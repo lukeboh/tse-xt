@@ -1,0 +1,459 @@
+/**
+ * TSE XT - Modernizador de DOM e Injeção de Componentes Glassmorphism (v0.2.0)
+ */
+
+window.JEPessoasModernizer = (function () {
+  'use strict';
+
+  function applyThemeState(enabled) {
+    if (enabled) {
+      document.body.classList.add('je-xt-enabled');
+      document.body.classList.remove('je-xt-disabled');
+    } else {
+      document.body.classList.add('je-xt-disabled');
+      document.body.classList.remove('je-xt-enabled');
+    }
+
+    const toggleText = document.getElementById('je-toggle-text');
+    if (toggleText) {
+      toggleText.innerHTML = enabled ? '✨ <strong>TSE XT</strong> Ativo' : '🏛️ <strong>TSE XT</strong> Desligado';
+    }
+  }
+
+  function modernizeHeader() {
+    if (document.querySelector('.je-topbar')) return;
+
+    // Coleta dados do usuário do DOM antigo (incluindo o IP)
+    const servidorEl = document.querySelector('.servidor');
+    const matriculaEl = document.querySelector('.matricula');
+    const lotacaoEl = document.querySelector('.lotacao');
+    const ipEl = document.querySelector('.ipServidorLogado');
+
+    const servidorNome = servidorEl ? servidorEl.innerText.replace(/Nome:\s*/i, '').trim() : 'Servidor';
+    const matricula = matriculaEl ? matriculaEl.innerText.replace(/Matrícula:\s*/i, '').trim() : '';
+    const lotacao = lotacaoEl ? lotacaoEl.innerText.replace(/Lotação:\s*/i, '').trim() : '';
+    const ip = ipEl ? ipEl.innerText.replace(/IP:\s*/i, '').trim() : '';
+    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.0';
+
+    // 1. Cria a Topbar Slim Glass com o Botão de Menu de Serviços Integrado
+    const topbar = document.createElement('header');
+    topbar.className = 'je-topbar';
+
+    topbar.innerHTML = `
+      <div class="je-brand-wrapper">
+        <!-- Botão de Menu de Serviços / Drawer -->
+        <button class="je-menu-trigger-btn" id="je-nav-menu-btn" title="Abrir Menu de Serviços (Alt + M)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <span>Menu</span>
+        </button>
+
+        <div class="je-brand" onclick="window.location.href='https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action'" title="Meu Espaço - Página Inicial">
+          <!-- Logo Oficial do Meu Espaço -->
+          <div class="je-logo-container">
+            <img src="/portalservidor2/_comum/img/espaco_topo.png" alt="Meu Espaço" class="je-official-logo" />
+          </div>
+          
+          <div class="je-brand-divider"></div>
+
+          <div class="je-brand-badge" title="Extensão TSE XT ativa">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            TSE XT
+          </div>
+          <span class="je-brand-version" id="je-version-badge" title="Clique para ver o histórico e novidades da versão" style="cursor: pointer; transition: all 0.2s ease;">
+            v${versaoExtensao}
+          </span>
+        </div>
+      </div>
+
+      <div class="je-search-container">
+        <svg class="je-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="je-search-input" placeholder="Pesquisar páginas, atalhos e serviços..." readonly />
+        <span class="je-search-shortcut">Ctrl+K</span>
+      </div>
+
+      <div class="je-topbar-actions">
+        <div class="je-user-profile">
+          <div class="je-user-chip" title="Servidor Logado, Lotação e IP">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0077ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <strong>${servidorNome}</strong>
+            ${matricula ? `<span>(${matricula})</span>` : ''}
+            ${lotacao ? `<span style="color:#64748b">• ${lotacao}</span>` : ''}
+            ${ip ? `<span class="je-ip-tag" title="IP de Origem: ${ip}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>${ip}</span>` : ''}
+          </div>
+          <a href="https://meuespaco.tse.jus.br/portalservidor2/Logout" class="je-logout-btn" title="Sair da Sessão">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Sair
+          </a>
+        </div>
+      </div>
+    `;
+
+    // 2. Cria o Toggle Switch Permanente
+    createPersistentToggle();
+
+    // 3. Conecta o Botão de Menu ao Drawer
+    const menuBtn = topbar.querySelector('#je-nav-menu-btn');
+    if (menuBtn) {
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.toggle();
+      });
+    }
+
+    // Conecta clique no badge de versão para abrir changelog
+    const versionBadge = topbar.querySelector('#je-version-badge');
+    if (versionBadge) {
+      versionBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.JEPessoasVersion) window.JEPessoasVersion.openChangelogModal();
+      });
+    }
+
+    // Conecta clique no input de pesquisa para abrir o Command Modal
+    const searchInput = topbar.querySelector('.je-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('click', () => {
+        if (window.JEPessoasSearch) window.JEPessoasSearch.open();
+      });
+    }
+
+    const container = document.getElementById('container') || document.body;
+    container.insertBefore(topbar, container.firstChild);
+  }
+
+  function createPersistentToggle() {
+    if (document.getElementById('je-persistent-toggle-bar')) return;
+
+    const toggleBar = document.createElement('aside');
+    toggleBar.id = 'je-persistent-toggle-bar';
+    toggleBar.className = 'je-persistent-toggle-bar';
+    toggleBar.setAttribute('aria-label', 'Controle Visual TSE XT');
+
+    toggleBar.innerHTML = `
+      <div class="je-toggle-container" id="je-theme-toggle-wrapper" title="Clique para alternar entre o visual moderno XT e o layout clássico">
+        <span class="je-toggle-label" id="je-toggle-text">✨ <strong>TSE XT</strong> Ativo</span>
+        <div class="je-toggle-switch" id="je-theme-toggle"></div>
+      </div>
+    `;
+
+    document.body.appendChild(toggleBar);
+
+    const toggleWrapper = toggleBar.querySelector('#je-theme-toggle-wrapper');
+    if (toggleWrapper) {
+      toggleWrapper.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
+        const nextState = !currentlyEnabled;
+        
+        applyThemeState(nextState);
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+      });
+    }
+  }
+
+  function injectPageTitleHeader() {
+    if (document.querySelector('.je-page-title-banner')) return;
+
+    const mesSelect = document.getElementById('mesSelecionado');
+    const anoSelect = document.getElementById('anoSelecionado');
+    const mesNome = mesSelect && mesSelect.selectedOptions[0] ? mesSelect.selectedOptions[0].text : 'Mês Atual';
+    const anoNome = anoSelect ? anoSelect.value : new Date().getFullYear();
+
+    const titleBanner = document.createElement('div');
+    titleBanner.className = 'je-page-title-banner';
+
+    titleBanner.innerHTML = `
+      <div class="je-title-content">
+        <div class="je-title-badge-wrapper">
+          <div class="je-title-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+              <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="je-breadcrumb">Meu Espaço <span>/</span> Frequência <span>/</span> Consulta Mensal</div>
+            <h1 class="je-main-page-title">Espelho de Ponto</h1>
+          </div>
+        </div>
+        <div class="je-current-period-tag" title="Período em visualização">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0077ff" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Referência: <strong>${mesNome} / ${anoNome}</strong></span>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('container') || document.body;
+    const topbar = document.querySelector('.je-topbar');
+    if (topbar && topbar.nextSibling) {
+      container.insertBefore(titleBanner, topbar.nextSibling);
+    } else {
+      container.insertBefore(titleBanner, container.firstChild);
+    }
+  }
+
+  function injectKPICards(kpiData) {
+    if (!kpiData) return;
+    if (document.querySelector('.je-kpi-dashboard')) {
+      document.querySelector('.je-kpi-dashboard').remove();
+    }
+
+    const dashboard = document.createElement('div');
+    dashboard.className = 'je-kpi-dashboard';
+
+    const isPositiveBank = !kpiData.accumulatedBankBalance.startsWith('-');
+    const isZeroMonthPositive = kpiData.zeroMonthStatus === 'positive';
+    const isZeroMonthNegative = kpiData.zeroMonthStatus === 'negative';
+
+    dashboard.innerHTML = `
+      <!-- Card 1: Previsão Saída p/ Completar Expediente -->
+      <div class="je-kpi-card" title="Horário estimado de saída para completar as ${kpiData.targetDailyHours}h de hoje">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Saída Expediente</span>
+          <div class="je-kpi-icon-wrapper">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 15 15"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="color: #0077ff;">${kpiData.estimatedExit}</div>
+        <div class="je-kpi-subtext">
+          ${kpiData.remainingMinutesToday > 0 
+            ? `<span>Faltam <strong>${kpiData.remainingTimeFormatted}</strong> hoje</span>`
+            : `<span>Jornada de hoje <strong>cumprida</strong></span>`}
+        </div>
+      </div>
+
+      <!-- Card 2: Saldo Acumulado do Banco de Horas -->
+      <div class="je-kpi-card" title="Saldo homologado no banco de horas institucional">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Banco de Horas</span>
+          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#dc2626'};">
+          ${kpiData.accumulatedBankBalance}
+        </div>
+        <div class="je-kpi-subtext">
+          <span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">
+            ${isPositiveBank ? 'Positivo' : 'Débito'}
+          </span>
+          <span>Homologado</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Previsão Saída p/ Zerar Saldo do Mês -->
+      <div class="je-kpi-card" title="Horário de saída para zerar o saldo acumulado até hoje (para mais ou para menos)">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Saída p/ Zerar Mês</span>
+          <div class="je-kpi-icon-wrapper" style="background: ${isZeroMonthPositive ? 'rgba(14, 165, 233, 0.1)' : (isZeroMonthNegative ? 'rgba(245, 158, 11, 0.1)' : 'rgba(100, 116, 139, 0.1)')}; color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#64748b')};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#1e293b')};">
+          ${kpiData.estimatedExitToZeroMonth}
+        </div>
+        <div class="je-kpi-subtext">
+          <span>${kpiData.zeroMonthSubtext}</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Meta / Progresso do Mês -->
+      <div class="je-kpi-card" title="Progresso da meta de horas trabalhadas no mês">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Meta do Mês (${kpiData.progressPercent}%)</span>
+          <div class="je-kpi-icon-wrapper">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value">${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></div>
+        
+        <!-- Barra de Progresso Glass Compacta -->
+        <div style="width: 100%; height: 4px; background: rgba(0, 102, 204, 0.1); border-radius: 999px; overflow: hidden; margin: 3px 0 4px 0;">
+          <div style="width: ${kpiData.progressPercent}%; height: 100%; background: linear-gradient(90deg, #0077ff, #00d2ff); border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+
+        <div class="je-kpi-subtext">
+          <span>${kpiData.daysWithRecords} dias reg. • <strong>${kpiData.remainingWorkingDaysMonth} restantes</strong></span>
+        </div>
+      </div>
+
+      <!-- Card 5: Saldo de Horas Extras (Duas Linhas) -->
+      <div class="je-kpi-card" title="Detalhamento de horas extras acumuladas no período">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Horas Extras</span>
+          <div class="je-kpi-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 3px; margin: 2px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
+            <span style="color: #64748b; font-weight: 600;">Dias úteis / Sáb:</span>
+            <strong style="color: #0a2540; font-size: 12.5px;">${kpiData.extraWeekdayAndSaturday}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
+            <span style="color: #64748b; font-weight: 600;">Dom / Feriados:</span>
+            <strong style="color: #7c3aed; font-size: 12.5px;">${kpiData.extraSundayAndHoliday}</strong>
+          </div>
+        </div>
+        <div class="je-kpi-subtext">
+          <span>Saldo Mês: <strong>${kpiData.totalExceedTimeFormatted}</strong></span>
+        </div>
+      </div>
+    `;
+
+    const table = document.getElementById('tblEspelhoPontoMesCorrente');
+    if (table && table.parentNode) {
+      table.parentNode.insertBefore(dashboard, table);
+    }
+  }
+
+  function modernizeTable() {
+    const table = document.getElementById('tblEspelhoPontoMesCorrente');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tr');
+    const now = new Date();
+    const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    rows.forEach((tr) => {
+      const dateCell = tr.querySelector('.h01');
+      if (dateCell) {
+        const dateText = dateCell.innerText.trim();
+        
+        // Destaca hoje
+        if (dateText === todayFormatted) {
+          tr.classList.add('je-row-today');
+        }
+
+        // Destaca fins de semana e ocorrências
+        const occCell = tr.querySelector('.h16');
+        const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
+        const rawText = tr.innerText.toUpperCase();
+
+        if (occText.includes('SÁBADO') || occText.includes('DOMINGO') || rawText.includes('SÁBADO') || rawText.includes('DOMINGO')) {
+          tr.classList.add('je-row-weekend');
+        }
+
+        if (occCell && occText) {
+          if (occText.includes('VIAGEM')) {
+            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${occCell.innerText}</span>`;
+          } else if (occText.includes('FERIADO') || occText.includes('RECESSO')) {
+            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${occCell.innerText}</span>`;
+          } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
+            occCell.innerHTML = `<span class="je-occurrence-badge">${occCell.innerText}</span>`;
+          }
+        }
+      }
+    });
+
+    // Modernização do Ícone de Hora Extra / Hora Excedente Autorizada (v0.2.0)
+    modernizeOvertimeClockIcons(table);
+  }
+
+  function modernizeOvertimeClockIcons(table) {
+    const clockImgs = table.querySelectorAll('img[src*="iconClock"], img[src*="Clock"], img[src*="relogio"], img[title*="Autorização"], img[title*="Hora Excedente"]');
+    
+    clockImgs.forEach((img) => {
+      if (img.classList.contains('je-clock-replaced')) return;
+      img.classList.add('je-clock-replaced');
+
+      const tooltip = img.getAttribute('title') || 'Hora Extra Autorizada (Clique para detalhes)';
+      
+      const modernClockBtn = document.createElement('button');
+      modernClockBtn.type = 'button';
+      modernClockBtn.className = 'je-overtime-clock-btn';
+      modernClockBtn.title = tooltip;
+      modernClockBtn.setAttribute('aria-label', tooltip);
+
+      modernClockBtn.innerHTML = `
+        <svg class="je-overtime-clock-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span class="je-overtime-plus">+</span>
+      `;
+
+      // Encaminha o clique para o elemento original mantendo o fluxo Ajax/Struts nativo
+      modernClockBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        img.click();
+      });
+
+      img.parentNode.insertBefore(modernClockBtn, img.nextSibling);
+    });
+  }
+
+  function modernizeForm() {
+    const form = document.getElementById('formEspelhoPontoMes');
+    if (!form || form.classList.contains('je-modernized-form')) return;
+
+    form.classList.add('je-modernized-form');
+
+    // Estiliza o botão Consultar
+    const btnConsultar = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
+    if (btnConsultar) {
+      btnConsultar.classList.add('je-btn');
+    }
+
+    // Auto-consulta instantânea: Dispara o botão Consultar ao alterar qualquer campo de filtro
+    const filterFields = form.querySelectorAll('select, input[type="radio"], input[type="checkbox"]');
+    filterFields.forEach((field) => {
+      field.addEventListener('change', () => {
+        const btn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
+        if (btn && !btn.disabled) {
+          btn.style.opacity = '0.75';
+          btn.value = 'CONSULTANDO...';
+          btn.click();
+        }
+      });
+    });
+  }
+
+  return {
+    applyThemeState,
+    modernizeHeader,
+    injectPageTitleHeader,
+    injectKPICards,
+    modernizeTable,
+    modernizeForm
+  };
+})();

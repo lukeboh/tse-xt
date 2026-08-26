@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>TSE XT</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="popup-header">
+      <div class="popup-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0077ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>TSE XT</span>
+      </div>
+      <span class="version-tag" id="popupVersion">v0.2.0</span>
+    </div>
+
+    <div class="popup-section">
+      <label class="section-label" for="targetHours">Jornada Diária Padrão (TSE)</label>
+      <div class="segmented-control">
+        <button type="button" class="segment-btn active" data-hours="7">7 Horas (TSE)</button>
+        <button type="button" class="segment-btn" data-hours="8">8 Horas</button>
+      </div>
+    </div>
+
+    <div class="popup-section">
+      <div class="feature-item">
+        <div>
+          <strong>Extensão TSE XT</strong>
+          <p>Multi-sistemas internos do TSE</p>
+        </div>
+        <span class="badge-active">Novo</span>
+      </div>
+      <div class="feature-item">
+        <div>
+          <strong>Isolamento de Estilos OFF</strong>
+          <p>100% legado ao desligar o XT</p>
+        </div>
+        <span class="badge-active">Ativo</span>
+      </div>
+      <div class="feature-item">
+        <div>
+          <strong>5 KPIs com Largura Uniforme</strong>
+          <p>Previsão Zerar Mês e Horas Extras</p>
+        </div>
+        <span class="badge-active">Ativo</span>
+      </div>
+      <div class="feature-item">
+        <div>
+          <strong>Ícone de Hora Extra</strong>
+          <p>Badge SVG com micro-interação</p>
+        </div>
+        <span class="badge-active">Ativo</span>
+      </div>
+      <div class="feature-item">
+        <div>
+          <strong>Auto-Consulta nos Filtros</strong>
+          <p>Disparo automático ao alterar campo</p>
+        </div>
+        <span class="badge-active">Ativo</span>
+      </div>
+      <div class="feature-item">
+        <div>
+          <strong>Drawer de Serviços</strong>
+          <p>Menu lateral tátil sem sobreposição</p>
+        </div>
+        <span class="badge-active">Ativo</span>
+      </div>
+    </div>
+
+    <div class="popup-footer">
+      <button id="btnReload" class="btn-primary">Atualizar Página do Portal</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
