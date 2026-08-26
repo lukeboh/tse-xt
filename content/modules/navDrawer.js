@@ -85,6 +85,27 @@ window.JEPessoasNavDrawer = (function () {
     return categories;
   }
 
+  function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/[&<>'"]/g, (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+  }
+
+  function sanitizeHref(url) {
+    if (!url || typeof url !== 'string') return '#';
+    const clean = url.trim();
+    // Permite apenas URLs relativas, https ou http
+    if (clean.startsWith('/') || clean.startsWith('https://') || clean.startsWith('http://') || clean.startsWith('#')) {
+      return escapeHTML(clean);
+    }
+    return '#';
+  }
+
   function createDrawerDOM() {
     if (document.getElementById('je-services-drawer-overlay')) return;
 
@@ -141,6 +162,17 @@ window.JEPessoasNavDrawer = (function () {
 
     overlay.querySelector('#je-drawer-close').addEventListener('click', close);
 
+    // Delegação de evento para expandir/recolher categorias sem inline onclick
+    const drawerContent = overlay.querySelector('#je-drawer-content');
+    if (drawerContent) {
+      drawerContent.addEventListener('click', (e) => {
+        const header = e.target.closest('.je-drawer-category-header');
+        if (header && header.parentElement) {
+          header.parentElement.classList.toggle('collapsed');
+        }
+      });
+    }
+
     // Filtro de busca dentro do drawer
     const searchInput = overlay.querySelector('#je-drawer-search');
     searchInput.addEventListener('input', () => {
@@ -162,12 +194,12 @@ window.JEPessoasNavDrawer = (function () {
       return `<div style="padding:24px; text-align:center; color:#94a3b8;">Nenhum serviço carregado.</div>`;
     }
 
-    return categories.map((cat, idx) => `
-      <div class="je-drawer-category-card" data-category="${cat.title.toLowerCase()}">
-        <div class="je-drawer-category-header" onclick="this.parentElement.classList.toggle('collapsed')">
+    return categories.map((cat) => `
+      <div class="je-drawer-category-card" data-category="${escapeHTML(cat.title.toLowerCase())}">
+        <div class="je-drawer-category-header" style="cursor:pointer;">
           <div class="je-category-header-left">
             <span class="je-cat-icon">${cat.icon}</span>
-            <strong class="je-cat-title">${cat.title}</strong>
+            <strong class="je-cat-title">${escapeHTML(cat.title)}</strong>
             <span class="je-cat-count">${cat.links.length}</span>
           </div>
           <svg class="je-cat-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -177,8 +209,8 @@ window.JEPessoasNavDrawer = (function () {
         <ul class="je-drawer-links-list">
           ${cat.links.map(link => `
             <li class="je-drawer-link-item">
-              <a href="${link.href}" target="${link.target}" class="je-drawer-link">
-                <span>${link.name}</span>
+              <a href="${sanitizeHref(link.href)}" target="${escapeHTML(link.target)}" class="je-drawer-link">
+                <span>${escapeHTML(link.name)}</span>
                 ${link.isChefe ? `<span class="je-badge-chefe">Chefia</span>` : ''}
                 ${link.isRestrito ? `<span class="je-badge-restrito">Restrito</span>` : ''}
               </a>

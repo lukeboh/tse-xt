@@ -5,6 +5,17 @@
 window.JEPessoasModernizer = (function () {
   'use strict';
 
+  function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/[&<>'"]/g, (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+  }
+
   function applyThemeState(enabled) {
     document.body.classList.add('je-theme-transitioning');
 
@@ -39,7 +50,7 @@ window.JEPessoasModernizer = (function () {
     const matricula = matriculaEl ? matriculaEl.innerText.replace(/Matrícula:\s*/i, '').trim() : '';
     const lotacao = lotacaoEl ? lotacaoEl.innerText.replace(/Lotação:\s*/i, '').trim() : '';
     const ip = ipEl ? ipEl.innerText.replace(/IP:\s*/i, '').trim() : '';
-    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.1';
+    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.3';
 
     // 1. Cria a Topbar Slim Glass com o Botão de Menu de Serviços Integrado
     const topbar = document.createElement('header');
@@ -57,7 +68,7 @@ window.JEPessoasModernizer = (function () {
           <span>Menu</span>
         </button>
 
-        <div class="je-brand" onclick="window.location.href='https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action'" title="Meu Espaço - Página Inicial">
+        <div class="je-brand" id="je-header-brand" style="cursor:pointer;" title="Meu Espaço - Página Inicial">
           <!-- Logo Oficial do Meu Espaço -->
           <div class="je-logo-container">
             <img src="/portalservidor2/_comum/img/espaco_topo.png" alt="Meu Espaço" class="je-official-logo" />
@@ -94,10 +105,10 @@ window.JEPessoasModernizer = (function () {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <strong>${servidorNome}</strong>
-            ${matricula ? `<span>(${matricula})</span>` : ''}
-            ${lotacao ? `<span style="color:#64748b">• ${lotacao}</span>` : ''}
-            ${ip ? `<span class="je-ip-tag" title="IP de Origem: ${ip}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>${ip}</span>` : ''}
+            <strong>${escapeHTML(servidorNome)}</strong>
+            ${matricula ? `<span>(${escapeHTML(matricula)})</span>` : ''}
+            ${lotacao ? `<span style="color:#64748b">• ${escapeHTML(lotacao)}</span>` : ''}
+            ${ip ? `<span class="je-ip-tag" title="IP de Origem: ${escapeHTML(ip)}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>${escapeHTML(ip)}</span>` : ''}
           </div>
           <a href="https://meuespaco.tse.jus.br/portalservidor2/Logout" class="je-logout-btn" title="Sair da Sessão">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -116,6 +127,14 @@ window.JEPessoasModernizer = (function () {
         </div>
       </div>
     `;
+
+    // Conecta clique no Logo/Brand
+    const brandLogo = topbar.querySelector('#je-header-brand');
+    if (brandLogo) {
+      brandLogo.addEventListener('click', () => {
+        window.location.href = 'https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action';
+      });
+    }
 
     // 2. Cria o Toggle Switch Permanente Flutuante (apenas para exibição no modo OFF legado)
     createPersistentToggle();
@@ -475,11 +494,11 @@ window.JEPessoasModernizer = (function () {
 
         if (occCell && occText) {
           if (occText.includes('VIAGEM')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${occCell.innerText}</span>`;
+            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${escapeHTML(occCell.innerText)}</span>`;
           } else if (occText.includes('FERIADO') || occText.includes('RECESSO')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${occCell.innerText}</span>`;
+            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${escapeHTML(occCell.innerText)}</span>`;
           } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge">${occCell.innerText}</span>`;
+            occCell.innerHTML = `<span class="je-occurrence-badge">${escapeHTML(occCell.innerText)}</span>`;
           }
         }
 

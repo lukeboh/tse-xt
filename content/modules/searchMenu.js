@@ -181,6 +181,17 @@ window.JEPessoasSearch = (function () {
     });
   }
 
+  function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/[&<>'"]/g, (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+  }
+
   function renderResults(query = '') {
     const q = query.toLowerCase().trim();
     const filtered = searchItems.filter((item) => {
@@ -193,7 +204,7 @@ window.JEPessoasSearch = (function () {
     if (filtered.length === 0) {
       modalResults.innerHTML = `
         <div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 13.5px;">
-          Nenhum resultado encontrado para "<strong>${query}</strong>"
+          Nenhum resultado encontrado para "<strong>${escapeHTML(query)}</strong>"
         </div>
       `;
       return;
@@ -203,8 +214,8 @@ window.JEPessoasSearch = (function () {
       const div = document.createElement('div');
       div.className = `je-result-item ${idx === selectedIndex ? 'selected' : ''}`;
       div.innerHTML = `
-        <div class="je-result-item-title">${item.title}</div>
-        <span class="je-result-item-badge">${item.category}</span>
+        <div class="je-result-item-title">${escapeHTML(item.title)}</div>
+        <span class="je-result-item-badge">${escapeHTML(item.category)}</span>
       `;
       div.addEventListener('click', () => {
         close();
