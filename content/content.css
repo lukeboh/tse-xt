@@ -53,6 +53,40 @@
 }
 
 /* ==========================================================================
+   Reset Estrito de Floats e Box-Sizing Herdados de CSS Legados
+   ========================================================================== */
+
+.je-topbar,
+.je-topbar *,
+.je-page-title-banner,
+.je-page-title-banner *,
+.je-kpi-dashboard,
+.je-kpi-dashboard *,
+#opcoes-consulta,
+#opcoes-consulta *,
+#formEspelhoPontoMes,
+#formEspelhoPontoMes *,
+.je-modal-overlay,
+.je-modal-overlay *,
+.je-drawer-overlay,
+.je-drawer-overlay *,
+.je-fab-container,
+.je-fab-container * {
+  box-sizing: border-box !important;
+}
+
+body.je-xt-enabled .je-topbar *,
+body.je-xt-enabled .je-page-title-banner *,
+body.je-xt-enabled .je-kpi-dashboard *,
+body.je-xt-enabled #opcoes-consulta *,
+body.je-xt-enabled #formEspelhoPontoMes *,
+body.je-xt-enabled .je-drawer-overlay *,
+body.je-xt-enabled .je-modal-overlay *,
+body.je-xt-enabled .je-fab-container * {
+  float: none !important;
+}
+
+/* ==========================================================================
    Transição Base do Documento
    ========================================================================== */
 
@@ -72,6 +106,11 @@ body.je-xt-enabled {
 }
 
 /* Layout Widescreen Fluido no modo Ativo */
+.container,
+#container {
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.35s ease, margin 0.35s ease !important;
+}
+
 body.je-xt-enabled .container, 
 body.je-xt-enabled #container {
   width: 96% !important;
@@ -79,7 +118,6 @@ body.je-xt-enabled #container {
   margin: 0 auto !important;
   padding: 0 16px 40px 16px !important;
   float: none !important;
-  transition: max-width 0.45s ease, width 0.45s ease;
 }
 
 body.je-xt-enabled .span-91, 
@@ -90,11 +128,12 @@ body.je-xt-enabled .span-5 {
   width: 100% !important;
   margin: 0 !important;
   float: none !important;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Banner, Barra Superior Legada e Menu Lateral Legado: Oculta no modo XT */
 #topo, #imgSGP, #barra-superior, .menu-encolhido, #menu-lateral {
-  transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 body.je-xt-enabled #topo, 
@@ -142,13 +181,48 @@ body.je-xt-disabled #menu-lateral {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  transition: var(--je-transition-spring);
-  animation: jeSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: 100% 50%;
+  animation: jeGrowFromToggle 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: max-width 0.4s ease, width 0.4s ease, padding 0.35s ease;
 }
 
-@keyframes jeSlideDown {
-  from { opacity: 0; transform: translateY(-16px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Animação que faz a topbar crescer e expandir a partir do botão no canto superior direito */
+@keyframes jeGrowFromToggle {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.08) scaleY(0.4);
+    transform-origin: 100% 50%;
+    clip-path: inset(0 0 0 92% round 20px);
+    filter: blur(6px);
+  }
+  50% {
+    opacity: 0.9;
+    filter: blur(1.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: 100% 50%;
+    clip-path: inset(0 0 0 0 round 20px);
+    filter: blur(0);
+  }
+}
+
+body.je-xt-enabled .je-topbar .je-brand-wrapper,
+body.je-xt-enabled .je-topbar .je-search-container,
+body.je-xt-enabled .je-topbar .je-user-profile {
+  animation: jeRevealContent 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes jeRevealContent {
+  0% {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 body.je-xt-disabled .je-topbar {
@@ -170,13 +244,30 @@ body.je-xt-disabled .je-topbar {
   padding: 7px 14px !important;
   font-size: 13px !important;
   font-weight: 700 !important;
-  display: flex !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
   align-items: center !important;
-  gap: 6px !important;
+  justify-content: center !important;
+  gap: 7px !important;
   cursor: pointer !important;
   height: 38px !important;
   box-shadow: var(--je-shadow-sm) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+}
+
+.je-menu-trigger-btn svg {
+  order: 1 !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  float: none !important;
+}
+
+.je-menu-trigger-btn span {
+  order: 2 !important;
+  display: inline-block !important;
+  float: none !important;
+  line-height: 1 !important;
 }
 
 .je-menu-trigger-btn:hover {
@@ -269,8 +360,19 @@ body.je-xt-disabled .je-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: var(--je-transition-spring);
-  animation: jeFadeInScale 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: jeSmoothFadeSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes jeSmoothFadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 body.je-xt-disabled .je-page-title-banner {
@@ -305,15 +407,41 @@ body.je-xt-disabled .je-page-title-banner {
 }
 
 .je-breadcrumb {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
-  margin-bottom: 2px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11.5px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  margin-bottom: 3px !important;
+  line-height: 1.2 !important;
 }
 
+.je-breadcrumb,
+.je-breadcrumb *,
 .je-breadcrumb span {
-  color: #94a3b8;
-  margin: 0 4px;
+  float: none !important;
+}
+
+.je-breadcrumb-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  float: none !important;
+  color: #64748b !important;
+}
+
+.je-breadcrumb-item.active {
+  color: var(--je-primary) !important;
+  font-weight: 600 !important;
+}
+
+.je-breadcrumb-separator {
+  display: inline-flex !important;
+  align-items: center !important;
+  float: none !important;
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  user-select: none !important;
 }
 
 .je-main-page-title {
@@ -388,9 +516,9 @@ body.je-xt-enabled .form-container {
 
 body.je-xt-enabled .opcoes-pesquisa,
 body.je-xt-enabled .box-oc,
-body.je-xt-enabled #formEspelhoPontoMes table,
-body.je-xt-enabled #formEspelhoPontoMes tbody,
-body.je-xt-enabled #formEspelhoPontoMes tr {
+body.je-xt-enabled #opcoes-consulta table,
+body.je-xt-enabled #opcoes-consulta tbody,
+body.je-xt-enabled #opcoes-consulta tr {
   display: flex !important;
   flex-wrap: wrap !important;
   align-items: flex-end !important;
@@ -401,7 +529,7 @@ body.je-xt-enabled #formEspelhoPontoMes tr {
 }
 
 body.je-xt-enabled .opcoes-pesquisa .campoPesquisa,
-body.je-xt-enabled #formEspelhoPontoMes td {
+body.je-xt-enabled #opcoes-consulta td {
   display: flex !important;
   flex-direction: column !important;
   justify-content: flex-end !important;
@@ -464,19 +592,27 @@ body.je-xt-enabled input[type="text"]:focus-visible {
   box-shadow: var(--je-glow-blue) !important;
 }
 
-/* Botão Consultar Perfeitamente Alinhado */
-body.je-xt-enabled input[type="button"], 
-body.je-xt-enabled input[type="submit"], 
-body.je-xt-enabled button, 
-body.je-xt-enabled .je-btn,
-body.je-xt-enabled #btnConsultar,
-body.je-xt-enabled .opcoes-pesquisa #btnConsultar {
+/* Botão Consultar Moderno (Flexbox 100% Centralizado) */
+body.je-xt-enabled .je-legacy-btn-consultar {
+  display: none !important;
+}
+
+body.je-xt-disabled .je-btn-consultar,
+body.je-xt-disabled #je-modern-btn-consultar {
+  display: none !important;
+}
+
+body.je-xt-disabled .je-legacy-btn-consultar {
+  display: inline-block !important;
+}
+
+.je-btn-consultar {
   background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: var(--je-radius-sm) !important;
-  padding: 0 24px !important;
-  font-size: 12.5px !important;
+  padding: 0 20px !important;
+  font-size: 13px !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   cursor: pointer !important;
@@ -488,17 +624,32 @@ body.je-xt-enabled .opcoes-pesquisa #btnConsultar {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  gap: 6px !important;
+  line-height: 1 !important;
   box-sizing: border-box !important;
   margin: 0 !important;
   align-self: flex-end !important;
+  user-select: none !important;
 }
 
-body.je-xt-enabled #btnConsultar:hover {
+.je-btn-consultar span {
+  display: inline-block !important;
+  float: none !important;
+  line-height: 1 !important;
+}
+
+.je-btn-consultar svg {
+  display: inline-block !important;
+  float: none !important;
+  flex-shrink: 0 !important;
+}
+
+.je-btn-consultar:hover {
   transform: translateY(-2px) !important;
   box-shadow: var(--je-shadow-md), var(--je-glow-blue) !important;
 }
 
-body.je-xt-enabled #btnConsultar:active {
+.je-btn-consultar:active {
   transform: translateY(0) !important;
   box-shadow: var(--je-shadow-sm) !important;
 }
@@ -514,19 +665,14 @@ body.je-xt-enabled #btnConsultar:active {
   width: 100% !important;
   box-sizing: border-box !important;
   margin-bottom: 16px !important;
-  transition: var(--je-transition-spring) !important;
-  animation: jeFadeInScale 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation: jeSmoothFadeSlide 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 @media (max-width: 1280px) {
   .je-kpi-dashboard {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
   }
-}
-
-@keyframes jeFadeInScale {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 body.je-xt-disabled .je-kpi-dashboard {
@@ -715,40 +861,51 @@ body.je-xt-disabled .je-overtime-clock-btn {
 }
 
 /* ==========================================================================
-   Toggle Switch Persistente Independente (Sempre Visível)
+   Toggle Switch Integrado & Persistente (Animação Suave & Alinhamento Preciso)
    ========================================================================== */
 
-.je-persistent-toggle-bar {
+/* Toggle Flutuante: Apenas visível no modo legado (XT Desligado) */
+body.je-xt-enabled .je-persistent-toggle-bar {
+  display: none !important;
+}
+
+body.je-xt-disabled .je-persistent-toggle-bar {
   position: fixed;
   top: 14px;
   right: 20px;
   z-index: 2147483647 !important;
-  display: flex;
+  display: flex !important;
   align-items: center;
   pointer-events: auto !important;
-  transition: var(--je-transition-spring);
+  animation: jeSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .je-toggle-container {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  padding: 5px 12px;
+  padding: 4px 12px;
   border-radius: var(--je-radius-full);
   border: 1.5px solid rgba(0, 119, 255, 0.35);
-  box-shadow: 0 4px 18px rgba(10, 37, 64, 0.15), var(--je-glow-blue-soft);
-  transition: var(--je-transition-smooth);
+  box-shadow: 0 2px 10px rgba(10, 37, 64, 0.08), var(--je-glow-blue-soft);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   cursor: pointer;
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .je-toggle-container:hover {
-  transform: scale(1.04);
-  box-shadow: 0 6px 24px rgba(10, 37, 64, 0.2), var(--je-glow-blue);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 18px rgba(10, 37, 64, 0.15), var(--je-glow-blue);
   border-color: var(--je-primary-light);
+}
+
+.je-toggle-container:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .je-toggle-label {
@@ -756,6 +913,8 @@ body.je-xt-disabled .je-overtime-clock-btn {
   font-weight: 700;
   color: var(--je-primary-dark);
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: color 0.3s ease;
 }
 
 .je-toggle-switch {
@@ -764,8 +923,9 @@ body.je-xt-disabled .je-overtime-clock-btn {
   height: 22px;
   background: #94a3b8;
   border-radius: 999px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .je-toggle-switch::after {
@@ -778,7 +938,7 @@ body.je-xt-disabled .je-overtime-clock-btn {
   background: #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
 
 body.je-xt-enabled .je-toggle-switch {
@@ -791,10 +951,26 @@ body.je-xt-enabled .je-toggle-switch::after {
   box-shadow: 0 2px 8px rgba(0, 119, 255, 0.5);
 }
 
+body.je-xt-disabled .je-toggle-switch {
+  background: #94a3b8;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.je-xt-disabled .je-toggle-switch::after {
+  transform: translateX(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
 body.je-xt-disabled .je-persistent-toggle-bar .je-toggle-container {
   background: rgba(255, 255, 255, 0.98);
   border-color: #cbd5e1;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Transição global durante alternância de tema */
+body.je-theme-transitioning,
+body.je-theme-transitioning * {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 /* Campo de Busca Rápida no Topo */
@@ -848,12 +1024,18 @@ body.je-xt-disabled .je-persistent-toggle-bar .je-toggle-container {
   border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
-/* User Info Chips */
+/* Ações da Barra Superior Slim & Perfil */
+.je-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .je-user-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-right: 140px;
+  gap: 8px;
+  margin-right: 0;
 }
 
 .je-user-chip {
@@ -867,6 +1049,8 @@ body.je-xt-disabled .je-persistent-toggle-bar .je-toggle-container {
   align-items: center;
   gap: 6px;
   box-shadow: var(--je-shadow-sm);
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .je-user-chip strong {
@@ -900,6 +1084,8 @@ body.je-xt-disabled .je-persistent-toggle-bar .je-toggle-container {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .je-logout-btn:hover {
@@ -1174,13 +1360,14 @@ body.je-xt-disabled .je-persistent-toggle-bar .je-toggle-container {
    ========================================================================== */
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente {
+  display: table !important;
   width: 100% !important;
-  border-collapse: separate !important;
+  border-collapse: collapse !important;
   border-spacing: 0 !important;
-  background: var(--je-glass-card) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: var(--je-backdrop-blur) !important;
   -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
-  border: 1px solid var(--je-glass-border) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
   border-radius: var(--je-radius-md) !important;
   box-shadow: var(--je-shadow-tactile) !important;
   overflow: hidden !important;
@@ -1188,54 +1375,80 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente {
   transition: var(--je-transition-smooth);
 }
 
+body.je-xt-enabled #tblEspelhoPontoMesCorrente thead {
+  display: table-header-group !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tbody {
+  display: table-row-group !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr {
+  display: table-row !important;
+}
+
 body.je-xt-enabled #tblEspelhoPontoMesCorrente th {
-  background: linear-gradient(180deg, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.9) 100%) !important;
+  display: table-cell !important;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
   color: var(--je-primary-dark) !important;
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.6px !important;
-  padding: 10px 8px !important;
-  border-bottom: 2px solid rgba(0, 102, 204, 0.15) !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
+  letter-spacing: 0.3px !important;
+  padding: 8px 4px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
   text-align: center !important;
-  white-space: nowrap !important;
+  vertical-align: middle !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente td {
-  padding: 8px 6px !important;
-  font-size: 12px !important;
-  color: #334155 !important;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
+  display: table-cell !important;
+  padding: 7px 6px !important;
+  font-size: 12.5px !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
   text-align: center !important;
+  vertical-align: middle !important;
+  line-height: 1.3 !important;
   transition: background 0.15s ease !important;
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:not(.total-horas):not(:first-child):hover td {
-  background: rgba(235, 244, 255, 0.75) !important;
+  background: rgba(224, 242, 254, 0.65) !important;
   color: var(--je-primary-dark) !important;
 }
 
-body.je-xt-enabled .je-row-today td {
-  background: rgba(224, 242, 254, 0.85) !important;
-  font-weight: 700 !important;
-  color: var(--je-primary-dark) !important;
-  border-top: 1px solid var(--je-primary-light) !important;
-  border-bottom: 1px solid var(--je-primary-light) !important;
+/* Sábado: Tom inicial do azul */
+body.je-xt-enabled tr.je-row-saturday td,
+body.je-xt-enabled tr.je-row-saturday {
+  background: rgba(235, 245, 255, 0.85) !important;
+  color: #1e3a8a !important;
 }
 
-body.je-xt-enabled .je-row-today {
-  box-shadow: inset 4px 0 0 var(--je-primary-light), var(--je-glow-blue-soft) !important;
+/* Domingo e Feriados: Tom um pouco mais escuro do azul */
+body.je-xt-enabled tr.je-row-sunday td,
+body.je-xt-enabled tr.je-row-sunday,
+body.je-xt-enabled tr.je-row-feriado td,
+body.je-xt-enabled tr.je-row-feriado {
+  background: rgba(219, 234, 254, 0.95) !important;
+  color: #1e40af !important;
+  font-weight: 600 !important;
 }
 
-body.je-xt-enabled .je-row-weekend td {
-  background: rgba(248, 250, 252, 0.4) !important;
-  color: #94a3b8 !important;
+/* Data Atual (Hoje): Azul mais destacado com borda e realce */
+body.je-xt-enabled tr.je-row-today td,
+body.je-xt-enabled tr.je-row-today {
+  background: linear-gradient(90deg, rgba(0, 119, 255, 0.16) 0%, rgba(0, 198, 255, 0.1) 100%) !important;
+  font-weight: 800 !important;
+  color: #0056b3 !important;
+  border-top: 2px solid #0077ff !important;
+  border-bottom: 2px solid #0077ff !important;
+}
+
+body.je-xt-enabled tr.je-row-today td:first-child {
+  border-left: 4px solid #0077ff !important;
 }
 
 body.je-xt-enabled .je-occurrence-badge {
@@ -1243,26 +1456,26 @@ body.je-xt-enabled .je-occurrence-badge {
   padding: 2px 8px;
   border-radius: var(--je-radius-full);
   font-size: 11px;
-  font-weight: 600;
-  background: rgba(100, 116, 139, 0.1);
-  color: #475569;
+  font-weight: 700;
+  background: rgba(0, 102, 204, 0.1);
+  color: var(--je-primary);
 }
 
 body.je-xt-enabled .je-occurrence-viagem {
-  background: rgba(139, 92, 246, 0.12);
+  background: rgba(139, 92, 246, 0.15);
   color: #7c3aed;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 body.je-xt-enabled .je-occurrence-feriado {
-  background: rgba(14, 165, 233, 0.12);
+  background: rgba(14, 165, 233, 0.15);
   color: #0284c7;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 body.je-xt-enabled .total-horas td, 
 body.je-xt-enabled .cellTotais {
-  background: rgba(241, 245, 249, 0.8) !important;
+  background: rgba(241, 245, 249, 0.95) !important;
   font-weight: 800 !important;
   color: var(--je-primary-dark) !important;
   font-size: 12.5px !important;

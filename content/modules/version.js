@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.2.0';
+  const CURRENT_VERSION = '0.2.1';
 
   const CHANGELOG = [
+    {
+      version: '0.2.1',
+      date: '2026-08-26',
+      title: 'Reestruturação Tabular Glassmorphic, Hierarquia de Cores & Alinhamento do Menu',
+      features: [
+        'Reestruturação completa da tabela do espelho de ponto em Glassmorphism sólido de alto contraste, eliminando quebras e cortes de cabeçalhos',
+        'Hierarquia cromática de linhas: sábado em tom azul suave, domingo/feriados em azul encorpado e dia atual em destaque vibrante',
+        'Integração direta e alinhamento do interruptor ✨ TSE XT Ativo no menu superior com animação de expansão a partir do botão',
+        'Centralização milimétrica do texto do botão CONSULTAR e correção do alinhamento do ícone do Menu e Breadcrumb',
+        'Restrição estrita do escopo de injeção exclusivamente para a página de Espelho de Ponto'
+      ]
+    },
     {
       version: '0.2.0',
       date: '2026-08-26',

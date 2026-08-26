@@ -6,6 +6,12 @@
   'use strict';
 
   function init() {
+    // Restringe estritamente para a página do Espelho de Ponto
+    const isEspelhoPontoPage = window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente');
+    if (!isEspelhoPontoPage) {
+      return;
+    }
+
     // Carrega preferências salvas ou padrão (7h para JE/TSE, XT Ativo)
     chrome.storage?.local?.get({ targetHours: 7, xtThemeEnabled: true }, (items) => {
       const targetHours = items.targetHours || 7;
