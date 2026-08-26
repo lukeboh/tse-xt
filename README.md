@@ -39,5 +39,13 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 1. Abra o Chrome e acesse `chrome://extensions/`.
 2. Ative o **Modo do desenvolvedor** no canto superior direito.
 3. Clique em **Carregar sem compactação** (*Load unpacked*).
-4. Selecione a pasta deste projeto (`d:\git\lukeboh\je-pessoas-xt`).
+4. Selecione a pasta deste projeto (`tse-xt`).
 5. Acesse o portal do TSE (ex: [Meu Espaço](https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action)) e aproveite!
+
+---
+
+## 🔒 Privacidade, Segurança e Especificações
+
+- **[Política de Privacidade](PRIVACY.md)**: Declaração de não coleta de dados, processamento 100% local (*client-side*) e conformidade com o Manifest V3.
+- **[Especificação de Negócio & Regras de Cálculo](docs/ESPECIFICACAO_NEGOCIO.md)**: Detalhamento completo das fórmulas matemáticas, desconsideração de pecúnia, regime híbrido e regras de jornada (7h/8h).
+
