@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "TSE XT",
+  "version": "0.2.0",
+  "description": "Interface moderna com Glassmorfismo Tátil, 5 KPIs uniformes, automação e usabilidade aprimorada para portais e sistemas internos do Tribunal Superior Eleitoral (TSE).",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://meuespaco.tse.jus.br/*",
+    "*://*.tse.jus.br/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://meuespaco.tse.jus.br/portalservidor2/*",
+        "*://*.tse.jus.br/portalservidor2/*",
+        "*://*.tse.jus.br/*"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "js": [
+        "content/modules/version.js",
+        "content/modules/kpiExtractor.js",
+        "content/modules/searchMenu.js",
+        "content/modules/quickActions.js",
+        "content/modules/navDrawer.js",
+        "content/modules/domModernizer.js",
+        "content/content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}
