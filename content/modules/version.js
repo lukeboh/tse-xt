@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.2.1';
+  const CURRENT_VERSION = '0.2.2';
 
   const CHANGELOG = [
+    {
+      version: '0.2.2',
+      date: '2026-08-26',
+      title: 'Nova Coluna Saldo Acumulado, Desconsideração de Pecúnia & Regras de Regime Híbrido',
+      features: [
+        'Nova coluna SALDO ACUM. entre Pecúnia e Adicional Noturno com cálculo acumulativo estritamente líquido de pecúnia',
+        'Supressão automática da coluna de saldo e desativação de banco de horas em meses com Trabalho Híbrido / Teletrabalho',
+        'Cálculo dinâmico da Meta do Mês considerando 7h ou 8h (com intervalo de almoço) e exclusão de licenças, férias e viagens',
+        'Alinhamento compacto de largura e correção milimétrica do rodapé da tabela com 16 colunas',
+        'Criação do documento oficial de especificação de negócio (docs/ESPECIFICACAO_NEGOCIO.md)'
+      ]
+    },
     {
       version: '0.2.1',
       date: '2026-08-26',

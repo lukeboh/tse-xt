@@ -287,7 +287,9 @@ window.JEPessoasModernizer = (function () {
           <span class="je-kpi-title">Banco de Horas</span>
           <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
+              <path d="M12 12v8a2 2 0 0 0 4 0"></path>
+              <path d="M12 2v1"></path>
             </svg>
           </div>
         </div>
@@ -295,14 +297,47 @@ window.JEPessoasModernizer = (function () {
           ${kpiData.accumulatedBankBalance}
         </div>
         <div class="je-kpi-subtext">
-          <span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">
-            ${isPositiveBank ? 'Positivo' : 'Débito'}
-          </span>
-          <span>Homologado</span>
+          ${kpiData.hasHybridWorkInMonth 
+            ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>Sem acúmulo de BH</span>`
+            : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`}
         </div>
       </div>
 
-      <!-- Card 3: Previsão Saída p/ Zerar Saldo do Mês -->
+      <!-- Card 3: Meta / Progresso do Mês (Fração Ordinária Feito/Esperado) -->
+      <div class="je-kpi-card" title="Progresso da meta de horas ordinárias trabalhadas no mês (Meta: ${kpiData.totalExpectedTimeFormatted})">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : (kpiData.isTargetExceeded ? 'Meta Superada' : 'Meta do Mês')} (${kpiData.progressPercent}%)</span>
+          <div class="je-kpi-icon-wrapper" style="background: ${kpiData.isTargetExceeded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 102, 204, 0.1)'}; color: ${kpiData.isTargetExceeded ? '#059669' : 'var(--je-primary)'};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="display: flex; align-items: baseline; justify-content: space-between; gap: 4px;">
+          <span>${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></span>
+          ${kpiData.isTargetExceeded 
+            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>` 
+            : ''}
+        </div>
+        
+        <!-- Barra de Progresso com Indicador de Meta e Extrapolação -->
+        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
+          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+
+        <div class="je-kpi-subtext">
+          ${kpiData.hasHybridWorkInMonth
+            ? `<span>${kpiData.totalExpectedMinutesMonth === 0 ? 'Sem exigência presencial' : `Faltam <strong>${kpiData.remainingHoursFormatted}</strong> presencial`}</span>`
+            : (kpiData.isTargetExceeded 
+              ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
+              : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias restantes</span>`)}
+        </div>
+      </div>
+
+      <!-- Card 4: Previsão Saída p/ Zerar Saldo do Mês -->
       <div class="je-kpi-card" title="Horário de saída para zerar o saldo acumulado até hoje (para mais ou para menos)">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Saída p/ Zerar Mês</span>
@@ -317,31 +352,6 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-subtext">
           <span>${kpiData.zeroMonthSubtext}</span>
-        </div>
-      </div>
-
-      <!-- Card 4: Meta / Progresso do Mês -->
-      <div class="je-kpi-card" title="Progresso da meta de horas trabalhadas no mês">
-        <div class="je-kpi-header">
-          <span class="je-kpi-title">Meta do Mês (${kpiData.progressPercent}%)</span>
-          <div class="je-kpi-icon-wrapper">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-          </div>
-        </div>
-        <div class="je-kpi-value">${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></div>
-        
-        <!-- Barra de Progresso Glass Compacta -->
-        <div style="width: 100%; height: 4px; background: rgba(0, 102, 204, 0.1); border-radius: 999px; overflow: hidden; margin: 3px 0 4px 0;">
-          <div style="width: ${kpiData.progressPercent}%; height: 100%; background: linear-gradient(90deg, #0077ff, #00d2ff); border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
-        </div>
-
-        <div class="je-kpi-subtext">
-          <span>${kpiData.daysWithRecords} dias reg. • <strong>${kpiData.remainingWorkingDaysMonth} restantes</strong></span>
         </div>
       </div>
 
@@ -377,18 +387,72 @@ window.JEPessoasModernizer = (function () {
     }
   }
 
+  function parseMinutes(str) {
+    if (!str || typeof str !== 'string') return 0;
+    const clean = str.replace(/[\u00a0\s]/g, '').replace(/[\u2212\u2013\u2014\u2010\u2015]/g, '-').trim();
+    if (!clean || clean === '--:--' || clean === '-') return 0;
+    const isNeg = clean.startsWith('-') || clean.includes('-');
+    const digitsOnly = clean.replace(/[^0-9:]/g, '');
+    const parts = digitsOnly.split(':');
+    if (parts.length < 2) return 0;
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const total = h * 60 + m;
+    return isNeg ? -total : total;
+  }
+
+  function formatSigned(minutes) {
+    if (minutes === null || minutes === undefined || isNaN(minutes)) return '00:00';
+    if (minutes === 0) return '00:00';
+    const isNeg = minutes < 0;
+    const absM = Math.abs(Math.round(minutes));
+    const h = Math.floor(absM / 60);
+    const m = absM % 60;
+    const strH = String(h).padStart(2, '0');
+    const strM = String(m).padStart(2, '0');
+    return (isNeg ? '-' : '+') + `${strH}:${strM}`;
+  }
+
   function modernizeTable() {
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return;
+
+    // Limpa injeções anteriores para garantir idempotência
+    table.querySelectorAll('.je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+
+    const tableText = table.innerText.toUpperCase();
+    const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
+
+    // 1. Injeta Cabeçalho da Nova Coluna "SALDO ACUM." (APENAS se NÃO houver trabalho híbrido no mês)
+    if (!hasHybridWorkInMonth) {
+      const headerRows = table.querySelectorAll('tr');
+      headerRows.forEach((tr) => {
+        const pecuniaTh = tr.querySelector('th.h12') || tr.querySelector('th.h11') || Array.from(tr.querySelectorAll('th')).find(th => th.innerText.toUpperCase().includes('PECÚNIA') || th.innerText.toUpperCase().includes('PECUNIA'));
+        if (pecuniaTh && !tr.querySelector('th.je-col-accumulated-balance')) {
+          const newTh = document.createElement('th');
+          newTh.className = 'je-col-accumulated-balance';
+          newTh.title = 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
+          newTh.innerHTML = 'SALDO ACUM.';
+          pecuniaTh.parentNode.insertBefore(newTh, pecuniaTh.nextSibling);
+        }
+      });
+    }
 
     const rows = table.querySelectorAll('tr');
     const now = new Date();
     const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
+    let runningBalance = 0;
+
     rows.forEach((tr) => {
-      const dateCell = tr.querySelector('.h01');
+      // Ignora linhas de cabeçalho
+      if (tr.querySelector('th')) return;
+
+      const dateCell = tr.querySelector('td.h01');
       if (dateCell) {
         const dateText = dateCell.innerText.trim();
+        if (!dateText.match(/^\d{2}\/\d{2}\/\d{4}$/)) return;
+
         const rawText = tr.innerText.toUpperCase();
         
         // Destaca hoje
@@ -406,7 +470,7 @@ window.JEPessoasModernizer = (function () {
         }
 
         // Destaca ocorrências
-        const occCell = tr.querySelector('.h16, .h15');
+        const occCell = tr.querySelector('td.h16, td.h15');
         const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
 
         if (occCell && occText) {
@@ -417,6 +481,92 @@ window.JEPessoasModernizer = (function () {
           } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
             occCell.innerHTML = `<span class="je-occurrence-badge">${occCell.innerText}</span>`;
           }
+        }
+
+        // Se NÃO estiver em regime híbrido, injeta a célula de Saldo Acumulado na linha
+        if (!hasHybridWorkInMonth) {
+          const allTds = tr.querySelectorAll('td:not(.je-col-accumulated-balance)');
+          const pecuniaCell = tr.querySelector('.h12') || tr.querySelector('.h11') || (allTds.length >= 11 ? allTds[10] : null);
+
+          const exceedDay = tr.querySelector('.h10')?.innerText.trim() || '';
+          const pecunia = (tr.querySelector('.h12') || tr.querySelector('.h11'))?.innerText.trim() || (allTds.length >= 11 ? allTds[10].innerText.trim() : '');
+
+          const exceedMin = parseMinutes(exceedDay);
+          const pecuniaMin = parseMinutes(pecunia);
+          const dailyDelta = exceedMin - pecuniaMin;
+
+          const dateParts = dateText.split('/');
+          let isPastOrToday = true;
+          if (dateParts.length === 3) {
+            const dObj = new Date(parseInt(dateParts[2], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[0], 10), 23, 59, 59);
+            isPastOrToday = dObj <= now || dateText === todayFormatted;
+          }
+
+          const e1 = tr.querySelector('.h02')?.innerText.trim() || '';
+          const totalDay = tr.querySelector('.h09')?.innerText.trim() || '';
+          const abono = tr.querySelector('.h08')?.innerText.trim() || '';
+          const hasRecord = !!(e1 || totalDay || (exceedDay && exceedDay !== '00:00' && exceedDay !== '--:--') || (pecunia && pecunia !== '00:00') || abono);
+
+          const shouldCount = hasRecord || isPastOrToday;
+
+          if (shouldCount) {
+            runningBalance += dailyDelta;
+          }
+
+          const td = document.createElement('td');
+          td.className = 'je-col-accumulated-balance';
+
+          if (shouldCount) {
+            if (runningBalance > 0) {
+              td.classList.add('je-balance-positive');
+            } else if (runningBalance < 0) {
+              td.classList.add('je-balance-negative');
+            } else {
+              td.classList.add('je-balance-zero');
+            }
+            td.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
+          } else {
+            td.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+          }
+
+          if (pecuniaCell && pecuniaCell.parentNode) {
+            pecuniaCell.parentNode.insertBefore(td, pecuniaCell.nextSibling);
+          } else if (allTds.length >= 11) {
+            allTds[10].parentNode.insertBefore(td, allTds[10].nextSibling);
+          }
+        }
+      }
+
+      // Linha de Totais da Tabela Principal ("Totais:")
+      if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && tr.innerText.includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
+        tr.querySelectorAll('.je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+        const cells = Array.from(tr.querySelectorAll('td'));
+        
+        if (cells.length >= 2) {
+          // cells[0]: "Totais:" (ocupa 8 colunas: Data, E1, S1, E2, S2, E3, S3, Abono)
+          cells[0].colSpan = 8;
+          
+          // cells[1]: Total Trabalhado (ex: 135:23)
+          // cells[2]: Total Horas Excedentes (ex: 30:23)
+          const targetExcedCell = cells[2] || cells[1];
+
+          // 1. Célula de Pecúnia no Rodapé
+          const pecuniaTd = document.createElement('td');
+          pecuniaTd.className = 'cellTotais je-totais-pecunia';
+          pecuniaTd.innerText = '00:00';
+          targetExcedCell.parentNode.insertBefore(pecuniaTd, targetExcedCell.nextSibling);
+
+          // 2. Célula de Saldo Acumulado no Rodapé (TSE XT)
+          const totalTd = document.createElement('td');
+          totalTd.className = `je-col-accumulated-balance ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
+          totalTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
+          pecuniaTd.parentNode.insertBefore(totalTd, pecuniaTd.nextSibling);
+
+          // 3. Célula trailing para cobrir as 4 colunas restantes (Adic Not Pec, Adic Not, Compl, Ocorrência)
+          const trailingTd = document.createElement('td');
+          trailingTd.className = 'cellTotais je-totais-trailing';
+          trailingTd.colSpan = 4;
+          totalTd.parentNode.insertBefore(trailingTd, totalTd.nextSibling);
         }
       }
     });
