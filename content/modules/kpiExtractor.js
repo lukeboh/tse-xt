@@ -7,9 +7,11 @@ window.JEPessoasKPI = (function () {
 
   function parseTimeToMinutes(timeStr) {
     if (!timeStr || typeof timeStr !== 'string') return 0;
-    const clean = timeStr.trim();
-    const isNegative = clean.includes('-');
-    const parts = clean.replace(/[-+]/g, '').split(':');
+    const clean = timeStr.replace(/[\u00a0\s]/g, '').replace(/[\u2212\u2013\u2014\u2010\u2015]/g, '-').trim();
+    if (!clean || clean === '--:--' || clean === '-') return 0;
+    const isNegative = clean.startsWith('-') || clean.includes('-');
+    const digitsOnly = clean.replace(/[^0-9:]/g, '');
+    const parts = digitsOnly.split(':');
     if (parts.length < 2) return 0;
     const hours = parseInt(parts[0], 10) || 0;
     const minutes = parseInt(parts[1], 10) || 0;
@@ -53,6 +55,11 @@ window.JEPessoasKPI = (function () {
     let daysWithRecords = 0;
     let totalWorkingDaysMonth = 0;
     let remainingWorkingDaysMonth = 0;
+    let pastWorkingDaysMonth = 0;
+    let totalExpectedMinutesMonth = 0;
+    let pastExpectedMinutesMonth = 0;
+    let remainingExpectedMinutesMonth = 0;
+    let runningAccumulatedBalance = 0;
 
     const rows = table.querySelectorAll('tr');
 
@@ -67,16 +74,7 @@ window.JEPessoasKPI = (function () {
         }
       }
 
-      // Linha de totais mensais
-      if (tr.classList.contains('total-horas')) {
-        const cells = tr.querySelectorAll('.cellTotais');
-        if (cells.length >= 2) {
-          totalWorkedMinutesMonth = parseTimeToMinutes(cells[0].innerText);
-          totalExceedMinutesMonth = parseTimeToMinutes(cells[1].innerText);
-        }
-      }
-
-      // Linhas dos dias
+      // Linhas dos dias (com data dd/mm/aaaa na célula .h01)
       const dateCell = tr.querySelector('.h01');
       if (dateCell) {
         const dateText = dateCell.innerText.trim();
@@ -97,41 +95,79 @@ window.JEPessoasKPI = (function () {
           const s2 = tr.querySelector('.h05')?.innerText.trim() || '';
           const e3 = tr.querySelector('.h06')?.innerText.trim() || '';
           const s3 = tr.querySelector('.h07')?.innerText.trim() || '';
+          const abono = tr.querySelector('.h08')?.innerText.trim() || '';
           const totalDay = tr.querySelector('.h09')?.innerText.trim() || '';
           const exceedDay = tr.querySelector('.h10')?.innerText.trim() || '';
-          const extraSunday = tr.querySelector('.h11')?.innerText.trim() || '';
-          const occurrence = tr.querySelector('.h16')?.innerText.trim() || '';
+          const pecunia = (tr.querySelector('.h12') || tr.querySelector('.h11'))?.innerText.trim() || '';
+          const occurrence = tr.querySelector('.h16, .h15')?.innerText.trim() || '';
 
-          const isHolidayOrRecess = occurrence.toUpperCase().includes('FERIADO') || occurrence.toUpperCase().includes('RECESSO');
+          const pecuniaMin = parseTimeToMinutes(pecunia);
+          const abonoMin = parseTimeToMinutes(abono);
+          const exceedMin = parseTimeToMinutes(exceedDay);
+          const totalMin = parseTimeToMinutes(totalDay);
 
-          // Contabilização de horas extras por dia
-          if (exceedDay && exceedDay !== '00:00' && !exceedDay.startsWith('-')) {
-            extraWeekdayAndSaturdayMinutes += parseTimeToMinutes(exceedDay);
-          }
-          if (extraSunday && extraSunday !== '00:00') {
-            extraSundayAndHolidayMinutes += parseTimeToMinutes(extraSunday);
-          }
+          // Identificação de Ocorrências e Dispensas da Jornada Ordinária
+          const rawRowText = tr.innerText.toUpperCase();
+          const occText = (occurrence + ' ' + rawRowText).toUpperCase();
 
-          if (!isWeekend && !isHolidayOrRecess) {
+          const isHolidayOrRecess = occText.includes('FERIADO') || occText.includes('RECESSO') || occText.includes('FACULTATIVO');
+          const isLicense = occText.includes('LICENÇA') || occText.includes('LICENCA') || occText.includes('MÉDICA') || occText.includes('MEDICA') || occText.includes('LUTO') || occText.includes('NOJO') || occText.includes('GALA') || occText.includes('MATERNIDADE') || occText.includes('PATERNIDADE') || occText.includes('CAPACITAÇÃO') || occText.includes('CAPACITACAO') || occText.includes('PRÊMIO') || occText.includes('PREMIO');
+          const isHybrid = occText.includes('HÍBRIDO') || occText.includes('HIBRIDO') || occText.includes('TELETRABALHO') || occText.includes('REMOTO') || occText.includes('HOME OFFICE');
+          const isVacation = occText.includes('FÉRIAS') || occText.includes('FERIAS');
+          const isTravel = occText.includes('VIAGEM') || occText.includes('MISSÃO') || occText.includes('MISSAO') || (occText.includes('SERVIÇO') && !occText.includes('TEMPO DE'));
+
+          const isDispensed = isHolidayOrRecess || isLicense || isHybrid || isVacation || isTravel || (abonoMin >= targetDailyMinutes);
+
+          // Verifica se houve intervalo de almoço (2 entradas e 2 saídas preenchidas)
+          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
+          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : targetDailyMinutes; // 8h ou 7h
+
+          // Contabilização de dias úteis e meta esperada (exclui fins de semana e dispensas)
+          const todayObj = new Date();
+          const todayStart = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate());
+          const isPast = dateObj < todayStart;
+          const isToday = dateText === todayStr;
+          const isFuture = dateObj > todayStart;
+
+          if (!isWeekend && !isDispensed) {
             totalWorkingDaysMonth++;
-            const todayObj = new Date();
-            const todayStart = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate());
-            if (dateObj >= todayStart) {
+            totalExpectedMinutesMonth += dayTargetMinutes;
+            if (isPast) {
+              pastWorkingDaysMonth++;
+              pastExpectedMinutesMonth += dayTargetMinutes;
+            } else {
               remainingWorkingDaysMonth++;
+              remainingExpectedMinutesMonth += dayTargetMinutes;
             }
           }
 
-          if (e1 || s1 || totalDay) {
+          const hasRealRecords = !!(e1 || s1 || (totalMin > 0) || (exceedMin !== 0) || (pecuniaMin > 0) || (abonoMin > 0));
+          if (hasRealRecords && !isFuture) {
             daysWithRecords++;
           }
 
-          if (dateText === todayStr) {
+          // CÁLCULO DO SALDO ACUMULADO DO MÊS (SEM PECÚNIA E SEM DIAS FUTUROS)
+          if (!isFuture) {
+            const dailyDelta = exceedMin - pecuniaMin;
+            runningAccumulatedBalance += dailyDelta;
+            totalExceedMinutesMonth += dailyDelta;
+
+            if (dayOfWeek === 6 || (!isWeekend && exceedMin > 0)) {
+              extraWeekdayAndSaturdayMinutes += Math.max(0, exceedMin - pecuniaMin);
+            } else if (dayOfWeek === 0 || isHolidayOrRecess) {
+              extraSundayAndHolidayMinutes += Math.max(0, (totalMin > 0 ? totalMin : exceedMin) - pecuniaMin);
+            }
+          }
+
+          if (isToday) {
             todayData = {
               date: dateText,
               e1, s1, e2, s2, e3, s3,
               totalDay,
               exceedDay,
+              pecunia,
               occurrence,
+              dayTargetMinutes,
               rowElement: tr
             };
           }
@@ -160,7 +196,7 @@ window.JEPessoasKPI = (function () {
         workedMinutesToday = Math.max(0, curMinutes - e1M);
         remainingMinutesToday = Math.max(0, targetDailyMinutes - workedMinutesToday);
       }
-      // 2. Cenário: Fez 1º turno e está no 2º turno (E1, S1, E2 preenchidos, sem S2)
+      // 2. Cenário: Fez 1º turno e está no 2º turno
       else if (e1M !== null && s1M !== null && e2M !== null && s2M === null) {
         const firstTurn = Math.max(0, s1M - e1M);
         const needed = Math.max(0, targetDailyMinutes - firstTurn);
@@ -180,25 +216,35 @@ window.JEPessoasKPI = (function () {
       }
     }
 
-    // Cálculo 2: Previsão de saída para zerar saldo do mês
-    // Se o servidor tem saldo acumulado positivo no mês, ele pode sair mais cedo.
-    // Se o servidor tem saldo acumulado negativo (débito) no mês, ele precisará compensar saindo mais tarde.
-    let estimatedExitToZeroMonth = '--:--';
-    let zeroMonthSubtext = 'Saldo do mês já zerado';
-    let zeroMonthStatus = 'neutral'; // 'positive' | 'negative' | 'neutral'
+    const tableText = table.innerText.toUpperCase();
+    const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
-    if (estimatedExitMinutes !== null) {
-      // O saldo total do mês até o momento (totalExceedMinutesMonth)
+    // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado
+    if (hasHybridWorkInMonth) {
+      runningAccumulatedBalance = 0;
+      totalExceedMinutesMonth = 0;
+      accumulatedBankBalance = '00:00';
+      extraWeekdayAndSaturdayMinutes = 0;
+      extraSundayAndHolidayMinutes = 0;
+    }
+
+    // Numerador da Meta do Mês: Carga dos dias passados + Saldo Acumulado Atual (Exclui estritamente horas pagas em pecúnia)
+    totalWorkedMinutesMonth = Math.max(0, pastExpectedMinutesMonth + runningAccumulatedBalance);
+
+    // Cálculo 2: Previsão de saída para zerar saldo do mês
+    let estimatedExitToZeroMonth = '--:--';
+    let zeroMonthSubtext = hasHybridWorkInMonth ? 'Regime Híbrido (sem banco de horas)' : 'Saldo do mês já zerado';
+    let zeroMonthStatus = 'neutral';
+
+    if (!hasHybridWorkInMonth && estimatedExitMinutes !== null) {
       const diffMinutes = totalExceedMinutesMonth;
       
       if (diffMinutes > 0) {
-        // Saldo positivo: pode sair mais cedo
         const exitZeroM = Math.max(0, estimatedExitMinutes - diffMinutes);
         estimatedExitToZeroMonth = formatMinutesToTime(exitZeroM % (24 * 60));
         zeroMonthSubtext = `Sair <strong>${formatMinutesToTime(diffMinutes)}</strong> mais cedo`;
         zeroMonthStatus = 'positive';
       } else if (diffMinutes < 0) {
-        // Saldo negativo: precisa compensar
         const absDiff = Math.abs(diffMinutes);
         const exitZeroM = estimatedExitMinutes + absDiff;
         estimatedExitToZeroMonth = formatMinutesToTime(exitZeroM % (24 * 60));
@@ -209,20 +255,30 @@ window.JEPessoasKPI = (function () {
         zeroMonthSubtext = `Igual ao expediente diário`;
         zeroMonthStatus = 'neutral';
       }
-    } else if (todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
+    } else if (!hasHybridWorkInMonth && todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
       estimatedExitToZeroMonth = 'Expediente fechado';
       zeroMonthSubtext = `Saldo do mês: ${formatMinutesToTime(totalExceedMinutesMonth, true)}`;
     }
 
-    // Cálculos de metas do mês
-    const totalExpectedMinutesMonth = totalWorkingDaysMonth * targetDailyMinutes;
+    // Cálculos de metas do mês (Denominador Dinâmico: 7h/8h excluindo licenças, híbrido, férias e viagens)
     const progressPercent = totalExpectedMinutesMonth > 0 
-      ? Math.min(100, Math.round((totalWorkedMinutesMonth / totalExpectedMinutesMonth) * 100))
+      ? Math.round((totalWorkedMinutesMonth / totalExpectedMinutesMonth) * 100)
       : 0;
+    
+    // Horas que faltam cumprir até o fim do mês: (Dias Restantes * Carga) - Saldo Excedente Acumulado
+    const remainingMinutesToCompleteMonth = Math.max(0, remainingExpectedMinutesMonth - runningAccumulatedBalance);
+    const remainingHoursFormatted = formatMinutesToTime(remainingMinutesToCompleteMonth);
+
+    // Meta superada APENAS se ultrapassar a meta global de 133h do mês inteiro
+    const isTargetExceeded = totalWorkedMinutesMonth >= totalExpectedMinutesMonth && (remainingWorkingDaysMonth === 0 || totalWorkedMinutesMonth > totalExpectedMinutesMonth);
+    const exceededMinutes = Math.max(0, totalWorkedMinutesMonth - totalExpectedMinutesMonth);
+    const exceededTimeFormatted = formatMinutesToTime(exceededMinutes);
+    const barFillPercent = Math.min(100, progressPercent);
 
     return {
       todayStr,
       todayData,
+      hasHybridWorkInMonth,
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,
@@ -247,6 +303,12 @@ window.JEPessoasKPI = (function () {
       totalExpectedMinutesMonth,
       totalExpectedTimeFormatted: formatMinutesToTime(totalExpectedMinutesMonth),
       progressPercent,
+      barFillPercent,
+      isTargetExceeded,
+      exceededMinutes,
+      exceededTimeFormatted,
+      remainingMinutesToCompleteMonth,
+      remainingHoursFormatted,
       totalExceedMinutesMonth,
       totalExceedTimeFormatted: formatMinutesToTime(totalExceedMinutesMonth, true),
       daysWithRecords,
