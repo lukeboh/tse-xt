@@ -96,6 +96,11 @@ window.JEPessoasQuickActions = (function () {
         let text = col.innerText.replace(/"/g, '""').trim();
         // Remove quebras de linha internas
         text = text.replace(/[\r\n]+/g, ' ');
+        // Previne CSV / Formula Injection no Excel para strings que comecem com =, +, -, @, tab ou CR
+        // Não altera horários válidos como +01:30 ou -00:45 nem números simples
+        if (/^[=+\-@\t\r]/.test(text) && !/^[+\-]?\d{1,2}:\d{2}$/.test(text) && !/^[+\-]?\d+(\.\d+)?$/.test(text)) {
+          text = "'" + text;
+        }
         rowData.push(`"${text}"`);
       });
       if (rowData.length > 0) {

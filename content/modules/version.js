@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.2.2';
+  const CURRENT_VERSION = '0.2.3';
 
   const CHANGELOG = [
+    {
+      version: '0.2.3',
+      date: '2026-08-26',
+      title: 'Blindagem de Segurança, Sanitização de DOM & Novos Ícones Oficiais',
+      features: [
+        'Blindagem contra DOM XSS no Command Palette com sanitização rigorosa de termos de busca e rótulos',
+        'Proteção contra CSV Formula Injection na exportação de planilhas para Microsoft Excel',
+        'Eliminação de event handlers inline (onclick) em conformidade com as diretrizes de segurança CSP do Chrome MV3',
+        'Sanitização completa de atributos dinâmicos e dados de usuário no cabeçalho e menu de serviços',
+        'Integração da nova família de ícones oficiais de alta resolução (16px, 32px, 48px e 128px)'
+      ]
+    },
     {
       version: '0.2.2',
       date: '2026-08-26',

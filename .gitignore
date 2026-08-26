@@ -7,3 +7,7 @@ $RECYCLE.BIN/
 
 # Logs and temp files
 *.log
+
+# Build and package output
+dist/
+*.zip
