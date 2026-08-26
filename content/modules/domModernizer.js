@@ -50,7 +50,7 @@ window.JEPessoasModernizer = (function () {
     const matricula = matriculaEl ? matriculaEl.innerText.replace(/Matrícula:\s*/i, '').trim() : '';
     const lotacao = lotacaoEl ? lotacaoEl.innerText.replace(/Lotação:\s*/i, '').trim() : '';
     const ip = ipEl ? ipEl.innerText.replace(/IP:\s*/i, '').trim() : '';
-    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.3';
+    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.3.1';
 
     // 1. Cria a Topbar Slim Glass com o Botão de Menu de Serviços Integrado
     const topbar = document.createElement('header');
