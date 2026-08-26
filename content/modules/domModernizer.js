@@ -6,6 +6,8 @@ window.JEPessoasModernizer = (function () {
   'use strict';
 
   function applyThemeState(enabled) {
+    document.body.classList.add('je-theme-transitioning');
+
     if (enabled) {
       document.body.classList.add('je-xt-enabled');
       document.body.classList.remove('je-xt-disabled');
@@ -14,10 +16,14 @@ window.JEPessoasModernizer = (function () {
       document.body.classList.remove('je-xt-enabled');
     }
 
-    const toggleText = document.getElementById('je-toggle-text');
-    if (toggleText) {
-      toggleText.innerHTML = enabled ? '✨ <strong>TSE XT</strong> Ativo' : '🏛️ <strong>TSE XT</strong> Desligado';
-    }
+    const toggleLabels = document.querySelectorAll('.je-toggle-label');
+    toggleLabels.forEach((label) => {
+      label.innerHTML = enabled ? '✨ <strong>TSE XT</strong> Ativo' : '🏛️ <strong>TSE XT</strong> Desligado';
+    });
+
+    setTimeout(() => {
+      document.body.classList.remove('je-theme-transitioning');
+    }, 450);
   }
 
   function modernizeHeader() {
@@ -33,7 +39,7 @@ window.JEPessoasModernizer = (function () {
     const matricula = matriculaEl ? matriculaEl.innerText.replace(/Matrícula:\s*/i, '').trim() : '';
     const lotacao = lotacaoEl ? lotacaoEl.innerText.replace(/Lotação:\s*/i, '').trim() : '';
     const ip = ipEl ? ipEl.innerText.replace(/IP:\s*/i, '').trim() : '';
-    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.0';
+    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.1';
 
     // 1. Cria a Topbar Slim Glass com o Botão de Menu de Serviços Integrado
     const topbar = document.createElement('header');
@@ -102,11 +108,31 @@ window.JEPessoasModernizer = (function () {
             Sair
           </a>
         </div>
+
+        <!-- Interruptor Integrado perfeitamente na barra de menu -->
+        <div class="je-toggle-container je-header-toggle" id="je-theme-toggle-header" title="Clique para alternar entre o visual moderno XT e o layout clássico">
+          <span class="je-toggle-label">✨ <strong>TSE XT</strong> Ativo</span>
+          <div class="je-toggle-switch"></div>
+        </div>
       </div>
     `;
 
-    // 2. Cria o Toggle Switch Permanente
+    // 2. Cria o Toggle Switch Permanente Flutuante (apenas para exibição no modo OFF legado)
     createPersistentToggle();
+
+    // Conecta o Toggle Integrado da Topbar
+    const headerToggle = topbar.querySelector('#je-theme-toggle-header');
+    if (headerToggle) {
+      headerToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
+        const nextState = !currentlyEnabled;
+        
+        applyThemeState(nextState);
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+      });
+    }
 
     // 3. Conecta o Botão de Menu ao Drawer
     const menuBtn = topbar.querySelector('#je-nav-menu-btn');
@@ -147,15 +173,15 @@ window.JEPessoasModernizer = (function () {
     toggleBar.setAttribute('aria-label', 'Controle Visual TSE XT');
 
     toggleBar.innerHTML = `
-      <div class="je-toggle-container" id="je-theme-toggle-wrapper" title="Clique para alternar entre o visual moderno XT e o layout clássico">
-        <span class="je-toggle-label" id="je-toggle-text">✨ <strong>TSE XT</strong> Ativo</span>
-        <div class="je-toggle-switch" id="je-theme-toggle"></div>
+      <div class="je-toggle-container je-floating-toggle" id="je-theme-toggle-floating" title="Clique para alternar para o visual moderno TSE XT">
+        <span class="je-toggle-label">🏛️ <strong>TSE XT</strong> Desligado</span>
+        <div class="je-toggle-switch"></div>
       </div>
     `;
 
     document.body.appendChild(toggleBar);
 
-    const toggleWrapper = toggleBar.querySelector('#je-theme-toggle-wrapper');
+    const toggleWrapper = toggleBar.querySelector('#je-theme-toggle-floating');
     if (toggleWrapper) {
       toggleWrapper.addEventListener('click', (e) => {
         e.preventDefault();
@@ -193,7 +219,13 @@ window.JEPessoasModernizer = (function () {
             </svg>
           </div>
           <div>
-            <div class="je-breadcrumb">Meu Espaço <span>/</span> Frequência <span>/</span> Consulta Mensal</div>
+            <nav class="je-breadcrumb" aria-label="Navegação">
+              <span class="je-breadcrumb-item">Meu Espaço</span>
+              <span class="je-breadcrumb-separator">/</span>
+              <span class="je-breadcrumb-item">Frequência</span>
+              <span class="je-breadcrumb-separator">/</span>
+              <span class="je-breadcrumb-item active">Consulta Mensal</span>
+            </nav>
             <h1 class="je-main-page-title">Espelho de Ponto</h1>
           </div>
         </div>
@@ -357,20 +389,25 @@ window.JEPessoasModernizer = (function () {
       const dateCell = tr.querySelector('.h01');
       if (dateCell) {
         const dateText = dateCell.innerText.trim();
+        const rawText = tr.innerText.toUpperCase();
         
         // Destaca hoje
         if (dateText === todayFormatted) {
           tr.classList.add('je-row-today');
         }
 
-        // Destaca fins de semana e ocorrências
-        const occCell = tr.querySelector('.h16');
-        const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
-        const rawText = tr.innerText.toUpperCase();
-
-        if (occText.includes('SÁBADO') || occText.includes('DOMINGO') || rawText.includes('SÁBADO') || rawText.includes('DOMINGO')) {
-          tr.classList.add('je-row-weekend');
+        // Sábado vs Domingo vs Feriado
+        if (rawText.includes('SÁBADO') || rawText.includes('SABADO')) {
+          tr.classList.add('je-row-saturday');
+        } else if (rawText.includes('DOMINGO')) {
+          tr.classList.add('je-row-sunday');
+        } else if (rawText.includes('FERIADO') || rawText.includes('RECESSO')) {
+          tr.classList.add('je-row-feriado');
         }
+
+        // Destaca ocorrências
+        const occCell = tr.querySelector('.h16, .h15');
+        const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
 
         if (occCell && occText) {
           if (occText.includes('VIAGEM')) {
@@ -428,21 +465,47 @@ window.JEPessoasModernizer = (function () {
 
     form.classList.add('je-modernized-form');
 
-    // Estiliza o botão Consultar
-    const btnConsultar = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
-    if (btnConsultar) {
-      btnConsultar.classList.add('je-btn');
+    // Substitui o input[type="button"] por um <button> moderno com alinhamento flex nativo
+    const legacyBtn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
+    if (legacyBtn && !document.getElementById('je-modern-btn-consultar')) {
+      legacyBtn.classList.add('je-legacy-btn-consultar');
+      
+      const modernBtn = document.createElement('button');
+      modernBtn.type = 'button';
+      modernBtn.id = 'je-modern-btn-consultar';
+      modernBtn.className = 'je-btn-consultar';
+      modernBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>CONSULTAR</span>
+      `;
+      modernBtn.title = 'Consultar Espelho de Ponto';
+
+      modernBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modernBtn.innerHTML = `<span>CONSULTANDO...</span>`;
+        modernBtn.style.opacity = '0.8';
+        legacyBtn.click();
+      });
+
+      legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
     }
 
     // Auto-consulta instantânea: Dispara o botão Consultar ao alterar qualquer campo de filtro
     const filterFields = form.querySelectorAll('select, input[type="radio"], input[type="checkbox"]');
     filterFields.forEach((field) => {
       field.addEventListener('change', () => {
-        const btn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
-        if (btn && !btn.disabled) {
-          btn.style.opacity = '0.75';
-          btn.value = 'CONSULTANDO...';
-          btn.click();
+        const modernBtn = document.getElementById('je-modern-btn-consultar');
+        const legacyBtn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
+        if (modernBtn) {
+          modernBtn.innerHTML = `<span>CONSULTANDO...</span>`;
+          modernBtn.style.opacity = '0.8';
+        }
+        if (legacyBtn && !legacyBtn.disabled) {
+          legacyBtn.click();
         }
       });
     });
