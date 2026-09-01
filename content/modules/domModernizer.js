@@ -16,25 +16,34 @@ window.JEPessoasModernizer = (function () {
     }[tag] || tag));
   }
 
-  function applyThemeState(enabled) {
-    document.body.classList.add('je-theme-transitioning');
+  function applyThemeState(enabled, isExplicitUserToggle = false) {
+    if (isExplicitUserToggle) {
+      document.body.classList.add('je-theme-transitioning');
+      setTimeout(() => {
+        document.body.classList.remove('je-theme-transitioning');
+      }, 450);
+    } else {
+      document.body.classList.remove('je-theme-transitioning');
+    }
 
     if (enabled) {
       document.body.classList.add('je-xt-enabled');
       document.body.classList.remove('je-xt-disabled');
+      document.documentElement.classList.add('je-xt-enabled');
+      document.documentElement.classList.remove('je-xt-disabled');
+      try { localStorage.setItem('je_xt_theme_enabled', 'true'); } catch (e) {}
     } else {
       document.body.classList.add('je-xt-disabled');
       document.body.classList.remove('je-xt-enabled');
+      document.documentElement.classList.add('je-xt-disabled');
+      document.documentElement.classList.remove('je-xt-enabled');
+      try { localStorage.setItem('je_xt_theme_enabled', 'false'); } catch (e) {}
     }
 
     const toggleLabels = document.querySelectorAll('.je-toggle-label');
     toggleLabels.forEach((label) => {
       label.innerHTML = enabled ? '✨ <strong>TSE XT</strong> Ativo' : '🏛️ <strong>TSE XT</strong> Desligado';
     });
-
-    setTimeout(() => {
-      document.body.classList.remove('je-theme-transitioning');
-    }, 450);
   }
 
   function modernizeHeader() {
@@ -50,7 +59,7 @@ window.JEPessoasModernizer = (function () {
     const matricula = matriculaEl ? matriculaEl.innerText.replace(/Matrícula:\s*/i, '').trim() : '';
     const lotacao = lotacaoEl ? lotacaoEl.innerText.replace(/Lotação:\s*/i, '').trim() : '';
     const ip = ipEl ? ipEl.innerText.replace(/IP:\s*/i, '').trim() : '';
-    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.2.3.1';
+    const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.3.5';
 
     // 1. Cria a Topbar Slim Glass com o Botão de Menu de Serviços Integrado
     const topbar = document.createElement('header');
@@ -59,7 +68,7 @@ window.JEPessoasModernizer = (function () {
     topbar.innerHTML = `
       <div class="je-brand-wrapper">
         <!-- Botão de Menu de Serviços / Drawer -->
-        <button class="je-menu-trigger-btn" id="je-nav-menu-btn" title="Abrir Menu de Serviços (Alt + M)">
+        <button type="button" class="je-menu-trigger-btn" id="je-nav-menu-btn" title="Abrir Menu de Serviços (Alt + M)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -90,11 +99,11 @@ window.JEPessoasModernizer = (function () {
       </div>
 
       <div class="je-search-container">
-        <svg class="je-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="je-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" class="je-search-input" placeholder="Pesquisar páginas, atalhos e serviços..." readonly />
+        <input type="text" class="je-search-input" placeholder="Pesquisar páginas, atalhos..." readonly />
         <span class="je-search-shortcut">Ctrl+K</span>
       </div>
 
@@ -148,7 +157,7 @@ window.JEPessoasModernizer = (function () {
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
         
-        applyThemeState(nextState);
+        applyThemeState(nextState, true);
         chrome.storage?.local?.set({ xtThemeEnabled: nextState });
       });
     }
@@ -157,6 +166,7 @@ window.JEPessoasModernizer = (function () {
     const menuBtn = topbar.querySelector('#je-nav-menu-btn');
     if (menuBtn) {
       menuBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.toggle();
       });
@@ -179,8 +189,20 @@ window.JEPessoasModernizer = (function () {
       });
     }
 
-    const container = document.getElementById('container') || document.body;
-    container.insertBefore(topbar, container.firstChild);
+    const appHeader = getAppHeaderContainer();
+    appHeader.appendChild(topbar);
+  }
+
+  function getAppHeaderContainer() {
+    let headerWrapper = document.getElementById('je-app-header');
+    if (!headerWrapper) {
+      headerWrapper = document.createElement('div');
+      headerWrapper.id = 'je-app-header';
+      headerWrapper.className = 'je-app-header';
+      const container = document.getElementById('container') || document.body;
+      container.insertBefore(headerWrapper, container.firstChild);
+    }
+    return headerWrapper;
   }
 
   function createPersistentToggle() {
@@ -208,7 +230,7 @@ window.JEPessoasModernizer = (function () {
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
         
-        applyThemeState(nextState);
+        applyThemeState(nextState, true);
         chrome.storage?.local?.set({ xtThemeEnabled: nextState });
       });
     }
@@ -217,13 +239,18 @@ window.JEPessoasModernizer = (function () {
   function injectPageTitleHeader() {
     if (document.querySelector('.je-page-title-banner')) return;
 
+    const isEspelhoDia = window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia');
+
     const mesSelect = document.getElementById('mesSelecionado');
     const anoSelect = document.getElementById('anoSelecionado');
-    const mesNome = mesSelect && mesSelect.selectedOptions[0] ? mesSelect.selectedOptions[0].text : 'Mês Atual';
+    const mesNome = mesSelect && mesSelect.selectedOptions && mesSelect.selectedOptions[0] ? mesSelect.selectedOptions[0].text : 'Mês Atual';
     const anoNome = anoSelect ? anoSelect.value : new Date().getFullYear();
 
     const titleBanner = document.createElement('div');
     titleBanner.className = 'je-page-title-banner';
+
+    const breadcrumbActiveText = isEspelhoDia ? 'Alteração de Ponto' : 'Consulta Mensal';
+    const pageTitleText = isEspelhoDia ? 'Alteração de Ponto' : 'Espelho de Ponto';
 
     titleBanner.innerHTML = `
       <div class="je-title-content">
@@ -243,28 +270,23 @@ window.JEPessoasModernizer = (function () {
               <span class="je-breadcrumb-separator">/</span>
               <span class="je-breadcrumb-item">Frequência</span>
               <span class="je-breadcrumb-separator">/</span>
-              <span class="je-breadcrumb-item active">Consulta Mensal</span>
+              <span class="je-breadcrumb-item active">${escapeHTML(breadcrumbActiveText)}</span>
             </nav>
-            <h1 class="je-main-page-title">Espelho de Ponto</h1>
+            <h1 class="je-page-title">${escapeHTML(pageTitleText)}</h1>
           </div>
         </div>
-        <div class="je-current-period-tag" title="Período em visualização">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0077ff" stroke-width="2.2">
+        <div class="je-reference-pill" title="Período de referência consultado">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
-          <span>Referência: <strong>${mesNome} / ${anoNome}</strong></span>
+          <span>Referência: <strong class="je-ref-value">${escapeHTML(mesNome)}</strong><span class="je-ref-sep"> / </span><strong class="je-ref-value">${escapeHTML(String(anoNome))}</strong></span>
         </div>
       </div>
     `;
 
-    const container = document.getElementById('container') || document.body;
-    const topbar = document.querySelector('.je-topbar');
-    if (topbar && topbar.nextSibling) {
-      container.insertBefore(titleBanner, topbar.nextSibling);
-    } else {
-      container.insertBefore(titleBanner, container.firstChild);
-    }
+    const appHeader = getAppHeaderContainer();
+    appHeader.appendChild(titleBanner);
   }
 
   function injectKPICards(kpiData) {
@@ -294,9 +316,11 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-value" style="color: #0077ff;">${kpiData.estimatedExit}</div>
         <div class="je-kpi-subtext">
-          ${kpiData.remainingMinutesToday > 0 
-            ? `<span>Faltam <strong>${kpiData.remainingTimeFormatted}</strong> hoje</span>`
-            : `<span>Jornada de hoje <strong>cumprida</strong></span>`}
+          ${!kpiData.hasTodayRow
+            ? `<span style="opacity: 0.45;">—</span>`
+            : (kpiData.remainingMinutesToday > 0
+              ? `<span>Faltam <strong>${kpiData.remainingTimeFormatted}</strong> hoje</span>`
+              : `<span>Jornada de hoje <strong>cumprida</strong></span>`)}
         </div>
       </div>
 
@@ -374,8 +398,8 @@ window.JEPessoasModernizer = (function () {
         </div>
       </div>
 
-      <!-- Card 5: Saldo de Horas Extras (Duas Linhas) -->
-      <div class="je-kpi-card" title="Detalhamento de horas extras acumuladas no período">
+      <!-- Card 5: Horas Extras — pecúnia a pagar por tipo de dia + saldo do mês -->
+      <div class="je-kpi-card" title="Horas de pecúnia (a pagar) acumuladas no mês, por tipo de dia. Rodapé: saldo excedente que foi para o banco de horas.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Horas Extras</span>
           <div class="je-kpi-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
@@ -386,12 +410,12 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 3px; margin: 2px 0;">
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Dias úteis / Sáb:</span>
-            <strong style="color: #0a2540; font-size: 12.5px;">${kpiData.extraWeekdayAndSaturday}</strong>
+            <span style="color: #64748b; font-weight: 600;">Pecúnia úteis / Sáb:</span>
+            <strong style="color: #0a2540; font-size: 12.5px;">${kpiData.pecuniaWeekdaySat}</strong>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Dom / Feriados:</span>
-            <strong style="color: #7c3aed; font-size: 12.5px;">${kpiData.extraSundayAndHoliday}</strong>
+            <span style="color: #64748b; font-weight: 600;">Pecúnia Dom / Feriados:</span>
+            <strong style="color: #7c3aed; font-size: 12.5px;">${kpiData.pecuniaSundayHoliday}</strong>
           </div>
         </div>
         <div class="je-kpi-subtext">
@@ -400,10 +424,8 @@ window.JEPessoasModernizer = (function () {
       </div>
     `;
 
-    const table = document.getElementById('tblEspelhoPontoMesCorrente');
-    if (table && table.parentNode) {
-      table.parentNode.insertBefore(dashboard, table);
-    }
+    const appHeader = getAppHeaderContainer();
+    appHeader.appendChild(dashboard);
   }
 
   function parseMinutes(str) {
@@ -432,27 +454,72 @@ window.JEPessoasModernizer = (function () {
     return (isNeg ? '-' : '+') + `${strH}:${strM}`;
   }
 
-  function modernizeTable() {
+  function modernizeTable(targetHours = 7) {
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
-    if (!table) return;
+    if (table) {
+      modernizeMonthlyTable(table, targetHours);
+    }
+
+    // Moderniza tabelas adicionais no contêiner principal (como em Alteração de Ponto)
+    const otherTables = document.querySelectorAll('table.grid, table[id*="tblEspelhoPontoDia"], form[name*="EspelhoPonto"] table, #container table:not(#tblEspelhoPontoMesCorrente):not(.je-topbar)');
+    otherTables.forEach((tbl) => {
+      if (tbl.classList.contains('je-modernized-table')) return;
+      tbl.classList.add('je-modernized-table');
+      modernizeOvertimeClockIcons(tbl);
+    });
+  }
+
+  function modernizeMonthlyTable(table, targetHours = 7) {
 
     // Limpa injeções anteriores para garantir idempotência
-    table.querySelectorAll('.je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+    table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+    table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
 
-    const tableText = table.innerText.toUpperCase();
+    // Se o TSE XT estiver desabilitado, interrompe a injeção de colunas customizadas
+    const isXTEnabled = document.body.classList.contains('je-xt-enabled') || localStorage.getItem('je_xt_theme_enabled') !== 'false';
+    if (!isXTEnabled) return;
+
+    // Normaliza espaços/quebras de linha: os cabeçalhos nativos vêm com <br>
+    // (ex.: "HORAS<br>AJUST." => innerText "HORAS\nAJUST."), o que quebrava os
+    // matches por substring com espaço.
+    const normalizeWs = (s) => (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+
+    const tableText = normalizeWs(table.innerText);
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
-    // 1. Injeta Cabeçalho da Nova Coluna "SALDO ACUM." (APENAS se NÃO houver trabalho híbrido no mês)
+    // Identifica se a tabela possui a coluna "HORAS AJUST." (mês fechado/homologado)
+    const headerTexts = Array.from(table.querySelectorAll('th')).map(th => normalizeWs(th.innerText));
+    const isClosedMonthTable = headerTexts.some(t => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
+
+    // 1. Injeta Cabeçalhos das Novas Colunas (APENAS se NÃO houver trabalho híbrido no mês)
     if (!hasHybridWorkInMonth) {
       const headerRows = table.querySelectorAll('tr');
       headerRows.forEach((tr) => {
-        const pecuniaTh = tr.querySelector('th.h12') || tr.querySelector('th.h11') || Array.from(tr.querySelectorAll('th')).find(th => th.innerText.toUpperCase().includes('PECÚNIA') || th.innerText.toUpperCase().includes('PECUNIA'));
-        if (pecuniaTh && !tr.querySelector('th.je-col-accumulated-balance')) {
-          const newTh = document.createElement('th');
-          newTh.className = 'je-col-accumulated-balance';
-          newTh.title = 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
-          newTh.innerHTML = 'SALDO ACUM.';
-          pecuniaTh.parentNode.insertBefore(newTh, pecuniaTh.nextSibling);
+        const pecuniaTh = tr.querySelector('th.h12') || tr.querySelector('th.h11') || Array.from(tr.querySelectorAll('th')).find(th => normalizeWs(th.innerText).includes('PECÚNIA') || normalizeWs(th.innerText).includes('PECUNIA'));
+        const exceedTh = tr.querySelector('th.h10') || Array.from(tr.querySelectorAll('th')).find(th => {
+          const text = normalizeWs(th.innerText);
+          return text.includes('HORAS AJUST') || text.includes('HORAS EXCED') || text.includes('AJUST') || text.includes('EXCED');
+        });
+        const anchorTh = pecuniaTh || exceedTh;
+
+        if (anchorTh) {
+          // Injeta a coluna HORAS EXCED. APENAS se o mês for FECHADO (quando a coluna nativa se chama HORAS AJUST.)
+          if (isClosedMonthTable && !tr.querySelector('th.je-col-daily-exceed')) {
+            const deltaTh = document.createElement('th');
+            deltaTh.className = 'je-col-daily-exceed';
+            deltaTh.title = 'Horas Excedentes Líquidas do Dia (Calculadas pelo TSE XT: Saldo Diário Bruto com multiplicadores de fim de semana - Pecúnia)';
+            deltaTh.innerHTML = 'HORAS EXCED.';
+            anchorTh.parentNode.insertBefore(deltaTh, anchorTh.nextSibling);
+          }
+
+          const insertedDeltaTh = tr.querySelector('th.je-col-daily-exceed') || anchorTh;
+          if (!tr.querySelector('th.je-col-accumulated-balance')) {
+            const accumTh = document.createElement('th');
+            accumTh.className = 'je-col-accumulated-balance';
+            accumTh.title = 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
+            accumTh.innerHTML = 'SALDO ACUM.';
+            insertedDeltaTh.parentNode.insertBefore(accumTh, insertedDeltaTh.nextSibling);
+          }
         }
       });
     }
@@ -488,85 +555,230 @@ window.JEPessoasModernizer = (function () {
           tr.classList.add('je-row-feriado');
         }
 
-        // Destaca ocorrências
-        const occCell = tr.querySelector('td.h16, td.h15');
+        // Leitura de batidas do dia
+        const e1 = tr.querySelector('td.h02')?.innerText.trim() || '';
+        const s1 = tr.querySelector('td.h03')?.innerText.trim() || '';
+        const e2 = tr.querySelector('td.h04')?.innerText.trim() || '';
+        const s2 = tr.querySelector('td.h05')?.innerText.trim() || '';
+        const e3 = tr.querySelector('td.h06')?.innerText.trim() || '';
+        const s3 = tr.querySelector('td.h07')?.innerText.trim() || '';
+        const abono = tr.querySelector('td.h08')?.innerText.trim() || '';
+        const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
+        const exceedDay = tr.querySelector('td.h10')?.innerText.trim() || '';
+        const occCell = tr.querySelector('td.h16');
         const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
 
-        if (occCell && occText) {
-          if (occText.includes('VIAGEM')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${escapeHTML(occCell.innerText)}</span>`;
-          } else if (occText.includes('FERIADO') || occText.includes('RECESSO')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${escapeHTML(occCell.innerText)}</span>`;
-          } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
-            occCell.innerHTML = `<span class="je-occurrence-badge">${escapeHTML(occCell.innerText)}</span>`;
+        // Verificação de Data Passada para Inconsistência de Batida
+        const dateParts = dateText.split('/');
+        let isPastOrToday = true;
+        let isStrictlyPast = false;
+        let dayOfWeek = null;
+        if (dateParts.length === 3) {
+          const dayNum = parseInt(dateParts[0], 10);
+          const monthNum = parseInt(dateParts[1], 10);
+          const yearNum = parseInt(dateParts[2], 10);
+          const dObj = new Date(yearNum, monthNum - 1, dayNum, 23, 59, 59);
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const dObjStart = new Date(yearNum, monthNum - 1, dayNum);
+          isPastOrToday = dObj <= now || dateText === todayFormatted;
+          isStrictlyPast = dObjStart < startOfToday;
+          dayOfWeek = dObj.getDay();
+        }
+
+        // Detecção de Batida Faltante / Inconsistência em Data Passada
+        let missingPunchReason = '';
+        if (isStrictlyPast) {
+          if (e1 && !s1) {
+            missingPunchReason = 'Falta Saída 1';
+          } else if (!e1 && s1) {
+            missingPunchReason = 'Falta Entrada 1';
+          } else if (e2 && !s2) {
+            missingPunchReason = 'Falta Saída 2';
+          } else if (!e2 && s2) {
+            missingPunchReason = 'Falta Entrada 2';
+          } else if (e3 && !s3) {
+            missingPunchReason = 'Falta Saída 3';
+          } else if (!e3 && s3) {
+            missingPunchReason = 'Falta Entrada 3';
+          } else {
+            const rawPunches = [e1, s1, e2, s2, e3, s3].filter(p => p && p !== '--:--' && p !== '-');
+            if (rawPunches.length % 2 !== 0) {
+              missingPunchReason = 'Batida Incompleta';
+            }
+          }
+
+          if (!missingPunchReason && occText) {
+            if (occText.includes('INCONSIST') || occText.includes('ÍMPAR') || occText.includes('IMPAR') || occText.includes('ESQUECIMENTO')) {
+              missingPunchReason = 'Inconsistência de Ponto';
+            }
           }
         }
 
-        // Se NÃO estiver em regime híbrido, injeta a célula de Saldo Acumulado na linha
-        if (!hasHybridWorkInMonth) {
-          const allTds = tr.querySelectorAll('td:not(.je-col-accumulated-balance)');
-          const pecuniaCell = tr.querySelector('.h12') || tr.querySelector('.h11') || (allTds.length >= 11 ? allTds[10] : null);
+        // Destaca ocorrências e linhas com ajuste de ponto pendente
+        const hasAjustePontoText = occText.includes('AJUSTE SEU PONTO') || occText.includes('INCONSIST');
+        if (missingPunchReason || hasAjustePontoText) {
+          tr.classList.add('je-row-ajuste-pendente');
+          if (missingPunchReason) {
+            tr.setAttribute('title', `⚠️ Ajuste de Ponto Necessário: ${missingPunchReason}`);
+          }
+          if (occCell) {
+            const existingLink = occCell.querySelector('a');
+            if (existingLink) {
+              existingLink.classList.add('je-occurrence-badge', 'je-occurrence-ajuste-pendente');
+              const rawTitle = existingLink.getAttribute('title') || '';
+              if (missingPunchReason && !rawTitle.includes(missingPunchReason)) {
+                const fullTitle = rawTitle ? `${rawTitle} | Ajuste necessário: ${missingPunchReason}` : `Ajuste necessário: ${missingPunchReason}`;
+                existingLink.setAttribute('title', fullTitle);
+              }
+              const linkText = existingLink.innerText.trim().replace(/^⚠️\s*/, '');
+              const baseText = linkText || 'AJUSTE SEU PONTO';
+              existingLink.innerHTML = escapeHTML(baseText);
+            } else {
+              const originalText = occCell.innerText.trim().replace(/^⚠️\s*/, '');
+              const hasExistingText = originalText && originalText !== '-' && originalText !== '--:--';
+              const labelText = hasExistingText ? originalText : 'AJUSTE SEU PONTO';
+              const tooltip = missingPunchReason ? `Ajuste necessário: ${missingPunchReason}` : 'Ajuste de Ponto Necessário';
+              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-ajuste-pendente" title="${escapeHTML(tooltip)}">${escapeHTML(labelText)}</span>`;
+            }
+          }
+        } else if (occCell && occText && occText !== '-' && occText !== '--:--') {
+          const existingLink = occCell.querySelector('a');
+          if (occText.includes('VIAGEM')) {
+            if (existingLink) {
+              existingLink.classList.add('je-occurrence-badge', 'je-occurrence-viagem');
+            } else {
+              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${escapeHTML(occCell.innerText)}</span>`;
+            }
+          } else if (occText.includes('FERIADO') || occText.includes('RECESSO')) {
+            if (existingLink) {
+              existingLink.classList.add('je-occurrence-badge', 'je-occurrence-feriado');
+            } else {
+              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${escapeHTML(occCell.innerText)}</span>`;
+            }
+          } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
+            if (existingLink) {
+              existingLink.classList.add('je-occurrence-badge');
+            } else {
+              occCell.innerHTML = `<span class="je-occurrence-badge">${escapeHTML(occCell.innerText)}</span>`;
+            }
+          }
+        }
 
-          const exceedDay = tr.querySelector('.h10')?.innerText.trim() || '';
-          const pecunia = (tr.querySelector('.h12') || tr.querySelector('.h11'))?.innerText.trim() || (allTds.length >= 11 ? allTds[10].innerText.trim() : '');
+        // Se NÃO estiver em regime híbrido, injeta as células do TSE XT
+        if (!hasHybridWorkInMonth) {
+          const pecuniaCell = tr.querySelector('td.h12') || tr.querySelector('td.h11');
+          const pecunia = pecuniaCell ? pecuniaCell.innerText.trim() : '';
 
           const exceedMin = parseMinutes(exceedDay);
           const pecuniaMin = parseMinutes(pecunia);
-          const dailyDelta = exceedMin - pecuniaMin;
+          const totalMin = parseMinutes(totalDay);
+          const abonoMin = parseMinutes(abono);
 
-          const dateParts = dateText.split('/');
-          let isPastOrToday = true;
-          if (dateParts.length === 3) {
-            const dObj = new Date(parseInt(dateParts[2], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[0], 10), 23, 59, 59);
-            isPastOrToday = dObj <= now || dateText === todayFormatted;
+          // Jornada esperada do dia: 8h se houve intervalo de almoço (4 batidas), senão a meta padrão.
+          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
+          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : (targetHours * 60);
+
+          // Detecção de dispensa da jornada ordinária (espelha a lógica do kpiExtractor).
+          const occU = (occText + ' ' + rawText).toUpperCase();
+          const isHolidayOrRecess = occU.includes('FERIADO') || occU.includes('RECESSO') || occU.includes('FACULTATIVO');
+          const isLicense = occU.includes('LICENÇA') || occU.includes('LICENCA') || occU.includes('MÉDICA') || occU.includes('MEDICA') || occU.includes('LUTO') || occU.includes('NOJO') || occU.includes('GALA') || occU.includes('MATERNIDADE') || occU.includes('PATERNIDADE') || occU.includes('CAPACITAÇÃO') || occU.includes('CAPACITACAO') || occU.includes('PRÊMIO') || occU.includes('PREMIO');
+          const isVacation = occU.includes('FÉRIAS') || occU.includes('FERIAS');
+          const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
+          const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
+
+          // Cálculo do saldo do dia pela fonte única (evita divergência com o card de KPI).
+          const dayResult = window.JEPessoasBalance.computeDailyDelta({
+            dayOfWeek,
+            isClosedMonth: isClosedMonthTable,
+            isHolidayOrRecess,
+            isDispensed,
+            totalMin,
+            exceedMin,
+            pecuniaMin,
+            dayTargetMinutes
+          });
+          const dailyDelta = dayResult.delta;
+          let multiplierBadge = '';
+          let deltaTooltip = '';
+
+          if (dailyDelta !== 0 && dayResult.multiplierPct === 100) {
+            const amount = formatSigned(dailyDelta).replace('+', '');
+            multiplierBadge = `<span class="je-multiplier-tag je-multiplier-tag-sun" title="${isHolidayOrRecess ? 'Feriado' : 'Domingo'} com +100% no saldo (+${amount})">+100%</span>`;
+            deltaTooltip = `${isHolidayOrRecess ? 'Feriado' : 'Domingo'} (+100%): ${totalDay || exceedDay} bruto com dobra (+100%) = +${amount} no saldo acumulado`;
+          } else if (dailyDelta !== 0 && dayResult.multiplierPct === 50) {
+            const amount = formatSigned(dailyDelta).replace('+', '');
+            multiplierBadge = `<span class="je-multiplier-tag je-multiplier-tag-sat" title="Sábado com +50% no saldo (+${amount})">+50%</span>`;
+            deltaTooltip = `Sábado (+50%): ${totalDay || exceedDay} bruto com acréscimo de 50% = +${amount} no saldo acumulado`;
           }
 
-          const e1 = tr.querySelector('.h02')?.innerText.trim() || '';
-          const totalDay = tr.querySelector('.h09')?.innerText.trim() || '';
-          const abono = tr.querySelector('.h08')?.innerText.trim() || '';
           const hasRecord = !!(e1 || totalDay || (exceedDay && exceedDay !== '00:00' && exceedDay !== '--:--') || (pecunia && pecunia !== '00:00') || abono);
-
-          const shouldCount = hasRecord || isPastOrToday;
+          const shouldCount = (hasRecord || isPastOrToday) && isPastOrToday;
 
           if (shouldCount) {
             runningBalance += dailyDelta;
           }
 
-          const td = document.createElement('td');
-          td.className = 'je-col-accumulated-balance';
+          const exceedCell = tr.querySelector('td.h10');
+          const pecuniaCellTarget = pecuniaCell || exceedCell;
+          let currentAnchor = pecuniaCellTarget;
+
+          // Célula 1: HORAS EXCED. do TSE XT (Injetada APENAS em meses fechados)
+          if (isClosedMonthTable) {
+            const tdDelta = document.createElement('td');
+            tdDelta.className = 'je-col-daily-exceed';
+
+            if (shouldCount) {
+              if (dailyDelta > 0) {
+                tdDelta.classList.add('je-balance-positive');
+              } else if (dailyDelta < 0) {
+                tdDelta.classList.add('je-balance-negative');
+              } else {
+                tdDelta.classList.add('je-balance-zero');
+              }
+              tdDelta.innerHTML = `<strong>${formatSigned(dailyDelta)}</strong>${multiplierBadge}`;
+              if (deltaTooltip) {
+                tdDelta.title = deltaTooltip;
+              }
+            } else {
+              tdDelta.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+            }
+
+            if (currentAnchor && currentAnchor.parentNode) {
+              currentAnchor.parentNode.insertBefore(tdDelta, currentAnchor.nextSibling);
+              currentAnchor = tdDelta;
+            }
+          }
+
+          // Célula 2: SALDO ACUM. do TSE XT (Injetada em todos os meses)
+          const tdAccum = document.createElement('td');
+          tdAccum.className = 'je-col-accumulated-balance';
 
           if (shouldCount) {
             if (runningBalance > 0) {
-              td.classList.add('je-balance-positive');
+              tdAccum.classList.add('je-balance-positive');
             } else if (runningBalance < 0) {
-              td.classList.add('je-balance-negative');
+              tdAccum.classList.add('je-balance-negative');
             } else {
-              td.classList.add('je-balance-zero');
+              tdAccum.classList.add('je-balance-zero');
             }
-            td.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
+            tdAccum.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
           } else {
-            td.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+            tdAccum.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
           }
 
-          if (pecuniaCell && pecuniaCell.parentNode) {
-            pecuniaCell.parentNode.insertBefore(td, pecuniaCell.nextSibling);
-          } else if (allTds.length >= 11) {
-            allTds[10].parentNode.insertBefore(td, allTds[10].nextSibling);
+          if (currentAnchor && currentAnchor.parentNode) {
+            currentAnchor.parentNode.insertBefore(tdAccum, currentAnchor.nextSibling);
           }
         }
       }
 
       // Linha de Totais da Tabela Principal ("Totais:")
       if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && tr.innerText.includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
-        tr.querySelectorAll('.je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+        tr.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
         const cells = Array.from(tr.querySelectorAll('td'));
         
         if (cells.length >= 2) {
-          // cells[0]: "Totais:" (ocupa 8 colunas: Data, E1, S1, E2, S2, E3, S3, Abono)
           cells[0].colSpan = 8;
-          
-          // cells[1]: Total Trabalhado (ex: 135:23)
-          // cells[2]: Total Horas Excedentes (ex: 30:23)
           const targetExcedCell = cells[2] || cells[1];
 
           // 1. Célula de Pecúnia no Rodapé
@@ -574,109 +786,501 @@ window.JEPessoasModernizer = (function () {
           pecuniaTd.className = 'cellTotais je-totais-pecunia';
           pecuniaTd.innerText = '00:00';
           targetExcedCell.parentNode.insertBefore(pecuniaTd, targetExcedCell.nextSibling);
+          let currentFooterAnchor = pecuniaTd;
 
-          // 2. Célula de Saldo Acumulado no Rodapé (TSE XT)
-          const totalTd = document.createElement('td');
-          totalTd.className = `je-col-accumulated-balance ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
-          totalTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
-          pecuniaTd.parentNode.insertBefore(totalTd, pecuniaTd.nextSibling);
+          // 2. Célula de Total Horas Excedentes no Rodapé (Apenas em Meses Fechados)
+          if (isClosedMonthTable) {
+            const totalDeltaTd = document.createElement('td');
+            totalDeltaTd.className = `je-col-daily-exceed ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
+            totalDeltaTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
+            currentFooterAnchor.parentNode.insertBefore(totalDeltaTd, currentFooterAnchor.nextSibling);
+            currentFooterAnchor = totalDeltaTd;
+          }
 
-          // 3. Célula trailing para cobrir as 4 colunas restantes (Adic Not Pec, Adic Not, Compl, Ocorrência)
+          // 3. Célula de Saldo Acumulado no Rodapé (TSE XT)
+          const totalAccumTd = document.createElement('td');
+          totalAccumTd.className = `je-col-accumulated-balance ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
+          totalAccumTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
+          currentFooterAnchor.parentNode.insertBefore(totalAccumTd, currentFooterAnchor.nextSibling);
+
+          // 4. Célula trailing
           const trailingTd = document.createElement('td');
           trailingTd.className = 'cellTotais je-totais-trailing';
           trailingTd.colSpan = 4;
-          totalTd.parentNode.insertBefore(trailingTd, totalTd.nextSibling);
+          totalAccumTd.parentNode.insertBefore(trailingTd, totalAccumTd.nextSibling);
         }
       }
     });
 
     // Modernização do Ícone de Hora Extra / Hora Excedente Autorizada (v0.2.0)
     modernizeOvertimeClockIcons(table);
+
+    // Injeta botões de formulário modal de ajuste de ponto inline (v0.3.19)
+    if (window.JEPessoasPointModal) {
+      window.JEPessoasPointModal.injectAdjustmentButtons(table);
+    }
+  }
+
+  function executePageScript(scriptCode) {
+    if (!scriptCode) return;
+    try {
+      const script = document.createElement('script');
+      script.textContent = scriptCode;
+      (document.head || document.documentElement).appendChild(script);
+      script.remove();
+    } catch (err) {
+      console.error('Erro ao executar script da página:', err);
+    }
   }
 
   function modernizeOvertimeClockIcons(table) {
     const clockImgs = table.querySelectorAll('img[src*="iconClock"], img[src*="Clock"], img[src*="relogio"], img[title*="Autorização"], img[title*="Hora Excedente"]');
     
     clockImgs.forEach((img) => {
-      if (img.classList.contains('je-clock-replaced')) return;
-      img.classList.add('je-clock-replaced');
+      const parentTd = img.closest('td');
+      if (parentTd) {
+        parentTd.style.setProperty('text-align', 'left', 'important');
+      }
 
-      const tooltip = img.getAttribute('title') || 'Hora Extra Autorizada (Clique para detalhes)';
+      const parentLink = img.closest('a');
+      const tooltip = img.getAttribute('title') || (parentLink && parentLink.getAttribute('title')) || 'Hora Extra Autorizada (Clique para detalhes)';
       
-      const modernClockBtn = document.createElement('button');
-      modernClockBtn.type = 'button';
-      modernClockBtn.className = 'je-overtime-clock-btn';
-      modernClockBtn.title = tooltip;
-      modernClockBtn.setAttribute('aria-label', tooltip);
+      const onclickAttr = img.getAttribute('onclick') || (parentLink && parentLink.getAttribute('onclick'));
+      const hrefAttr = (parentLink && parentLink.getAttribute('href')) || img.getAttribute('href');
 
-      modernClockBtn.innerHTML = `
-        <svg class="je-overtime-clock-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
-        <span class="je-overtime-plus">+</span>
-      `;
+      let modernClockBtn = img.nextElementSibling && img.nextElementSibling.classList.contains('je-overtime-clock-btn')
+        ? img.nextElementSibling
+        : null;
 
-      // Encaminha o clique para o elemento original mantendo o fluxo Ajax/Struts nativo
-      modernClockBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        img.click();
-      });
+      const isNew = !modernClockBtn;
 
-      img.parentNode.insertBefore(modernClockBtn, img.nextSibling);
+      if (isNew) {
+        img.classList.add('je-clock-replaced');
+        modernClockBtn = document.createElement('button');
+        modernClockBtn.type = 'button';
+        modernClockBtn.className = 'je-overtime-clock-btn';
+        modernClockBtn.title = tooltip;
+        modernClockBtn.setAttribute('aria-label', tooltip);
+
+        modernClockBtn.innerHTML = `
+          <svg class="je-overtime-clock-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        `;
+      }
+
+      // 1. Replicação nativa do atributo onclick para execução direta no Main World
+      if (onclickAttr) {
+        modernClockBtn.setAttribute('onclick', onclickAttr);
+      } else if (hrefAttr && hrefAttr.toLowerCase().startsWith('javascript:')) {
+        const code = hrefAttr.replace(/^javascript:/i, '').trim();
+        if (code && code !== '#' && !code.includes('javascript:void')) {
+          modernClockBtn.setAttribute('onclick', code);
+        }
+      }
+
+      if (isNew) {
+        // 2. Listener de clique de segurança preservando o User Gesture Token no Main World
+        modernClockBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const currentOnclick = img.getAttribute('onclick') || (parentLink && parentLink.getAttribute('onclick'));
+          if (currentOnclick) {
+            const cleanCode = currentOnclick.replace(/^javascript:/i, '').trim();
+            try {
+              const runCode = new Function(cleanCode);
+              runCode.call(window);
+              return;
+            } catch (err) {
+              console.warn('Erro ao executar onclick via Function:', err);
+            }
+          }
+
+          const currentHref = (parentLink && parentLink.getAttribute('href')) || img.getAttribute('href');
+          if (currentHref && currentHref.toLowerCase().startsWith('javascript:')) {
+            const cleanCode = currentHref.replace(/^javascript:/i, '').trim();
+            try {
+              const runCode = new Function(cleanCode);
+              runCode.call(window);
+              return;
+            } catch (err) {
+              console.warn('Erro ao executar href via Function:', err);
+            }
+          }
+
+          try {
+            if (parentLink) parentLink.click();
+            else img.click();
+          } catch (err) {
+            console.warn('Erro ao disparar clique residual:', err);
+          }
+        });
+
+        img.parentNode.insertBefore(modernClockBtn, img.nextSibling);
+      }
     });
   }
 
   function modernizeForm() {
-    const form = document.getElementById('formEspelhoPontoMes');
-    if (!form || form.classList.contains('je-modernized-form')) return;
+    const forms = document.querySelectorAll('#formEspelhoPontoMes, #formEspelhoPontoDia, form[name*="EspelhoPonto"], form[action*="EspelhoPonto"]');
+    if (!forms || forms.length === 0) return;
 
-    form.classList.add('je-modernized-form');
+    forms.forEach((form) => {
+      const formActionStr = form.getAttribute('action') || form.action || '';
+      const isDia = form.id === 'formEspelhoPontoDia' || formActionStr.includes('EspelhoPontoDiaAction') || window.location.href.includes('EspelhoPontoDiaAction');
+      const defaultEndpoint = isDia 
+        ? '/portalservidor2/EspelhoPontoDiaAction_consultar.action' 
+        : '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
 
-    // Substitui o input[type="button"] por um <button> moderno com alinhamento flex nativo
-    const legacyBtn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
-    if (legacyBtn && !document.getElementById('je-modern-btn-consultar')) {
-      legacyBtn.classList.add('je-legacy-btn-consultar');
-      
-      const modernBtn = document.createElement('button');
-      modernBtn.type = 'button';
-      modernBtn.id = 'je-modern-btn-consultar';
-      modernBtn.className = 'je-btn-consultar';
-      modernBtn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <span>CONSULTAR</span>
-      `;
-      modernBtn.title = 'Consultar Espelho de Ponto';
+      // Blindagem de Action: Garante que o form aponte sempre para o endpoint mapeado correto
+      if (!formActionStr || formActionStr.endsWith('Action') || formActionStr.endsWith('Action.action') || formActionStr.endsWith('EspelhoPontoMesAction') || formActionStr.endsWith('EspelhoPontoDiaAction')) {
+        form.action = defaultEndpoint;
+        form.setAttribute('action', defaultEndpoint);
+      }
 
-      modernBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        modernBtn.innerHTML = `<span>CONSULTANDO...</span>`;
-        modernBtn.style.opacity = '0.8';
-        legacyBtn.click();
+      if (form.classList.contains('je-modernized-form')) return;
+      form.classList.add('je-modernized-form');
+
+      // Substitui o botão legado por um <button> moderno com alinhamento flex nativo
+      const legacyBtn = form.querySelector('#btnConsultar, input[value="CONSULTAR"], input[type="submit"]');
+      if (legacyBtn && !form.querySelector('.je-btn-consultar')) {
+        legacyBtn.classList.add('je-legacy-btn-consultar');
+        
+        const modernBtn = document.createElement('button');
+        modernBtn.type = 'button';
+        modernBtn.className = 'je-btn-consultar';
+        const btnText = legacyBtn.value ? escapeHTML(legacyBtn.value.toUpperCase()) : 'CONSULTAR';
+        modernBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>${btnText}</span>
+        `;
+        modernBtn.title = legacyBtn.title || 'Consultar';
+
+        modernBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          modernBtn.innerHTML = `<span>ENVIANDO...</span>`;
+          modernBtn.style.opacity = '0.8';
+          const fnName = isDia ? 'formEspelhoPontoDia_consultar' : 'formEspelhoPontoMes_consultar';
+          if (typeof window[fnName] === 'function') {
+            window[fnName]();
+          } else {
+            legacyBtn.click();
+          }
+        });
+
+        legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
+      }
+
+      // Auto-consulta instantânea: Dispara a consulta ao alterar campos de filtro (com action blindada)
+      const filterFields = form.querySelectorAll('select, input[type="radio"]');
+      filterFields.forEach((field) => {
+        field.addEventListener('change', () => {
+          const modernBtn = form.querySelector('.je-btn-consultar');
+          if (modernBtn) {
+            modernBtn.innerHTML = `<span>CONSULTANDO...</span>`;
+            modernBtn.style.opacity = '0.8';
+          }
+          const fnName = isDia ? 'formEspelhoPontoDia_consultar' : 'formEspelhoPontoMes_consultar';
+          if (typeof window[fnName] === 'function') {
+            window[fnName]();
+          } else {
+            form.action = defaultEndpoint;
+            form.submit();
+          }
+        });
       });
 
-      legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
+      // Intercepta qualquer submissão para a action genérica (sem método)
+      form.addEventListener('submit', (e) => {
+        const curAction = form.getAttribute('action') || form.action || '';
+        if (!curAction || curAction.endsWith('Action') || curAction.endsWith('Action.action') || curAction.endsWith('EspelhoPontoMesAction') || curAction.endsWith('EspelhoPontoDiaAction')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const fnName = isDia ? 'formEspelhoPontoDia_consultar' : 'formEspelhoPontoMes_consultar';
+          if (typeof window[fnName] === 'function') {
+            window[fnName]();
+          } else {
+            form.action = defaultEndpoint;
+            form.submit();
+          }
+        }
+      });
+
+      // Seleciona por padrão o Motivo "Esquecimento" se disponível
+      setDefaultMotivoEsquecimento(form);
+      setupJustificativaCharCounter(form);
+      modernizeMolduraForm(form);
+    });
+
+    modernizeCalendarIcons();
+    highlightUserAndManagerNames();
+  }
+
+  function modernizeMolduraForm(targetRoot) {
+    const root = targetRoot || document;
+    const moldura = root.classList && root.classList.contains('moldura') ? root : root.querySelector('.moldura');
+    if (!moldura || moldura.dataset.jeMolduraModernized) return;
+    moldura.dataset.jeMolduraModernized = 'true';
+
+    // Remove br soltos que quebram o layout flex
+    moldura.querySelectorAll('br').forEach(br => br.remove());
+
+    // Agrupa 1: Operação
+    const labelOperacao = Array.from(moldura.querySelectorAll('label')).find(l => /oper/i.test(l.innerText || ''));
+    const spanInclusao = moldura.querySelector('.imitaTextfieldReadonlySemBorda');
+    if (labelOperacao && spanInclusao) {
+      const group = document.createElement('div');
+      group.className = 'je-form-group je-group-operacao';
+      labelOperacao.parentNode.insertBefore(group, labelOperacao);
+      group.appendChild(labelOperacao);
+      group.appendChild(spanInclusao);
     }
 
-    // Auto-consulta instantânea: Dispara o botão Consultar ao alterar qualquer campo de filtro
-    const filterFields = form.querySelectorAll('select, input[type="radio"], input[type="checkbox"]');
-    filterFields.forEach((field) => {
-      field.addEventListener('change', () => {
-        const modernBtn = document.getElementById('je-modern-btn-consultar');
-        const legacyBtn = document.getElementById('btnConsultar') || form.querySelector('input[value="CONSULTAR"]');
-        if (modernBtn) {
-          modernBtn.innerHTML = `<span>CONSULTANDO...</span>`;
-          modernBtn.style.opacity = '0.8';
+    // Agrupa 2: Horário da marcação
+    const labelHorario = Array.from(moldura.querySelectorAll('label')).find(l => /hor/i.test(l.innerText || ''));
+    const inputHorario = moldura.querySelector('#marcacaoPonto_marcacao, input[name*="marcacao" i]');
+    if (labelHorario && inputHorario) {
+      const group = document.createElement('div');
+      group.className = 'je-form-group je-group-horario';
+      labelHorario.parentNode.insertBefore(group, labelHorario);
+      group.appendChild(labelHorario);
+      group.appendChild(inputHorario);
+    }
+
+    // Agrupa 3: Motivo
+    const labelMotivo = Array.from(moldura.querySelectorAll('label')).find(l => /motivo/i.test(l.innerText || ''));
+    const selectMotivo = moldura.querySelector('#marcacaoPonto_alteracao_motivo_codigo, select[name*="motivo" i]');
+    if (labelMotivo && selectMotivo) {
+      const group = document.createElement('div');
+      group.className = 'je-form-group je-group-motivo';
+      labelMotivo.parentNode.insertBefore(group, labelMotivo);
+      group.appendChild(labelMotivo);
+      group.appendChild(selectMotivo);
+    }
+
+    // Agrupa 4: Justificativa (largura total)
+    const labelJustificativa = Array.from(moldura.querySelectorAll('label')).find(l => /justificativa/i.test(l.innerText || ''));
+    const textareaJustificativa = moldura.querySelector('#marcacaoPonto_alteracao_motivo_justificativa, textarea[name*="justificativa" i]');
+    if (labelJustificativa && textareaJustificativa) {
+      const group = document.createElement('div');
+      group.className = 'je-form-group je-form-group-full';
+      labelJustificativa.parentNode.insertBefore(group, labelJustificativa);
+      group.appendChild(labelJustificativa);
+      group.appendChild(textareaJustificativa);
+    }
+
+    // Linha 1 de campos (Operação + Horário + Motivo na mesma linha)
+    const row1 = document.createElement('div');
+    row1.className = 'je-form-row';
+    const groups = Array.from(moldura.querySelectorAll('.je-form-group:not(.je-form-group-full)'));
+    if (groups.length > 0) {
+      groups[0].parentNode.insertBefore(row1, groups[0]);
+      groups.forEach(g => row1.appendChild(g));
+    }
+
+    // Linha 4: Botões no canto inferior direito (INCLUIR / LIMPAR)
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'je-form-actions-row';
+
+    const nativeBtns = Array.from(moldura.querySelectorAll('input[type="submit"], input[type="button"], button, .botoes input'));
+    if (nativeBtns.length > 0) {
+      nativeBtns[0].parentNode.insertBefore(actionsRow, nativeBtns[0]);
+      nativeBtns.forEach(btn => {
+        const isIncluir = (btn.value && (btn.value.includes('INCLUIR') || btn.value.includes('SALVAR'))) || btn.type === 'submit';
+        btn.classList.add(isIncluir ? 'je-btn-incluir' : 'je-btn-limpar');
+        actionsRow.appendChild(btn);
+      });
+    }
+  }
+
+  function setupJustificativaCharCounter(targetRoot) {
+    const root = targetRoot || document;
+    const textareas = root.querySelectorAll('#marcacaoPonto_alteracao_motivo_justificativa, textarea[name*="justificativa" i], textarea[id*="justificativa" i]');
+    textareas.forEach((ta) => {
+      if (ta.dataset.jeCounterSet) return;
+      ta.dataset.jeCounterSet = 'true';
+
+      ta.setAttribute('maxlength', '500');
+
+      // Oculta nós de texto soltos legados com a palavra "caracteres"
+      const parent = ta.parentElement;
+      if (parent) {
+        Array.from(parent.childNodes).forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE && /caracteres/i.test(node.textContent)) {
+            node.textContent = '';
+          } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'TEXTAREA' && !node.classList.contains('je-char-counter-container') && /caracteres/i.test(node.innerText || '')) {
+            node.style.display = 'none';
+          }
+        });
+      }
+
+      // Oculta elemento irmão contendo textos legados
+      let nextElem = ta.nextElementSibling;
+      while (nextElem && !nextElem.classList.contains('je-char-counter-container')) {
+        if (/caracteres/i.test(nextElem.innerText || '')) {
+          nextElem.style.display = 'none';
         }
-        if (legacyBtn && !legacyBtn.disabled) {
-          legacyBtn.click();
+        nextElem = nextElem.nextElementSibling;
+      }
+
+      const counterContainer = document.createElement('div');
+      counterContainer.className = 'je-char-counter-container';
+
+      const updateCount = () => {
+        const current = ta.value ? ta.value.length : 0;
+        const remaining = Math.max(0, 500 - current);
+        counterContainer.innerHTML = `
+          <span class="je-char-max">Máx. 500 caracteres</span>
+          <span class="je-char-rem">Caracteres restantes: <strong class="${remaining < 50 ? 'je-char-warning' : ''}">${remaining}</strong> / 500</span>
+        `;
+      };
+
+      ta.addEventListener('input', updateCount);
+      ta.addEventListener('keyup', updateCount);
+      ta.addEventListener('change', updateCount);
+      updateCount();
+
+      ta.parentNode.insertBefore(counterContainer, ta.nextSibling);
+    });
+  }
+
+  function setDefaultMotivoEsquecimento(form) {
+    const motiveSelects = (form || document).querySelectorAll('select[name*="motivo" i], select[id*="motivo" i], select[name*="justificativa" i], select[name*="ocorrencia" i], #motivo, #motivoSelecionado');
+    motiveSelects.forEach((select) => {
+      if (select.dataset.jeMotivoSet) return;
+
+      let foundOption = null;
+      Array.from(select.options).forEach((opt) => {
+        const txt = (opt.text || opt.value || '').toUpperCase();
+        if (txt.includes('ESQUECIMENTO')) {
+          foundOption = opt;
         }
       });
+
+      if (foundOption) {
+        foundOption.selected = true;
+        select.value = foundOption.value;
+        select.dataset.jeMotivoSet = 'true';
+      }
+    });
+  }
+
+  function modernizeCalendarIcons() {
+    const dateInputs = document.querySelectorAll('input[name*="data" i], input[id*="data" i], input.data, input[name*="Data"], input[id*="Data"]');
+    dateInputs.forEach((dateInput) => {
+      const parent = dateInput.parentElement;
+      if (!parent) return;
+
+      const legacyImg = parent.querySelector('img[src*="cal" i], img[src*="calendar" i], img[title*="Calend" i], img[alt*="Calend" i], .ui-datepicker-trigger');
+
+      let wrapper = dateInput.closest('.je-date-input-wrapper');
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'je-date-input-wrapper';
+        dateInput.parentNode.insertBefore(wrapper, dateInput);
+        wrapper.appendChild(dateInput);
+      }
+
+      if (wrapper.querySelector('.je-calendar-picker-btn')) return;
+
+      const modernCalBtn = document.createElement('button');
+      modernCalBtn.type = 'button';
+      modernCalBtn.className = 'je-calendar-picker-btn';
+      modernCalBtn.title = (legacyImg && legacyImg.title) ? legacyImg.title : 'Selecionar Data no Calendário';
+      modernCalBtn.setAttribute('aria-label', modernCalBtn.title);
+
+      modernCalBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      `;
+
+      modernCalBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (legacyImg) {
+          legacyImg.click();
+        } else {
+          dateInput.focus();
+          if (typeof dateInput.showPicker === 'function') {
+            try { dateInput.showPicker(); } catch (err) {}
+          }
+        }
+      });
+
+      wrapper.appendChild(modernCalBtn);
+    });
+  }
+
+  function highlightUserAndManagerNames() {
+    const h3Elements = document.querySelectorAll('#conteudo h3, .form-container h3, #opcoes-consulta h3, .moldura h3');
+    h3Elements.forEach((h3) => {
+      if (h3.dataset.jeH3Modernized) return;
+
+      const rawText = h3.innerText.trim();
+      if (!rawText || (!rawText.includes(':') && !/Matrícula|Servidor|Responsável|Chefia|Nome/i.test(rawText))) {
+        return;
+      }
+
+      h3.dataset.jeH3Modernized = 'true';
+
+      const parts = rawText.split(/\s+-\s+/);
+      const formattedParts = parts.map((part) => {
+        const colonIndex = part.indexOf(':');
+        if (colonIndex !== -1) {
+          const label = part.substring(0, colonIndex + 1);
+          const val = part.substring(colonIndex + 1).trim();
+          if (val) {
+            return `${escapeHTML(label)} <span class="je-header-highlight">${escapeHTML(val)}</span>`;
+          }
+          return escapeHTML(part);
+        } else {
+          const trimmed = part.trim();
+          if (trimmed) {
+            return `<span class="je-header-highlight">${escapeHTML(trimmed)}</span>`;
+          }
+          return '';
+        }
+      });
+
+      h3.innerHTML = formattedParts.join(' - ');
+    });
+
+    const legacySelectors = [
+      '.servidor-nome', '.responsavel-nome', '.nomeServidor', '.nomeResponsavel'
+    ];
+    document.querySelectorAll(legacySelectors.join(',')).forEach((el) => {
+      el.classList.add('je-header-highlight');
+    });
+  }
+
+  function setDefaultMotivoEsquecimento(form) {
+    const motiveSelects = (form || document).querySelectorAll('select[name*="motivo" i], select[id*="motivo" i], select[name*="justificativa" i], select[name*="ocorrencia" i], #motivo, #motivoSelecionado');
+    motiveSelects.forEach((select) => {
+      if (select.dataset.jeMotivoSet) return;
+
+      let foundOption = null;
+      Array.from(select.options).forEach((opt) => {
+        const txt = (opt.text || opt.value || '').toUpperCase();
+        if (txt.includes('ESQUECIMENTO')) {
+          foundOption = opt;
+        }
+      });
+
+      if (foundOption) {
+        foundOption.selected = true;
+        select.value = foundOption.value;
+        select.dataset.jeMotivoSet = 'true';
+      }
     });
   }
 
@@ -686,6 +1290,8 @@ window.JEPessoasModernizer = (function () {
     injectPageTitleHeader,
     injectKPICards,
     modernizeTable,
-    modernizeForm
+    modernizeForm,
+    modernizeCalendarIcons,
+    highlightUserAndManagerNames
   };
 })();

@@ -5,225 +5,23 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.2.3.1';
+  const CURRENT_VERSION = '0.3.0';
 
   const CHANGELOG = [
     {
-      version: '0.2.3.1',
-      date: '2026-08-26',
-      title: 'Ajuste de Metadados da Chrome Web Store, Blindagem de Segurança & Novos Ícones',
+      version: '0.3.0',
+      date: '2026-09-01',
+      title: 'Série 0.3.x consolidada',
       features: [
-        'Ajuste da descrição do manifesto para conformidade estrita com o limite da Chrome Web Store (132 caracteres)',
-        'Blindagem contra DOM XSS no Command Palette com sanitização rigorosa de termos de busca e rótulos',
-        'Proteção contra CSV Formula Injection na exportação de planilhas para Microsoft Excel',
-        'Eliminação de event handlers inline (onclick) em conformidade com as diretrizes de segurança CSP do Chrome MV3',
-        'Sanitização completa de atributos dinâmicos e dados de usuário no cabeçalho e menu de serviços',
-        'Integração da nova família de ícones oficiais de alta resolução (16px, 32px, 48px e 128px)'
-      ]
-    },
-    {
-      version: '0.2.2',
-      date: '2026-08-26',
-      title: 'Nova Coluna Saldo Acumulado, Desconsideração de Pecúnia & Regras de Regime Híbrido',
-      features: [
-        'Nova coluna SALDO ACUM. entre Pecúnia e Adicional Noturno com cálculo acumulativo estritamente líquido de pecúnia',
-        'Supressão automática da coluna de saldo e desativação de banco de horas em meses com Trabalho Híbrido / Teletrabalho',
-        'Cálculo dinâmico da Meta do Mês considerando 7h ou 8h (com intervalo de almoço) e exclusão de licenças, férias e viagens',
-        'Alinhamento compacto de largura e correção milimétrica do rodapé da tabela com 16 colunas',
-        'Criação do documento oficial de especificação de negócio (docs/ESPECIFICACAO_NEGOCIO.md)'
-      ]
-    },
-    {
-      version: '0.2.1',
-      date: '2026-08-26',
-      title: 'Reestruturação Tabular Glassmorphic, Hierarquia de Cores & Alinhamento do Menu',
-      features: [
-        'Reestruturação completa da tabela do espelho de ponto em Glassmorphism sólido de alto contraste, eliminando quebras e cortes de cabeçalhos',
-        'Hierarquia cromática de linhas: sábado em tom azul suave, domingo/feriados em azul encorpado e dia atual em destaque vibrante',
-        'Integração direta e alinhamento do interruptor ✨ TSE XT Ativo no menu superior com animação de expansão a partir do botão',
-        'Centralização milimétrica do texto do botão CONSULTAR e correção do alinhamento do ícone do Menu e Breadcrumb',
-        'Restrição estrita do escopo de injeção exclusivamente para a página de Espelho de Ponto'
-      ]
-    },
-    {
-      version: '0.2.0',
-      date: '2026-08-26',
-      title: 'Renomeação para TSE XT & Expansão de Escopo Multi-Sistemas',
-      features: [
-        'A extensão agora se chama oficialmente TSE XT para expandir sua atuação para múltiplos portais e sistemas internos do Tribunal Superior Eleitoral',
-        'Atualização dos botões, chips e rótulos de controle para ✨ TSE XT Ativo / 🏛️ TSE XT Desligado',
-        'Preparação arquitetural do escopo de injeção em todos os domínios internos (*://*.tse.jus.br/*)'
-      ]
-    },
-    {
-      version: '0.1.15',
-      date: '2026-08-26',
-      title: 'Isolamento Rigoroso de Estilos XT (100% Legado no Modo OFF)',
-      features: [
-        'Garantia de que absolutamente nenhuma melhoria visual seja apresentada com o interruptor TSE XT desligado',
-        'Restauração completa da imagem legada original de relógio e tabelas quando desativado',
-        'Ocultação estrita de todos os badges SVG e componentes modernos no modo desligado'
-      ]
-    },
-    {
-      version: '0.1.14',
-      date: '2026-08-26',
-      title: 'Grid Uniforme de 5 KPIs, Previsão Zerar Saldo & Horas Extras Detalhadas',
-      features: [
-        'Distribuição uniforme com largura idêntica para todos os cards de KPIs no espaço widescreen disponível',
-        'Novo Card: "Previsão Saída p/ Zerar Saldo do Mês", informando a hora exata para zerar o saldo acumulado (compensando débitos ou saindo mais cedo em caso de crédito)',
-        'Novo Card: "Saldo de Horas Extras" com duas linhas dedicadas (Dias Úteis/Sábados e Domingos/Feriados)',
-        'Renomeação de "Previsão de Saída" para "Saída Expediente" (completar a jornada diária)'
-      ]
-    },
-    {
-      version: '0.1.13',
-      date: '2026-08-26',
-      title: 'Ícone Moderno de Hora Extra Autorizada',
-      features: [
-        'Substituição do relógio legado pixelado por um badge tátil SVG de alta resolução',
-        'Micro-interação suave com rotação no hover e brilho azul sutil',
-        'Preservação total da ação nativa de clique e abertura dos detalhes de autorização'
-      ]
-    },
-    {
-      version: '0.1.12',
-      date: '2026-08-26',
-      title: 'Auto-Consulta Automática nos Filtros',
-      features: [
-        'Disparo automático da consulta ao alterar qualquer campo do formulário (Unidade, Nome, Ano ou Mês)',
-        'Feedback visual imediato no botão com estado de carregamento',
-        'Elimina a necessidade de clicar manualmente no botão "CONSULTAR" após selecionar uma opção'
-      ]
-    },
-    {
-      version: '0.1.11',
-      date: '2026-08-26',
-      title: 'Harmonização dos Textos e Dimensões dos KPIs (Sem Truncamento)',
-      features: [
-        'Ajuste nos títulos e textos secundários dos 4 cards de KPIs para evitar quebras e truncamentos',
-        'Largura mínima e altura dos cards calibradas com flexibilidade (minmax 230px e min-height 98px)',
-        'Garantia de leitura 100% fluida dos saldos, previsões e contagens de dias úteis'
-      ]
-    },
-    {
-      version: '0.1.10',
-      date: '2026-08-26',
-      title: 'Alinhamento Vertical Perfeito do Botão CONSULTAR',
-      features: [
-        'Estruturação em Flexbox moderno com alinhamento na linha de base inferior (align-items: flex-end)',
-        'Alinhamento milimétrico do botão CONSULTAR em relação aos campos suspensos com labels (Unidade, Nome, Ano e Mês)',
-        'Eliminação de espaçamentos residuais herdados do CSS legado'
-      ]
-    },
-    {
-      version: '0.1.9',
-      date: '2026-08-25',
-      title: 'KPIs Compactos (-30%) & Densidade Visual Otimizada',
-      features: [
-        'Redução proporcional de 30% no tamanho dos 4 cards de KPIs (Previsão, Banco, Meta e Saldo)',
-        'Micro-espaçamentos reduzidos e tipografia mais refinada para priorizar o espaço útil da tabela de ponto',
-        'Barra de progresso e badges adaptados para o formato compacto'
-      ]
-    },
-    {
-      version: '0.1.8',
-      date: '2026-08-25',
-      title: 'Destaque para Espelho de Ponto & Filtros Harmônicos sem Cortes',
-      features: [
-        'Novo Banner de Título com destaque para "Espelho de Ponto", ícone dedicado, breadcrumb e tag do mês/ano de referência',
-        'Caixa de opções de pesquisa totalmente harmonizada em Glassmorphism integrado à página',
-        'Correção definitiva da altura e corte de texto dos seletores suspensos (Unidade, Nome, Ano e Mês)',
-        'Botão "CONSULTAR" alinhado perfeitamente com os campos de filtro'
-      ]
-    },
-    {
-      version: '0.1.7',
-      date: '2026-08-25',
-      title: 'Drawer de Serviços & Eliminação de Sobreposição',
-      features: [
-        'Novo Menu de Serviços em Drawer lateral com Glassmorfismo Tátil (acesso pelo botão "Menu" na Topbar ou atalho Alt+M)',
-        'Eliminação total do acavalamento e sobreposição do menu antigo sobre os cards de KPIs e formulários',
-        'Organização por categorias com ícones visuais, badges de permissão (Chefia / Restrito) e busca rápida interna',
-        'Abertura e fechamento suaves com animação lateral e backdrop blur sem deslocar o layout'
-      ]
-    },
-    {
-      version: '0.1.6',
-      date: '2026-08-25',
-      title: 'Integração do IP no Topo & Limpeza da Linha Legada',
-      features: [
-        'O endereço IP do servidor logado agora é exibido diretamente no chip da barra superior compacta com ícone de rede',
-        'Ocultação completa da linha legada `#barra-superior` (que continha os dados duplicados dos anos 90)',
-        'Otimização do espaço vertical útil para exibição dos KPIs e tabela do ponto'
-      ]
-    },
-    {
-      version: '0.1.5',
-      date: '2026-08-25',
-      title: 'Toggle Switch Persistente & Independente',
-      features: [
-        'O botão de ligar/desligar o TSE XT agora é um componente independente e flutuante no topo',
-        'Garantia de visibilidade 100% permanente tanto no modo XT quanto no layout legado (z-index máximo)',
-        'Rótulos e estados visuais mais claros (✨ TSE XT Ativo / 🏛️ TSE XT Desligado)',
-        'Transição instantânea e fluida entre os modos'
-      ]
-    },
-    {
-      version: '0.1.4',
-      date: '2026-08-25',
-      title: 'Interruptor de Visual XT (ON/OFF) com Transições Animadas',
-      features: [
-        'Novo botão de alternância (Toggle Switch) para ligar e desligar o visual do TSE XT',
-        'Permite alternar instantaneamente para o layout legado original do portal para conferência',
-        'Transições animadas fluidas (efeitos de slide, fade, blur e escala suaves com curva spring 2026)',
-        'Persistência do estado do tema nas preferências do navegador'
-      ]
-    },
-    {
-      version: '0.1.3',
-      date: '2026-08-25',
-      title: 'Restauração do Logo Oficial do Meu Espaço',
-      features: [
-        'Reintegração do logotipo oficial original do Meu Espaço na barra superior slim',
-        'Alinhamento proporcional mantendo o topo compacto e preservando a credibilidade institucional',
-        'Micro-transição e efeito de profundidade sutil no logo ao passar o mouse'
-      ]
-    },
-    {
-      version: '0.1.2',
-      date: '2026-08-25',
-      title: 'Simulador de Metas & Progresso Mensal',
-      features: [
-        'Barra de progresso visual com gradiente no Card de Horas do Mês (percentual atingido)',
-        'Cálculo e exibição de dias úteis restantes no mês',
-        'Contagem de tempo restante de jornada de trabalho para o dia de hoje',
-        'Detecção inteligente de feriados e recessos no cálculo de dias úteis esperados'
-      ]
-    },
-    {
-      version: '0.1.1',
-      date: '2026-08-25',
-      title: 'Barra de Ações Rápidas & Exportação',
-      features: [
-        'Novo Botão Flutuante (FAB) de Ações Rápidas com animações táteis suaves',
-        'Exportação completa da tabela do espelho de ponto para CSV/Excel com formatação e acentuação UTF-8',
-        'Atalho rápido para centralizar a visualização no dia de hoje com efeito luminoso',
-        'Otimização de impressão limpa da folha de ponto',
-        'Ajustes nos micro-espaçamentos dos cartões de KPIs'
-      ]
-    },
-    {
-      version: '0.1.0',
-      date: '2026-08-25',
-      title: 'Versão Inicial de Modernização',
-      features: [
-        'Design System completo em Glassmorfismo Tátil (acrílico fosco e sombras 3D táteis)',
-        'Efeito Glow Azul nos inputs, botões, filtros e na linha do dia atual',
-        'Topbar Slim compacta com identificação do servidor e atalho de logout',
-        'Dashboard com 4 KPIs: Previsão de Saída, Saldo do Banco, Horas no Mês e Saldo do Mês',
-        'Command Palette com busca textual rápida em mais de 60 opções (Ctrl+K)',
-        'Esquema de versionamento visível e interativo'
+        'Cálculo de saldo unificado: multiplicadores de fim de semana e feriado (+50% sábado, +100% domingo/feriado) e módulo balanceCalc.js como fonte única compartilhada entre a coluna SALDO ACUM. e o card de KPI.',
+        'Suporte a meses fechados/homologados: a coluna nativa h10 passa de HORAS EXCED. para HORAS AJUST.; o saldo do dia útil passa a ser TOTAL menos a jornada esperada (7h/8h), com guarda de dispensa (licença, férias, viagem, abono integral).',
+        'Coluna auxiliar HORAS EXCED. injetada em meses fechados, com a mesma formatação de cor da coluna SALDO ACUM. (verde/vermelho/neutro).',
+        'Card Horas Extras soma a pecúnia (horas a pagar) por tipo de dia; o card Saída Expediente só exibe o tempo restante quando o mês visualizado contém o dia atual.',
+        'Ajuste de ponto inline via modal, integrado às actions Struts para inclusão e exclusão de marcações, disponível apenas quando se visualiza o ponto de outra pessoa (visão de chefia).',
+        'Suporte à tela Alteração de Ponto (EspelhoPontoDiaAction), menu drawer com expansão por hover, calendário glassmorphic e modernização dos ícones de hora extra autorizada.',
+        'Robustez de carregamento: execução em document_start, montagem atômica do topo em um único requestAnimationFrame, supressão do FOUC e blindagem de endpoints Struts.',
+        'Refinamento visual: data atual glassmorphic, chips de ocorrência, desfoque suave de modais, pílula de referência, espaçamentos verticais padronizados em 16px e correção da lupa do campo de busca.',
+        'Aviso de aplicação experimental exibido no primeiro carregamento e a cada atualização de versão.'
       ]
     }
   ];
@@ -283,9 +81,79 @@ window.JEPessoasVersion = (function () {
     overlay.classList.add('active');
   }
 
+  // ---------------------------------------------------------------------------
+  // Aviso de aplicação experimental — exibido no 1º carregamento e a cada
+  // atualização de versão (guarda a última versão reconhecida em chrome.storage).
+  // ---------------------------------------------------------------------------
+  const DISCLAIMER_ACK_KEY = 'je_xt_disclaimer_ack_version';
+  let disclaimerChecked = false;
+
+  function showDisclaimerModal() {
+    let overlay = document.getElementById('je-disclaimer-modal');
+    if (overlay) {
+      overlay.classList.add('active');
+      return;
+    }
+
+    overlay = document.createElement('div');
+    overlay.id = 'je-disclaimer-modal';
+    overlay.className = 'je-modal-overlay';
+    overlay.innerHTML = `
+      <div class="je-modal-content" style="max-width: 460px; padding: 0;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid rgba(226, 232, 240, 0.8); display: flex; align-items: center; gap: 8px; background: rgba(248, 250, 252, 0.85);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0a2540;">TSE XT — Aplicação Experimental</h3>
+        </div>
+        <div style="padding: 20px; font-size: 13.5px; line-height: 1.65; color: #334155;">
+          <p style="margin: 0 0 12px;">O <strong>TSE XT</strong> é uma aplicação <strong>experimental</strong>, com o único objetivo de melhorar a experiência do usuário no controle do ponto.</p>
+          <p style="margin: 0 0 12px;">Pode conter erros.</p>
+          <p style="margin: 0;"><strong>Não representa nenhuma garantia</strong> de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho.</p>
+        </div>
+        <div style="padding: 14px 20px 18px; display: flex; justify-content: flex-end;">
+          <button id="je-disclaimer-ok" style="background: linear-gradient(135deg, #0056b3, #0077ff) !important; color: #fff !important; border: none !important; font-weight: 700; font-size: 13px; padding: 8px 20px; border-radius: 8px; cursor: pointer; box-shadow: none !important; height: auto !important;">Entendi</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const acknowledge = () => {
+      overlay.classList.remove('active');
+      try {
+        chrome.storage?.local?.set({ [DISCLAIMER_ACK_KEY]: CURRENT_VERSION });
+      } catch (e) {}
+    };
+
+    overlay.querySelector('#je-disclaimer-ok').addEventListener('click', acknowledge);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) acknowledge();
+    });
+
+    requestAnimationFrame(() => overlay.classList.add('active'));
+  }
+
+  function maybeShowDisclaimer() {
+    if (disclaimerChecked || !document.body) return;
+    disclaimerChecked = true;
+    try {
+      chrome.storage.local.get({ [DISCLAIMER_ACK_KEY]: null }, (items) => {
+        if (!items || items[DISCLAIMER_ACK_KEY] !== CURRENT_VERSION) {
+          showDisclaimerModal();
+        }
+      });
+    } catch (e) {
+      showDisclaimerModal();
+    }
+  }
+
   return {
     getVersion: () => CURRENT_VERSION,
     getChangelog: () => CHANGELOG,
-    openChangelogModal
+    openChangelogModal,
+    maybeShowDisclaimer
   };
 })();

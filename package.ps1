@@ -45,8 +45,11 @@ $null = New-Item -ItemType Directory -Path $tempBuildDir
 
 try {
     # 4. Copia os arquivos essenciais
-    Write-Host ">> [2/5] Copiando manifest.json..." -ForegroundColor Gray
+    Write-Host ">> [2/5] Copiando manifest.json e background.js..." -ForegroundColor Gray
     Copy-Item (Join-Path $projectRoot "manifest.json") -Destination $tempBuildDir
+    if (Test-Path (Join-Path $projectRoot "background.js")) {
+        Copy-Item (Join-Path $projectRoot "background.js") -Destination $tempBuildDir
+    }
 
     Write-Host ">> [3/5] Copiando content e popup..." -ForegroundColor Gray
     Copy-Item (Join-Path $projectRoot "content") -Destination $tempBuildDir -Recurse

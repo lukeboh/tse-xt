@@ -45,13 +45,20 @@ window.JEPessoasKPI = (function () {
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return null;
 
+    // Mês homologado: o cabeçalho nativo "HORAS EXCED." passa a ser "HORAS AJUST."
+    // (vem com <br>, por isso o replace de whitespace antes do match).
+    const isClosedMonth = Array.from(table.querySelectorAll('th')).some(th => {
+      const t = (th.innerText || '').toUpperCase().replace(/\s+/g, ' ');
+      return t.includes('HORAS AJUST') || t.includes('HORA AJUST');
+    });
+
     const todayStr = getTodayString();
     let todayData = null;
     let totalWorkedMinutesMonth = 0;
     let totalExceedMinutesMonth = 0;
     let accumulatedBankBalance = '00:00';
-    let extraWeekdayAndSaturdayMinutes = 0;
-    let extraSundayAndHolidayMinutes = 0;
+    let pecuniaWeekdaySatMinutes = 0;
+    let pecuniaSundayHolidayMinutes = 0;
     let daysWithRecords = 0;
     let totalWorkingDaysMonth = 0;
     let remainingWorkingDaysMonth = 0;
@@ -99,7 +106,7 @@ window.JEPessoasKPI = (function () {
           const totalDay = tr.querySelector('.h09')?.innerText.trim() || '';
           const exceedDay = tr.querySelector('.h10')?.innerText.trim() || '';
           const pecunia = (tr.querySelector('.h12') || tr.querySelector('.h11'))?.innerText.trim() || '';
-          const occurrence = tr.querySelector('.h16, .h15')?.innerText.trim() || '';
+          const occurrence = tr.querySelector('.h16')?.innerText.trim() || '';
 
           const pecuniaMin = parseTimeToMinutes(pecunia);
           const abonoMin = parseTimeToMinutes(abono);
@@ -148,15 +155,30 @@ window.JEPessoasKPI = (function () {
 
           // CÁLCULO DO SALDO ACUMULADO DO MÊS (SEM PECÚNIA E SEM DIAS FUTUROS)
           if (!isFuture) {
-            const dailyDelta = exceedMin - pecuniaMin;
+            // Fonte única de verdade, compartilhada com a coluna "SALDO ACUM." (domModernizer).
+            const dispensedNonHoliday = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
+            const { delta: dailyDelta } = window.JEPessoasBalance.computeDailyDelta({
+              dayOfWeek,
+              isClosedMonth,
+              isHolidayOrRecess,
+              isDispensed: dispensedNonHoliday,
+              totalMin,
+              exceedMin,
+              pecuniaMin,
+              dayTargetMinutes
+            });
+
+            // Soma da PECÚNIA (horas que serão pagas) por tipo de dia — alimenta o card "Horas Extras".
+            if (pecuniaMin > 0) {
+              if (dayOfWeek === 0 || isHolidayOrRecess) {
+                pecuniaSundayHolidayMinutes += pecuniaMin;
+              } else {
+                pecuniaWeekdaySatMinutes += pecuniaMin;
+              }
+            }
+
             runningAccumulatedBalance += dailyDelta;
             totalExceedMinutesMonth += dailyDelta;
-
-            if (dayOfWeek === 6 || (!isWeekend && exceedMin > 0)) {
-              extraWeekdayAndSaturdayMinutes += Math.max(0, exceedMin - pecuniaMin);
-            } else if (dayOfWeek === 0 || isHolidayOrRecess) {
-              extraSundayAndHolidayMinutes += Math.max(0, (totalMin > 0 ? totalMin : exceedMin) - pecuniaMin);
-            }
           }
 
           if (isToday) {
@@ -219,13 +241,12 @@ window.JEPessoasKPI = (function () {
     const tableText = table.innerText.toUpperCase();
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
-    // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado
+    // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado.
+    // (A pecúnia NÃO é zerada: é valor a pagar, independente do regime de banco de horas.)
     if (hasHybridWorkInMonth) {
       runningAccumulatedBalance = 0;
       totalExceedMinutesMonth = 0;
       accumulatedBankBalance = '00:00';
-      extraWeekdayAndSaturdayMinutes = 0;
-      extraSundayAndHolidayMinutes = 0;
     }
 
     // Numerador da Meta do Mês: Carga dos dias passados + Saldo Acumulado Atual (Exclui estritamente horas pagas em pecúnia)
@@ -278,6 +299,7 @@ window.JEPessoasKPI = (function () {
     return {
       todayStr,
       todayData,
+      hasTodayRow: !!todayData,
       hasHybridWorkInMonth,
       estimatedExit,
       workedMinutesToday,
@@ -293,9 +315,10 @@ window.JEPessoasKPI = (function () {
       accumulatedBankBalance,
       accumulatedBankMinutes: parseTimeToMinutes(accumulatedBankBalance),
 
-      // Horas extras separadas
-      extraWeekdayAndSaturday: formatMinutesToTime(extraWeekdayAndSaturdayMinutes),
-      extraSundayAndHoliday: formatMinutesToTime(extraSundayAndHolidayMinutes),
+      // Pecúnia (horas a pagar) separada por tipo de dia
+      pecuniaWeekdaySat: formatMinutesToTime(pecuniaWeekdaySatMinutes),
+      pecuniaSundayHoliday: formatMinutesToTime(pecuniaSundayHolidayMinutes),
+      pecuniaTotalMinutes: pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes,
 
       // Metas do mês
       totalWorkedMinutesMonth,

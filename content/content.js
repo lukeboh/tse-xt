@@ -5,10 +5,36 @@
 (function () {
   'use strict';
 
+  // Injeção síncrona ultra-rápida de estado no <html> ao nível de document_start (antes do DOM carregar)
+  try {
+    if (localStorage.getItem('je_xt_theme_enabled') !== 'false') {
+      document.documentElement.classList.add('je-xt-enabled');
+      document.documentElement.classList.remove('je-xt-disabled');
+    } else {
+      document.documentElement.classList.add('je-xt-disabled');
+      document.documentElement.classList.remove('je-xt-enabled');
+    }
+  } catch (e) {}
+
   function init() {
-    // Restringe estritamente para a página do Espelho de Ponto
-    const isEspelhoPontoPage = window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente');
-    if (!isEspelhoPontoPage) {
+    if (!document.body) return;
+
+    // Se document.body já existe, sincroniza a classe imediatamente sem transição
+    const isThemeEnabled = localStorage.getItem('je_xt_theme_enabled') !== 'false';
+    if (isThemeEnabled) {
+      document.body.classList.add('je-xt-enabled');
+      document.body.classList.remove('je-xt-disabled');
+    } else {
+      document.body.classList.add('je-xt-disabled');
+      document.body.classList.remove('je-xt-enabled');
+    }
+
+    // Detecta as páginas suportadas pelo TSE XT (Espelho Mensal e Alteração de Ponto Diária)
+    const isEspelhoMes = window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente');
+    const isEspelhoDia = window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia');
+    const isSupportedPage = isEspelhoMes || isEspelhoDia;
+
+    if (!isSupportedPage) {
       return;
     }
 
@@ -17,54 +43,59 @@
       const targetHours = items.targetHours || 7;
       const isEnabled = items.xtThemeEnabled !== false;
 
-      // 1. Aplica classe de estado de tema no body e moderniza estrutura
-      if (window.JEPessoasModernizer) {
-        window.JEPessoasModernizer.applyThemeState(isEnabled);
-        window.JEPessoasModernizer.modernizeHeader();
-        window.JEPessoasModernizer.injectPageTitleHeader();
-        window.JEPessoasModernizer.modernizeForm();
-        window.JEPessoasModernizer.modernizeTable();
-      }
-
-      // 2. Extrai e Injeta KPIs
-      if (window.JEPessoasKPI && window.JEPessoasModernizer) {
-        const kpis = window.JEPessoasKPI.extractKPIs(targetHours);
-        if (kpis) {
-          window.JEPessoasModernizer.injectKPICards(kpis);
+      // Executa toda a montagem do DOM em um único frame atômico do navegador
+      requestAnimationFrame(() => {
+        if (window.JEPessoasModernizer) {
+          window.JEPessoasModernizer.applyThemeState(isEnabled, false);
+          window.JEPessoasModernizer.modernizeHeader();
+          window.JEPessoasModernizer.injectPageTitleHeader();
+          window.JEPessoasModernizer.modernizeForm();
+          window.JEPessoasModernizer.modernizeTable(targetHours);
         }
-      }
 
-      // 3. Inicializa Barra de Busca Textual / Command Palette
-      if (window.JEPessoasSearch) {
-        window.JEPessoasSearch.init();
-      }
+        // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
+        if (isEspelhoMes && window.JEPessoasKPI && window.JEPessoasModernizer) {
+          const kpis = window.JEPessoasKPI.extractKPIs(targetHours);
+          if (kpis) {
+            window.JEPessoasModernizer.injectKPICards(kpis);
+          }
+        }
 
-      // 4. Inicializa Barra Flutuante de Ações Rápidas
-      if (window.JEPessoasQuickActions) {
-        window.JEPessoasQuickActions.init();
-      }
+        // Inicializa modais e atalhos
+        if (window.JEPessoasSearch) window.JEPessoasSearch.init();
+        if (window.JEPessoasQuickActions) window.JEPessoasQuickActions.init();
+        if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
+        if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
 
-      // 5. Inicializa Drawer de Serviços
-      if (window.JEPessoasNavDrawer) {
-        window.JEPessoasNavDrawer.init();
-      }
+        // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
+        if (window.JEPessoasVersion) window.JEPessoasVersion.maybeShowDisclaimer();
+      });
     });
   }
 
-  // Executa após o DOM estar pronto
+  // Executa no DOMContentLoaded ou imediatamente se já carregado
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 
-  // Observador para caso a tabela seja recarregada via Ajax/Struts sem refresh total
+  // Observador para caso a tabela/formulário seja recarregado via Ajax/Struts sem refresh total
   const observer = new MutationObserver(() => {
-    const table = document.getElementById('tblEspelhoPontoMesCorrente');
-    if (table && !document.querySelector('.je-kpi-dashboard')) {
+    const tableMes = document.getElementById('tblEspelhoPontoMesCorrente');
+    const hasTopBar = !!document.querySelector('.je-topbar');
+    if ((tableMes && !document.querySelector('.je-kpi-dashboard')) || !hasTopBar) {
       init();
     }
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    });
+  }
 })();
