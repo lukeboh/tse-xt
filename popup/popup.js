@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const segmentBtns = document.querySelectorAll('.segment-btn');
   const btnReload = document.getElementById('btnReload');
+  const popupVersion = document.getElementById('popupVersion');
+  if (popupVersion && chrome.runtime?.getManifest) {
+    popupVersion.innerText = 'v' + chrome.runtime.getManifest().version;
+  }
 
   // Carrega configuração salva
   chrome.storage?.local?.get({ targetHours: 7 }, (items) => {

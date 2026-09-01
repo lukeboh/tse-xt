@@ -14,7 +14,7 @@ window.JEPessoasQuickActions = (function () {
 
     fabContainer.innerHTML = `
       <div class="je-fab-menu" id="je-fab-menu">
-        <button class="je-fab-item" id="je-fab-export-csv" title="Exportar tabela para CSV/Excel">
+        <button type="button" class="je-fab-item" id="je-fab-export-csv" title="Exportar tabela para CSV/Excel">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
@@ -23,7 +23,7 @@ window.JEPessoasQuickActions = (function () {
           <span>Exportar CSV</span>
         </button>
 
-        <button class="je-fab-item" id="je-fab-today" title="Rolar até o dia de hoje">
+        <button type="button" class="je-fab-item" id="je-fab-today" title="Rolar até o dia de hoje">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
@@ -31,7 +31,7 @@ window.JEPessoasQuickActions = (function () {
           <span>Ir para Hoje</span>
         </button>
 
-        <button class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
+        <button type="button" class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 6 2 18 2 18 9"></polyline>
             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
@@ -41,7 +41,7 @@ window.JEPessoasQuickActions = (function () {
         </button>
       </div>
 
-      <button class="je-fab-main" id="je-fab-main" title="Ações Rápidas JE Pessoas XT">
+      <button type="button" class="je-fab-main" id="je-fab-main" title="Ações Rápidas JE Pessoas XT">
         <svg class="je-fab-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -54,16 +54,22 @@ window.JEPessoasQuickActions = (function () {
     const mainBtn = fabContainer.querySelector('#je-fab-main');
     const fabMenu = fabContainer.querySelector('#je-fab-menu');
 
-    mainBtn.addEventListener('click', () => {
+    mainBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       fabContainer.classList.toggle('active');
     });
 
-    fabContainer.querySelector('#je-fab-export-csv').addEventListener('click', () => {
+    fabContainer.querySelector('#je-fab-export-csv').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       exportTableToCSV();
       fabContainer.classList.remove('active');
     });
 
-    fabContainer.querySelector('#je-fab-today').addEventListener('click', () => {
+    fabContainer.querySelector('#je-fab-today').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const todayRow = document.querySelector('.je-row-today');
       if (todayRow) {
         todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -73,7 +79,9 @@ window.JEPessoasQuickActions = (function () {
       fabContainer.classList.remove('active');
     });
 
-    fabContainer.querySelector('#je-fab-print').addEventListener('click', () => {
+    fabContainer.querySelector('#je-fab-print').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       window.print();
       fabContainer.classList.remove('active');
     });

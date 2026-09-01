@@ -20,6 +20,8 @@ window.JEPessoasNavDrawer = (function () {
     'default': '📌'
   };
 
+  let flatLinks = [];
+
   function getCategoryIcon(title) {
     const t = title.toLowerCase();
     for (const key in CATEGORY_ICONS) {
@@ -29,56 +31,85 @@ window.JEPessoasNavDrawer = (function () {
   }
 
   function extractMenuData() {
-    const legacyMenu = document.getElementById('menu-lateral');
+    const legacyMenu = document.getElementById('menu-lateral') || document.querySelector('.menu-lateral, #menu, .menu');
     if (!legacyMenu) return [];
 
+    flatLinks = [];
     const categories = [];
-    const rootItems = legacyMenu.querySelectorAll(':scope > ul > li');
+
+    // Seleciona li de primeiro nível dentro do menu lateral legado
+    const rootItems = legacyMenu.querySelectorAll('ul > li');
 
     rootItems.forEach((li) => {
-      const linkOrTitle = li.querySelector('a, span');
+      // Ignora li internos que já pertencem a um submenu
+      if (li.parentElement && (li.parentElement.classList.contains('submenu') || li.parentElement.parentElement.tagName === 'LI')) {
+        return;
+      }
+
+      const linkOrTitle = li.querySelector(':scope > a, :scope > span, :scope > strong');
       if (!linkOrTitle) return;
 
       const title = linkOrTitle.innerText.trim();
-      const directHref = linkOrTitle.getAttribute('href');
-      const submenu = li.querySelector('ul.submenu');
+      if (!title) return;
+
+      const submenu = li.querySelector('ul');
 
       if (submenu) {
         const subLinks = [];
-        submenu.querySelectorAll('li').forEach((subLi) => {
-          const a = subLi.querySelector('a');
-          if (a) {
-            const isChefe = subLi.classList.contains('chefe') || a.classList.contains('chefe');
-            const isRestrito = subLi.classList.contains('restrito') || a.classList.contains('restrito');
-            subLinks.push({
-              name: a.innerText.trim(),
-              href: a.getAttribute('href'),
-              target: a.getAttribute('target') || '_self',
-              isChefe,
-              isRestrito
-            });
-          }
+        submenu.querySelectorAll('li a').forEach((a) => {
+          const name = a.innerText.trim();
+          if (!name) return;
+
+          const parentLi = a.parentElement;
+          const isChefe = (parentLi && parentLi.classList.contains('chefe')) || a.classList.contains('chefe');
+          const isRestrito = (parentLi && parentLi.classList.contains('restrito')) || a.classList.contains('restrito');
+
+          const linkIdx = flatLinks.length;
+          const itemObj = {
+            name,
+            href: a.href || a.getAttribute('href') || '#',
+            target: a.getAttribute('target') || '_self',
+            isChefe,
+            isRestrito,
+            element: a,
+            idx: linkIdx
+          };
+
+          flatLinks.push(itemObj);
+          subLinks.push(itemObj);
         });
 
-        categories.push({
-          title,
-          icon: getCategoryIcon(title),
-          links: subLinks
-        });
-      } else if (directHref && !directHref.startsWith('#')) {
-        categories.push({
-          title,
-          icon: getCategoryIcon(title),
-          links: [
-            {
-              name: title,
-              href: directHref,
-              target: linkOrTitle.getAttribute('target') || '_self',
-              isChefe: false,
-              isRestrito: false
-            }
-          ]
-        });
+        if (subLinks.length > 0) {
+          categories.push({
+            title,
+            icon: getCategoryIcon(title),
+            links: subLinks
+          });
+        }
+      } else {
+        const a = linkOrTitle.tagName.toLowerCase() === 'a' ? linkOrTitle : li.querySelector('a');
+        if (a) {
+          const name = a.innerText.trim();
+          if (!name) return;
+
+          const linkIdx = flatLinks.length;
+          const itemObj = {
+            name,
+            href: a.href || a.getAttribute('href') || '#',
+            target: a.getAttribute('target') || '_self',
+            isChefe: false,
+            isRestrito: false,
+            element: a,
+            idx: linkIdx
+          };
+
+          flatLinks.push(itemObj);
+          categories.push({
+            title: name,
+            icon: getCategoryIcon(name),
+            links: [itemObj]
+          });
+        }
       }
     });
 
@@ -98,8 +129,25 @@ window.JEPessoasNavDrawer = (function () {
 
   function sanitizeHref(url) {
     if (!url || typeof url !== 'string') return '#';
-    const clean = url.trim();
-    // Permite apenas URLs relativas, https ou http
+    let clean = url.trim();
+
+    // Normaliza links para EspelhoPontoMesAction e EspelhoPontoDiaAction garantindo que chamem os endpoints de ação corretos
+    if (clean.includes('EspelhoPontoMesAction') && !clean.includes('_')) {
+      clean = clean.replace(/EspelhoPontoMesAction(\.action)?/g, 'EspelhoPontoMesAction_recuperar.action');
+    } else if (clean.includes('EspelhoPontoDiaAction') && !clean.includes('_')) {
+      clean = clean.replace(/EspelhoPontoDiaAction(\.action)?/g, 'EspelhoPontoDiaAction_consultar.action');
+    }
+
+    // Se o link termina em Action_metodo sem a extensão .action, adiciona .action
+    if (/Action_[a-zA-Z0-9]+$/.test(clean)) {
+      clean += '.action';
+    }
+
+    // Se for URL relativa sem barra inicial, prefixa com o contexto /portalservidor2/
+    if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('/') && !clean.startsWith('#')) {
+      clean = '/portalservidor2/' + clean;
+    }
+
     if (clean.startsWith('/') || clean.startsWith('https://') || clean.startsWith('http://') || clean.startsWith('#')) {
       return escapeHTML(clean);
     }
@@ -131,7 +179,7 @@ window.JEPessoasNavDrawer = (function () {
               <span class="je-drawer-subtitle">Meu Espaço • Tribunal Superior Eleitoral</span>
             </div>
           </div>
-          <button class="je-drawer-close-btn" id="je-drawer-close" title="Fechar Menu (ESC)">✕</button>
+          <button type="button" class="je-drawer-close-btn" id="je-drawer-close" title="Fechar Menu (ESC)">✕</button>
         </div>
 
         <div class="je-drawer-search-wrapper">
@@ -148,7 +196,7 @@ window.JEPessoasNavDrawer = (function () {
 
         <div class="je-drawer-footer">
           <span>Atalho rápido: <kbd>Alt + M</kbd> ou clique no botão Menu</span>
-          <span style="color:#0077ff; font-weight:700;">JE XT v${window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.1.7'}</span>
+          <span style="color:#0077ff; font-weight:700;">TSE XT v${window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '0.3.5'}</span>
         </div>
       </div>
     `;
@@ -160,15 +208,72 @@ window.JEPessoasNavDrawer = (function () {
       if (e.target === overlay) close();
     });
 
-    overlay.querySelector('#je-drawer-close').addEventListener('click', close);
+    overlay.querySelector('#je-drawer-close').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    });
 
-    // Delegação de evento para expandir/recolher categorias sem inline onclick
+    // Delegação de evento para expansão mutuamente exclusiva por hover e clique nos links
     const drawerContent = overlay.querySelector('#je-drawer-content');
     if (drawerContent) {
+      // Quando o mouse entra na área de um card de categoria diferente: expande o novo e colapsa o anterior
+      drawerContent.addEventListener('mouseover', (e) => {
+        const card = e.target.closest('.je-drawer-category-card');
+        if (!card) return;
+
+        // Se o card já está expandido, ignora
+        if (!card.classList.contains('collapsed')) return;
+
+        // Colapsa todas as outras categorias e expande a atual
+        const allCards = drawerContent.querySelectorAll('.je-drawer-category-card');
+        allCards.forEach((c) => {
+          if (c !== card) {
+            c.classList.add('collapsed');
+          }
+        });
+
+        card.classList.remove('collapsed');
+      });
+
       drawerContent.addEventListener('click', (e) => {
         const header = e.target.closest('.je-drawer-category-header');
         if (header && header.parentElement) {
-          header.parentElement.classList.toggle('collapsed');
+          const targetCard = header.parentElement;
+          const isCollapsed = targetCard.classList.contains('collapsed');
+
+          // Colapsa os demais
+          drawerContent.querySelectorAll('.je-drawer-category-card').forEach((c) => {
+            if (c !== targetCard) c.classList.add('collapsed');
+          });
+
+          targetCard.classList.toggle('collapsed', !isCollapsed);
+          return;
+        }
+
+        const linkEl = e.target.closest('.je-drawer-link');
+        if (linkEl) {
+          const idx = parseInt(linkEl.getAttribute('data-link-idx'), 10);
+          const targetItem = flatLinks[idx];
+
+          if (targetItem && targetItem.element) {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+
+            // Dispara clique no elemento original do menu do Meu Espaço
+            targetItem.element.click();
+
+            // Fallback de navegação se o click() não redirecionar
+            const destUrl = sanitizeHref(targetItem.href);
+            if (destUrl && destUrl !== '#') {
+              setTimeout(() => {
+                if (window.location.href !== destUrl) {
+                  window.location.href = destUrl;
+                }
+              }, 120);
+            }
+          }
         }
       });
     }
@@ -195,7 +300,7 @@ window.JEPessoasNavDrawer = (function () {
     }
 
     return categories.map((cat) => `
-      <div class="je-drawer-category-card" data-category="${escapeHTML(cat.title.toLowerCase())}">
+      <div class="je-drawer-category-card collapsed" data-category="${escapeHTML(cat.title.toLowerCase())}">
         <div class="je-drawer-category-header" style="cursor:pointer;">
           <div class="je-category-header-left">
             <span class="je-cat-icon">${cat.icon}</span>
@@ -209,7 +314,7 @@ window.JEPessoasNavDrawer = (function () {
         <ul class="je-drawer-links-list">
           ${cat.links.map(link => `
             <li class="je-drawer-link-item">
-              <a href="${sanitizeHref(link.href)}" target="${escapeHTML(link.target)}" class="je-drawer-link">
+              <a href="${sanitizeHref(link.href)}" data-link-idx="${link.idx}" target="${escapeHTML(link.target)}" class="je-drawer-link">
                 <span>${escapeHTML(link.name)}</span>
                 ${link.isChefe ? `<span class="je-badge-chefe">Chefia</span>` : ''}
                 ${link.isRestrito ? `<span class="je-badge-restrito">Restrito</span>` : ''}
@@ -228,7 +333,7 @@ window.JEPessoasNavDrawer = (function () {
       const links = card.querySelectorAll('.je-drawer-link-item');
       links.forEach((li) => {
         const text = li.innerText.toLowerCase();
-        if (text.includes(query)) {
+        if (!query || text.includes(query)) {
           li.style.display = 'block';
           hasVisibleLink = true;
         } else {
@@ -236,7 +341,10 @@ window.JEPessoasNavDrawer = (function () {
         }
       });
 
-      if (hasVisibleLink || card.getAttribute('data-category').includes(query)) {
+      if (!query) {
+        card.style.display = 'block';
+        card.classList.add('collapsed');
+      } else if (hasVisibleLink || card.getAttribute('data-category').includes(query)) {
         card.style.display = 'block';
         card.classList.remove('collapsed');
       } else {

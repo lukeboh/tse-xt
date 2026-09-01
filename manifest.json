@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TSE XT",
-  "version": "0.2.3.1",
+  "version": "0.3.0",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",
@@ -11,6 +11,9 @@
     "*://meuespaco.tse.jus.br/*",
     "*://*.tse.jus.br/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -30,21 +33,25 @@
     {
       "matches": [
         "*://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_*",
-        "*://*.tse.jus.br/portalservidor2/EspelhoPontoMesAction_*"
+        "*://*.tse.jus.br/portalservidor2/EspelhoPontoMesAction_*",
+        "*://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoDiaAction_*",
+        "*://*.tse.jus.br/portalservidor2/EspelhoPontoDiaAction_*"
       ],
       "css": [
         "content/content.css"
       ],
       "js": [
         "content/modules/version.js",
+        "content/modules/balanceCalc.js",
         "content/modules/kpiExtractor.js",
         "content/modules/searchMenu.js",
         "content/modules/quickActions.js",
         "content/modules/navDrawer.js",
         "content/modules/domModernizer.js",
+        "content/modules/pointAdjustmentModal.js",
         "content/content.js"
       ],
-      "run_at": "document_end"
+      "run_at": "document_start"
     }
   ]
 }

@@ -11,8 +11,38 @@ window.JEPessoasSearch = (function () {
   let modalResults = null;
   let selectedIndex = 0;
 
+  function executePageScript(scriptCode) {
+    if (!scriptCode) return;
+    try {
+      const script = document.createElement('script');
+      script.textContent = scriptCode;
+      (document.head || document.documentElement).appendChild(script);
+      script.remove();
+    } catch (err) {
+      console.error('Erro ao executar script da página:', err);
+    }
+  }
+
   function buildSearchIndex() {
     searchItems = [
+      {
+        title: '⚡ Ajustar Meu Ponto (Hoje)',
+        category: 'Ações Rápidas',
+        action: () => {
+          const now = new Date();
+          const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+          if (window.JEPessoasPointModal) {
+            window.JEPessoasPointModal.openModalForDate(todayFormatted);
+          }
+        }
+      },
+      {
+        title: 'Frequência - Alteração de Ponto',
+        category: 'Navegação',
+        action: () => {
+          window.location.href = '/portalservidor2/EspelhoPontoDiaAction_consultar.action';
+        }
+      },
       {
         title: 'Espelho de Ponto - Mês Atual',
         category: 'Navegação',
@@ -23,9 +53,7 @@ window.JEPessoasSearch = (function () {
           if (mesSelect && anoSelect) {
             mesSelect.value = String(now.getMonth() + 1);
             anoSelect.value = String(now.getFullYear());
-            if (typeof formEspelhoPontoMes_consultar === 'function') {
-              formEspelhoPontoMes_consultar();
-            }
+            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
           }
         }
       },
@@ -55,9 +83,7 @@ window.JEPessoasSearch = (function () {
               const anoSelect = document.getElementById('anoSelecionado');
               if (anoSelect) anoSelect.value = String(parseInt(anoSelect.value, 10) - 1);
             }
-            if (typeof formEspelhoPontoMes_consultar === 'function') {
-              formEspelhoPontoMes_consultar();
-            }
+            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
           }
         }
       },
@@ -75,9 +101,7 @@ window.JEPessoasSearch = (function () {
               const anoSelect = document.getElementById('anoSelecionado');
               if (anoSelect) anoSelect.value = String(parseInt(anoSelect.value, 10) + 1);
             }
-            if (typeof formEspelhoPontoMes_consultar === 'function') {
-              formEspelhoPontoMes_consultar();
-            }
+            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
           }
         }
       },
@@ -97,18 +121,17 @@ window.JEPessoasSearch = (function () {
       }
     ];
 
-    // Adiciona links existentes no menu superior / rodapé do portal
+    // Adiciona links existentes no menu superior / rodapé do portal (filtrando javascript: URLs)
     document.querySelectorAll('a[href]').forEach((link) => {
       const text = link.innerText.trim();
       const href = link.getAttribute('href');
-      if (text && href && !href.startsWith('#') && !href.startsWith('javascript:void') && text.length > 2 && text.length < 50) {
-        // Evita duplicatas
+      if (text && href && !href.startsWith('#') && !href.toLowerCase().startsWith('javascript:') && text.length > 2 && text.length < 50) {
         if (!searchItems.some((item) => item.title.toLowerCase() === text.toLowerCase())) {
           searchItems.push({
             title: text,
             category: 'Menu Meu Espaço',
             action: () => {
-              link.click();
+              window.location.href = href;
             }
           });
         }
