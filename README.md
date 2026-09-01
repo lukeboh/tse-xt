@@ -85,7 +85,8 @@ A série 0.3.x consolidou o mecanismo de cálculo, o suporte a meses fechados e 
 
 - **Persistência (sticky) ao rolar a tela**: manter o menu/topbar, a linha de KPIs e os cabeçalhos da tabela fixos durante a rolagem do espelho.
 - **Horas extras autorizadas no card "Horas Extras"**: exibir, junto da pecúnia, a quantidade de horas extras efetivamente **autorizadas** no período.
-- **Revisão das regras a partir da legislação de referência**: auditar e ajustar as fórmulas de jornada, banco de horas, pecúnia e multiplicadores conforme a legislação de referência do TSE.
+- **Horas executadas não homologadas no KPI "Banco de Horas"**: destacar na tabela e contabilizar à parte no card **Banco de Horas** as horas efetivamente trabalhadas em excesso que **não foram homologadas pela chefia** (rodapé `Horas Excedentes Não Homologadas` do espelho) — hoje elas não entram no saldo e passam despercebidas. Ver [docs/CONFLITOS_NORMATIVOS.md](docs/CONFLITOS_NORMATIVOS.md) §C1b.
+- **Revisão das regras a partir da legislação de referência**: auditar e ajustar as fórmulas de jornada, banco de horas, pecúnia e multiplicadores conforme a legislação de referência do TSE — matriz de conflitos e estudo empírico em [docs/CONFLITOS_NORMATIVOS.md](docs/CONFLITOS_NORMATIVOS.md).
 - **Detecção automática de jornada de 7h e 8h**: identificar por dia/servidor se a jornada aplicável é de 7h ou 8h, sem depender de configuração manual nem apenas da presença de intervalo de almoço.
 
 ---
