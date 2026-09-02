@@ -42,13 +42,11 @@ window.JEPessoasAuthScan = (function () {
 
   function rowHasAuthorization(tr) {
     if (!tr) return false;
-    // 1. onclick/href da função nativa detalharAutorizacao(...)
+    // Sinal forte: ícone de relógio nativo com onclick detalharAutorizacao(...)
+    // — aparece exatamente nos dias com autorização de serviço extraordinário.
     if (tr.querySelector('[onclick*="detalharAutorizacao"], a[href*="detalharAutorizacao"]')) return true;
-    // 2. ícone de relógio de hora extra autorizada
-    if (tr.querySelector('img[src*="conClock" i], img[src*="relogio" i], img[title*="utoriza" i], img[alt*="utoriza" i], .je-overtime-clock-btn')) return true;
-    // 3. HTML cru (quando o parsing veio de fetch e o onclick já foi lido)
-    const html = tr.innerHTML || '';
-    return /detalharAutorizacao|conClock|Autoriza(c|ç)/i.test(html);
+    if (tr.querySelector('img[src*="iconClock" i], img[title*="autoriza" i], .je-overtime-clock-btn')) return true;
+    return /detalharAutorizacao|iconClock\d/i.test(tr.innerHTML || '');
   }
 
   /**
@@ -74,9 +72,16 @@ window.JEPessoasAuthScan = (function () {
     }
     if (!table) return { found: false };
 
-    const headerTexts = Array.from(table.querySelectorAll('th')).map((th) => normWs(th.innerText));
-    const closed = headerTexts.some((t) => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
-    const tableText = normWs(table.innerText);
+    // Mês fechado: a coluna h10 deixa de ser "Horas excedentes" e passa a
+    // "Horas ajustadas". Em documento não renderizado o <br> de "Horas<br>Ajust."
+    // some sem virar espaço, então testa o title do <th> e o texto sem espaços.
+    const headerBlob = Array.from(table.querySelectorAll('th'))
+      .map((th) => ((th.getAttribute('title') || '') + ' ' + (th.textContent || '')))
+      .join(' ')
+      .toUpperCase()
+      .replace(/\s+/g, '');
+    const closed = headerBlob.includes('AJUSTAD') || headerBlob.includes('HORASAJUST');
+    const tableText = normWs(table.innerText || table.textContent);
     const hybrid = HYBRID_RE.test(tableText);
 
     const days = [];
@@ -100,7 +105,8 @@ window.JEPessoasAuthScan = (function () {
       const s1 = tr.querySelector('td.h03')?.innerText.trim() || '';
       const e2 = tr.querySelector('td.h04')?.innerText.trim() || '';
       const s2 = tr.querySelector('td.h05')?.innerText.trim() || '';
-      const abono = tr.querySelector('td.h08')?.innerText.trim() || '';
+      // a célula de abono/liberação não traz classe .h08 no corpo — cai para a 8ª célula
+      const abono = (tr.querySelector('td.h08') || tr.children[7])?.innerText.trim() || '';
       const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
       const h10 = tr.querySelector('td.h10')?.innerText.trim() || '';
       const pecunia = (tr.querySelector('td.h12') || tr.querySelector('td.h11'))?.innerText.trim() || '';
