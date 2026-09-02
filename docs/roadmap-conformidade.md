@@ -51,7 +51,7 @@
   | **Híbrido/teletrabalho sem HE** | ❌ | ✅ | ✅ |
   | **Mês com HE autorizado** (art. 13) | ✅ *(só parcela `Horas Excedentes Homologadas`)* | ❌ | ✅ |
 - **Correção empírica (02/09/2026, CDP):** o estado "mês com HE autorizado" **credita sim** a parcela homologada — 04/2026 (Portaria 380/2026 vigente) e 09/2025 registraram `Horas Adquiridas` no Extrato havendo pecúnia no mês. O art. 13 veda a **utilização** (consumo), não a aquisição. Ver [regras §3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco) e [§5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada). Detecção do estado: chamada `detalharAutorizacao(` nas linhas do dia + `Pecúnia > 0`.
-- **Implementado (v0.4.0 — parcial):** `kpiExtractor.hasAuthorizedHEInMonth` detecta o estado; o card **Banco de Horas** passa a exibir o selo "HE autorizada · Consumo vedado neste mês (art. 13)" em vez de ser suprimido. **Falta:** creditar no `SALDO ACUM.` apenas a parcela `Horas Excedentes Homologadas` (converge com R1) e tratar o bloqueio de débito nos KPIs "Saída p/ Zerar Mês" / "Meta do Mês".
+- **Implementado (v0.4.0/0.4.1 — parcial):** `kpiExtractor.hasAuthorizedHEInMonth` detecta o estado; o card **Banco de Horas** exibe "HE autorizada · Consumo vedado" + a **prévia das homologadas** (`homologPreviewMinutes` = Úteis×1 + Sáb×1,5 + DomFer×2, do rodapé); o KPI **"Saída p/ Zerar Mês"** é desativado (`--:--`, "Consumo do banco vedado neste mês (art. 13)"). **Falta:** reescrever o `SALDO ACUM.` dia a dia para creditar só a parcela homologada em vez do excedente bruto (converge com R1); e revisar o numerador da "Meta do Mês" quando o saldo do mês não pode ser consumido.
 - **Relacionado:** o `Resíduo de Horas` fortemente negativo dos meses híbridos (−70h a −98h) é **cosmético** — não é debitado do banco — e **não pode** alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês" (ver [regras §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). A guarda de meta precisa do mesmo cuidado que hoje só a coluna tem.
 - **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (parcialmente resolvida — falta confirmar a vedação de **consumo** no mês com HE autorizado).
 
@@ -74,6 +74,7 @@
   - `> 10h` em fim de semana/feriado
   - `mês > 60h`
   - faixa 60–90h marcada como "sujeita a deliberação da DG"
+- **Implementado (v0.4.1 — parcial):** selos por dia `> 2h (art. 4º)` / `> 10h (art. 4º)` quando o excedente do dia passa do teto por jornada, mesmo autorizado ([domModernizer.js](../content/modules/domModernizer.js) `modernizeMonthlyTable`, constantes em `legalConfig.js`). **Falta:** alerta de `mês > 60h` e faixa 60–90h no rodapé/card.
 
 ## R6 — 🟡 Excedente sem autorização prévia
 
@@ -82,7 +83,8 @@
 - **Ação:**
   1. Cruzar com o ícone de autorização já existente (`detalharAutorizacao` / `formEspelhoPontoMes_detalharAutorizacao`); sinalizar dias com excedente **sem** autorização vinculada.
   2. Badge/aviso no dia e no card quando o excedente do dia **exceder** o autorizado — deixando claro que a diferença só vira crédito se homologada, senão é perda.
-- **Implementado (v0.4.0 — parcial):** `authorizationScan.rowHasAuthorization()` + selo `sem autorização` (âmbar) nos dias já encerrados com excedente ≥ 30 min, sem pecúnia e sem autorização vinculada ([domModernizer.js](../content/modules/domModernizer.js) `modernizeMonthlyTable`). **Falta:** ler o valor efetivamente autorizado no SAEX (`detalharAutorizacao` faz consulta assíncrona) para o badge "> autorizado".
+- **Implementado (v0.4.0/0.4.1 — parcial):** `authorizationScan.rowHasAuthorization()` + selo `sem autorização` (âmbar) nos dias já encerrados com excedente ≥ 30 min, sem pecúnia e sem autorização vinculada ([domModernizer.js](../content/modules/domModernizer.js) `modernizeMonthlyTable`). Complementado pelo selo de teto legal do R5.
+- **Bloqueio do badge "> autorizado":** o valor exato autorizado por dia sai de `AutorizacaoHoraExcedenteAction_execute?dataDia.asString=DD/MM/AAAA&servidor.matricula=NNN` (função nativa `formEspelhoPontoMes_detalharAutorizacao`, abre em `window.open`). Via `fetch` autenticado esse endpoint **redireciona para a home** (`Login_verTelaInicialSemLogout`) — acesso restrito para o perfil do servidor comum. Sem essa fonte, o badge "> autorizado" fica adiado; a aproximação viável hoje é o teto legal fixo (R5) e a categoria B1/B2 da Auditoria.
 - **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras" e "Horas executadas não homologadas no KPI Banco de Horas" (R1).
 - **Depende de:** [duvidas-normativas.md D6](duvidas-normativas.md) (a homologação da chefia tem teto no autorizado?).
 

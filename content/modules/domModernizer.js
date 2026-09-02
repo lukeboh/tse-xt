@@ -343,7 +343,7 @@ window.JEPessoasModernizer = (function () {
           ${kpiData.hasHybridWorkInMonth
             ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>Sem acúmulo de BH</span>`
             : (kpiData.hasAuthorizedHEInMonth
-              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span title="Portaria 380/2026 art. 13">Consumo vedado neste mês</span>`
+              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span title="Portaria 380/2026 art. 13: neste mês o saldo do banco não pode ser consumido; a parcela homologada continua sendo creditada.">Consumo vedado${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`
               : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`)}
         </div>
       </div>
@@ -688,10 +688,7 @@ window.JEPessoasModernizer = (function () {
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
           const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
 
-          // R6 — excedente sem autorização prévia (Portaria 380/2026 art. 3º).
-          // Marca dias já encerrados com horas trabalhadas em excesso que não
-          // têm autorização de serviço extraordinário vinculada nem viraram
-          // pecúnia — logo não geram pagamento nem compensação automática.
+          // R6 / R5 — sinalização de excedente irregular em dias já encerrados.
           try {
             const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6 || isHolidayOrRecess;
             // Em mês fechado a coluna h10 é "HORAS AJUST." (jornada reconhecida),
@@ -700,9 +697,12 @@ window.JEPessoasModernizer = (function () {
               ? (totalMin > 0 ? totalMin : exceedMin)
               : (isClosedMonthTable ? (totalMin - dayTargetMinutes) : exceedMin);
             const hasAuth = window.JEPessoasAuthScan && window.JEPessoasAuthScan.rowHasAuthorization(tr);
-            if (isStrictlyPast && !isDispensed && pecuniaMin === 0 && !hasAuth
-                && grossExcessMin >= 30
-                && occCell && !occCell.querySelector('.je-occurrence-ajuste-pendente')
+            const canBadge = isStrictlyPast && !isDispensed && occCell
+              && !occCell.querySelector('.je-occurrence-ajuste-pendente');
+
+            // R6 — excedente sem autorização de serviço extraordinário vinculada
+            // e sem pecúnia: não gera pagamento nem compensação automática (art. 3º).
+            if (canBadge && pecuniaMin === 0 && !hasAuth && grossExcessMin >= 30
                 && !occCell.querySelector('.je-occ-sem-autorizacao')) {
               const tag = document.createElement('span');
               tag.className = 'je-occurrence-badge je-occ-sem-autorizacao';
@@ -710,6 +710,24 @@ window.JEPessoasModernizer = (function () {
               tag.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} sem autorização de serviço extraordinário vinculada — não gera pecúnia nem compensação automática (Portaria 380/2026 art. 3º).`;
               occCell.appendChild(document.createTextNode(' '));
               occCell.appendChild(tag);
+            }
+
+            // R5 — excedente acima do teto legal por jornada, mesmo autorizado:
+            // 2h em dia útil, 10h em sábado/domingo/feriado (Res. 22.901/2008 art. 4º).
+            // O que passa disso não é compensável.
+            const L = window.JEPessoasLegal;
+            const capMin = isWeekendOrHoliday
+              ? ((L && L.MAX_HE_FDS_MIN.valor) || 600)
+              : ((L && L.MAX_HE_DIA_UTIL_MIN.valor) || 120);
+            if (canBadge && grossExcessMin > capMin
+                && !occCell.querySelector('.je-occ-acima-teto')) {
+              const over = grossExcessMin - capMin;
+              const tag2 = document.createElement('span');
+              tag2.className = 'je-occurrence-badge je-occ-acima-teto';
+              tag2.textContent = isWeekendOrHoliday ? '> 10h (art. 4º)' : '> 2h (art. 4º)';
+              tag2.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} — ${formatSigned(over).replace('+', '')} acima do teto de ${isWeekendOrHoliday ? '10h' : '2h'} por jornada (Res. 22.901/2008 art. 4º). O que passa do teto não é compensável.`;
+              occCell.appendChild(document.createTextNode(' '));
+              occCell.appendChild(tag2);
             }
           } catch (e) { /* não bloqueia a modernização */ }
 

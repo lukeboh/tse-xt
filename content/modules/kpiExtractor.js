@@ -248,6 +248,20 @@ window.JEPessoasKPI = (function () {
     const hasAuthIcon = !!table.querySelector('[onclick*="detalharAutorizacao"], a[href*="detalharAutorizacao"], img[title*="utoriza" i]');
     const hasAuthorizedHEInMonth = !hasHybridWorkInMonth && (hasAuthIcon || (pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes) > 0);
 
+    // Prévia do crédito real no banco = parcela HOMOLOGADA com fator por tipo de dia
+    // (Úteis ×1 + Sáb ×1,5 + Dom/Feriado ×2). Vem do rodapé do espelho, não da
+    // coluna SALDO ACUM. (que ainda inclui excedente não homologado — ver R1/R3).
+    let homologPreviewMinutes = 0;
+    try {
+      const scan = window.JEPessoasAuthScan && window.JEPessoasAuthScan.analyzeEspelho(document, { targetDailyMinutes: targetDailyMinutes });
+      if (scan && scan.footer && scan.footer.homolog) {
+        const h = scan.footer.homolog;
+        const SF = (window.JEPessoasLegal && window.JEPessoasLegal.SATURDAY_FACTOR.valor) || 1.5;
+        const DF = (window.JEPessoasLegal && window.JEPessoasLegal.SUNDAY_HOLIDAY_FACTOR.valor) || 2.0;
+        homologPreviewMinutes = Math.round(h.uteis * 1 + h.sab * SF + h.domfer * DF);
+      }
+    } catch (e) { /* rodapé pode não existir em mês corrente */ }
+
     // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado.
     // (A pecúnia NÃO é zerada: é valor a pagar, independente do regime de banco de horas.)
     if (hasHybridWorkInMonth) {
@@ -261,10 +275,14 @@ window.JEPessoasKPI = (function () {
 
     // Cálculo 2: Previsão de saída para zerar saldo do mês
     let estimatedExitToZeroMonth = '--:--';
-    let zeroMonthSubtext = hasHybridWorkInMonth ? 'Regime Híbrido (sem banco de horas)' : 'Saldo do mês já zerado';
+    let zeroMonthSubtext = hasHybridWorkInMonth
+      ? 'Regime Híbrido (sem banco de horas)'
+      : (hasAuthorizedHEInMonth ? 'Consumo do banco vedado neste mês (art. 13)' : 'Saldo do mês já zerado');
     let zeroMonthStatus = 'neutral';
 
-    if (!hasHybridWorkInMonth && estimatedExitMinutes !== null) {
+    // R3 — no mês com HE autorizado a UTILIZAÇÃO do banco é vedada (Portaria
+    // 380/2026 art. 13): não faz sentido sugerir "sair mais cedo" abatendo saldo.
+    if (!hasHybridWorkInMonth && !hasAuthorizedHEInMonth && estimatedExitMinutes !== null) {
       const diffMinutes = totalExceedMinutesMonth;
       
       if (diffMinutes > 0) {
@@ -283,7 +301,7 @@ window.JEPessoasKPI = (function () {
         zeroMonthSubtext = `Igual ao expediente diário`;
         zeroMonthStatus = 'neutral';
       }
-    } else if (!hasHybridWorkInMonth && todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
+    } else if (!hasHybridWorkInMonth && !hasAuthorizedHEInMonth && todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
       estimatedExitToZeroMonth = 'Expediente fechado';
       zeroMonthSubtext = `Saldo do mês: ${formatMinutesToTime(totalExceedMinutesMonth, true)}`;
     }
@@ -309,6 +327,8 @@ window.JEPessoasKPI = (function () {
       hasTodayRow: !!todayData,
       hasHybridWorkInMonth,
       hasAuthorizedHEInMonth,
+      homologPreviewMinutes,
+      homologPreviewFormatted: formatMinutesToTime(homologPreviewMinutes),
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,

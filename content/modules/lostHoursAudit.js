@@ -427,23 +427,57 @@ window.JEPessoasLostHours = (function () {
       ${banner}
       <div class="je-audit-hero">
         <div class="je-audit-hero-num">${fmt(tot.totalLost)}</div>
-        <div class="je-audit-hero-cap">horas adicionais sem pecúnia e sem banco de horas</div>
+        <div class="je-audit-hero-cap">horas que você trabalhou além da jornada e que <strong>não</strong> viraram pecúnia <strong>nem</strong> crédito no banco de horas</div>
         <div class="je-audit-hero-sub">${withLoss.length} de ${list.length} meses com perda · ${escapeHTML(snap.serverLabel || '')}</div>
       </div>
 
+      <p class="je-audit-intro">
+        Toda hora extra tem três destinos possíveis: vira <strong>pecúnia</strong> (é paga),
+        é <strong>homologada</strong> pela chefia e entra no <strong>banco de horas</strong>, ou
+        <strong>se perde</strong>. As 4 categorias abaixo somam tudo que se perdeu.
+      </p>
+
       <div class="je-audit-cards">
-        ${bucketCard('B1', 'Não Homologadas', tot.b1, 'Linha "Horas Excedentes Não Homologadas" do rodapé do espelho.')}
-        ${bucketCard('B2', 'Excedente de dia útil', tot.b2, 'Saldo de dias úteis acima da jornada absorvido como HORAS AJUST./Compl. Jorn. Mínima. Estimativa.')}
-        ${bucketCard('B3', 'Descarte de FDS/feriado', tot.b3, 'Acima do teto de 10h em sábado/domingo/feriado, ou trabalho de fim de semana em mês híbrido.')}
-        ${bucketCard('B4', 'Crédito aquém da fórmula', tot.b4, 'Homologadas cujo crédito no Extrato ficou abaixo de Úteis×1 + Sáb×1,5 + DomFer×2.')}
+        ${bucketCard('B1', 'Não Homologadas', tot.b1, 'exato')}
+        ${bucketCard('B2', 'Excedente de dia útil', tot.b2, 'estimativa')}
+        ${bucketCard('B3', 'Descarte de FDS/feriado', tot.b3, 'estimativa')}
+        ${bucketCard('B4', 'Crédito aquém da fórmula', tot.b4, 'exato')}
       </div>
+
+      <details class="je-audit-explain" open>
+        <summary>📖 Entenda cada categoria</summary>
+        <div class="je-audit-explain-body">
+          <div class="je-audit-def">
+            <div class="je-audit-def-h"><span class="je-audit-def-id">B1</span> Não Homologadas <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
+            <p>Horas que o espelho <strong>reconhece</strong> como excedente, mas que a chefia <strong>não homologou</strong>. Aparecem na linha <em>"Horas Excedentes Não Homologadas"</em> do rodapé do espelho. Sem homologação elas não entram no banco (fator zero) e não são pagas — ficam registradas só como aviso.</p>
+          </div>
+          <div class="je-audit-def">
+            <div class="je-audit-def-h"><span class="je-audit-def-id">B2</span> Excedente de dia útil absorvido <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
+            <p>Nos dias úteis, o que você trabalhou <strong>além da jornada</strong> (7h ou 8h) e que o sistema não pagou nem homologou. Esse tempo é "engolido" pela coluna <em>HORAS AJUST.</em> / <em>Compl. Jorn. Mínima</em> para fechar a jornada do mês e some sem virar crédito. É reconstruído dia a dia (<em>total do dia − jornada</em>, líquido do que foi pago/homologado no mês), por isso é uma estimativa.</p>
+          </div>
+          <div class="je-audit-def">
+            <div class="je-audit-def-h"><span class="je-audit-def-id">B3</span> Descarte de fim de semana / feriado <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
+            <p>Duas situações: (a) horas trabalhadas <strong>acima do teto de 10h</strong> num sábado, domingo ou feriado — o que passa disso é cortado (Res. 22.901/2008 art. 4º); (b) qualquer trabalho de fim de semana feito num <strong>mês de regime híbrido/teletrabalho</strong>, que é descartado por inteiro (Portaria 380/2026 art. 12).</p>
+          </div>
+          <div class="je-audit-def">
+            <div class="je-audit-def-h"><span class="je-audit-def-id">B4</span> Crédito aquém da fórmula <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
+            <p>Quando a chefia <strong>homologou</strong> horas mas o <strong>Extrato do Banco de Horas</strong> creditou <strong>menos</strong> do que a fórmula prevê (<em>Dias úteis ×1 + Sábados ×1,5 + Domingos/feriados ×2</em>). Na prática quase sempre fica em <strong>00:00</strong> — o Extrato costuma creditar igual ou a mais.</p>
+          </div>
+          <p class="je-audit-regime-legend">
+            <strong>Coluna "Regime":</strong>
+            <span class="je-audit-badge je-audit-badge-norm">Normal</span> mês comum ·
+            <span class="je-audit-badge je-audit-badge-he">HE autoriz.</span> mês com hora extra autorizada (consumo do banco vedado, art. 13) ·
+            <span class="je-audit-badge je-audit-badge-hib">Híbrido</span> mês com teletrabalho/híbrido (serviço extraordinário suprimido).
+          </p>
+        </div>
+      </details>
 
       <div class="je-audit-tablewrap">
         <table class="je-audit-table">
           <thead>
             <tr>
-              <th>Mês</th><th>Regime</th><th>Pecúnia</th><th>Homolog.</th>
-              <th>B1</th><th>B2</th><th>B3</th><th>B4</th><th>Perdido</th>
+              <th>Mês</th><th>Regime</th><th title="Horas pagas em pecúnia no mês">Pecúnia</th><th title="Horas homologadas para o banco no mês">Homolog.</th>
+              <th title="B1 — Não Homologadas">B1</th><th title="B2 — Excedente de dia útil absorvido">B2</th><th title="B3 — Descarte de fim de semana/feriado">B3</th><th title="B4 — Crédito aquém da fórmula">B4</th><th>Perdido</th>
             </tr>
           </thead>
           <tbody>
@@ -451,13 +485,16 @@ window.JEPessoasLostHours = (function () {
           </tbody>
         </table>
       </div>
-      <p class="je-audit-foot">B2 e B3 são estimativas reconstruídas dia a dia. Referência normativa: docs/regras-calculo-frequencia.md §3.9.</p>
+      <p class="je-audit-foot">B2 e B3 são reconstruções dia a dia — trate como ordem de grandeza. Meses ainda abertos são reprocessados a cada "Atualizar". Base normativa: <em>regras-calculo-frequencia.md §3.9</em>.</p>
     `;
   }
 
-  function bucketCard(id, title, min, tip) {
-    return `<div class="je-audit-card" title="${escapeHTML(tip)}">
-      <div class="je-audit-card-id">${id}</div>
+  function bucketCard(id, title, min, precision) {
+    const tag = precision === 'exato'
+      ? '<span class="je-audit-tag je-audit-tag-exato">exato</span>'
+      : '<span class="je-audit-tag je-audit-tag-est">estimativa</span>';
+    return `<div class="je-audit-card">
+      <div class="je-audit-card-id">${id} ${tag}</div>
       <div class="je-audit-card-val">${fmt(min)}</div>
       <div class="je-audit-card-title">${escapeHTML(title)}</div>
     </div>`;
