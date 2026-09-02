@@ -66,6 +66,7 @@
         if (window.JEPessoasQuickActions) window.JEPessoasQuickActions.init();
         if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
         if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
+        if (isEspelhoMes && window.JEPessoasLostHours) window.JEPessoasLostHours.init();
 
         // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
         if (window.JEPessoasVersion) window.JEPessoasVersion.maybeShowDisclaimer();
