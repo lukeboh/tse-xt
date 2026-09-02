@@ -302,6 +302,10 @@ window.JEPessoasModernizer = (function () {
     const isZeroMonthPositive = kpiData.zeroMonthStatus === 'positive';
     const isZeroMonthNegative = kpiData.zeroMonthStatus === 'negative';
 
+    const URLS = (window.JEPessoasLegal && window.JEPessoasLegal.URLS) || {};
+    const linkNorm = (url, txt, title) =>
+      `<a href="${url}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''} style="color:inherit; text-decoration:underline; text-underline-offset:2px;">${txt}</a>`;
+
     dashboard.innerHTML = `
       <!-- Card 1: Previsão Saída p/ Completar Expediente -->
       <div class="je-kpi-card" title="Horário estimado de saída para completar as ${kpiData.targetDailyHours}h de hoje">
@@ -341,10 +345,12 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-subtext">
           ${kpiData.hasHybridWorkInMonth
-            ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>Sem acúmulo de BH</span>`
+            ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span title="Portaria 490/2022 art. 22: não se adquire banco de horas em teletrabalho/híbrido.">${linkNorm(URLS.prt490_2022 || '#', 'Sem acúmulo de BH', 'Portaria-TSE 490/2022, art. 22')}</span>`
             : (kpiData.hasAuthorizedHEInMonth
-              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span title="Portaria 380/2026 art. 13: neste mês o saldo do banco não pode ser consumido; a parcela homologada continua sendo creditada.">Consumo vedado${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`
-              : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`)}
+              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado neste mês (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13: no mês com HE autorizada o saldo do banco não pode ser consumido; a parcela homologada continua sendo creditada.')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`
+              : (kpiData.isReducedRecessMonth
+                ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">Recesso · jornada 5h</span><span>Acúmulo de BH só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Portaria 885/2024', 'Portaria-TSE 885/2024 e sucessoras: no recesso a jornada é de 5h e o excedente só vira banco por decisão da Diretoria-Geral.')})</span>`
+                : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`))}
         </div>
       </div>
 
@@ -376,9 +382,10 @@ window.JEPessoasModernizer = (function () {
         <div class="je-kpi-subtext">
           ${kpiData.hasHybridWorkInMonth
             ? `<span>${kpiData.totalExpectedMinutesMonth === 0 ? 'Sem exigência presencial' : `Faltam <strong>${kpiData.remainingHoursFormatted}</strong> presencial`}</span>`
-            : (kpiData.isTargetExceeded 
+            : (kpiData.isTargetExceeded
               ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
               : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias restantes</span>`)}
+          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024). Dias com intervalo de almoço seguem 8h.">meta reduzida · recesso 5h</span>` : ''}
         </div>
       </div>
 
@@ -575,10 +582,14 @@ window.JEPessoasModernizer = (function () {
         let isPastOrToday = true;
         let isStrictlyPast = false;
         let dayOfWeek = null;
+        let dayMonth = null;
+        let dayYear = null;
         if (dateParts.length === 3) {
           const dayNum = parseInt(dateParts[0], 10);
           const monthNum = parseInt(dateParts[1], 10);
           const yearNum = parseInt(dateParts[2], 10);
+          dayMonth = monthNum;
+          dayYear = yearNum;
           const dObj = new Date(yearNum, monthNum - 1, dayNum, 23, 59, 59);
           const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           const dObjStart = new Date(yearNum, monthNum - 1, dayNum);
@@ -676,9 +687,11 @@ window.JEPessoasModernizer = (function () {
           const totalMin = parseMinutes(totalDay);
           const abonoMin = parseMinutes(abono);
 
-          // Jornada esperada do dia: 8h se houve intervalo de almoço (4 batidas), senão a meta padrão.
-          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
-          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : (targetHours * 60);
+          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em mês
+          // de recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
+          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: dayYear, month: dayMonth })
+            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : (targetHours * 60));
 
           // Detecção de dispensa da jornada ordinária (espelha a lógica do kpiExtractor).
           const occU = (occText + ' ' + rawText).toUpperCase();

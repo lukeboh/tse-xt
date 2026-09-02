@@ -105,6 +105,7 @@ window.JEPessoasAuthScan = (function () {
       const s1 = tr.querySelector('td.h03')?.innerText.trim() || '';
       const e2 = tr.querySelector('td.h04')?.innerText.trim() || '';
       const s2 = tr.querySelector('td.h05')?.innerText.trim() || '';
+      const e3 = tr.querySelector('td.h06')?.innerText.trim() || '';
       // a célula de abono/liberação não traz classe .h08 no corpo — cai para a 8ª célula
       const abono = (tr.querySelector('td.h08') || tr.children[7])?.innerText.trim() || '';
       const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
@@ -121,8 +122,11 @@ window.JEPessoasAuthScan = (function () {
       const isHybridDay = HYBRID_RE.test(ctx);
       const abonoMin = parseTimeToMinutes(abono);
 
-      const hasLunch = !!(e1 && s1 && e2 && s2);
-      const targetMin = hasLunch ? 480 : target;
+      // Jornada-alvo do dia: 8h se houve intervalo (2ª entrada), 5h em mês de
+      // recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
+      const targetMin = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+        ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: yearNum, month: monthNum })
+        : ((e2 || e3) ? 480 : target);
       const isDispensed = isLicense || isVacation || isTravel || isHybridDay || (abonoMin >= targetMin);
 
       const hasAuth = rowHasAuthorization(tr);
@@ -177,14 +181,19 @@ window.JEPessoasAuthScan = (function () {
     const residuoNums = footerRow('Resíduo de Horas');
 
     const heAuthorized = !hybrid && (authDayCount > 0 || pecunia.total > 0);
+    const year = opts.year || (days[0] ? parseInt(days[0].date.slice(6), 10) : null);
+    const month = opts.month || (days[0] ? parseInt(days[0].date.slice(3, 5), 10) : null);
+    const reducedRecess = !!(window.JEPessoasLegal && window.JEPessoasLegal.isReducedRecessMonth
+      && year && month && window.JEPessoasLegal.isReducedRecessMonth(year, month));
 
     return {
       found: true,
-      year: opts.year || (days[0] ? parseInt(days[0].date.slice(6), 10) : null),
-      month: opts.month || (days[0] ? parseInt(days[0].date.slice(3, 5), 10) : null),
+      year,
+      month,
       closed,
       hybrid,
       heAuthorized,
+      reducedRecess,
       authDayCount,
       footer: {
         pecunia,

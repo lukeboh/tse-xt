@@ -5,20 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.1';
+  const CURRENT_VERSION = '0.4.3';
 
   const CHANGELOG = [
     {
-      version: '0.4.1',
+      version: '0.4.3',
       date: '2026-09-02',
       title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
         'Auditoria de Horas Perdidas: novo modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais que não viraram pecúnia nem banco de horas, em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula). O resultado é persistido por matrícula; a tela abre sempre com o último resultado e atualiza só o delta, com barra de progresso e data da última varredura. Full Update refaz tudo.',
-        'A tela da Auditoria explica cada categoria (B1–B4) em linguagem clara, com a origem de cada número, marca "valor exato" vs "estimativa" e traz legenda dos regimes de mês.',
-        'R3 — três estados de banco de horas: o mês com hora extra autorizada passa a ser reconhecido (Portaria 380/2026 art. 13). O consumo do saldo é vedado (KPI "Saída p/ Zerar Mês" desativado com aviso), mas a aquisição continua — o card Banco de Horas mostra a prévia das horas homologadas que serão creditadas.',
-        'R5/R6 — selos na tabela: "sem autorização" nos dias com excedente sem serviço extraordinário vinculado, e "> 2h / > 10h (art. 4º)" quando o excedente do dia passa do teto legal por jornada, mesmo autorizado.',
-        'Módulo legalConfig.js: constantes de cálculo (tetos de HE, jornada ordinária, fatores, repousos) com norma, artigo e link, para tooltips e avisos.',
-        'Robustez: a montagem da interface ganhou fallback por setTimeout além do requestAnimationFrame, garantindo a renderização mesmo em aba de segundo plano.'
+        'A tela da Auditoria explica cada categoria (P1–P4) em linguagem clara, com a origem de cada número, link para a norma que a fundamenta e marca "valor exato" vs "estimativa"; tem gráfico de barras cronológico das perdas por ano, tooltips completos nas colunas, e cada linha da tabela abre (com confirmação) o Espelho de Ponto do mês correspondente.',
+        'R4 — jornada diária automática: 7h em turno único (1 entrada / 1 saída), 8h quando há 2ª entrada (intervalo de almoço), e 5h nos meses de recesso (janeiro; julho de ano não eleitoral — Portaria-TSE 885/2024). Fonte única em legalConfig.js, usada pelo cálculo de saldo, pelos KPIs e pela Auditoria. Selos "Recesso · jornada 5h" e "meta reduzida" nos cards.',
+        'R3 — mês com hora extra autorizada reconhecido (Portaria 380/2026 art. 13, agora com link para a norma). O consumo do saldo é vedado (KPI "Saída p/ Zerar Mês" desativado), mas a aquisição continua — o card Banco de Horas mostra a prévia das horas homologadas.',
+        'R5/R6 — selos na tabela: "sem autorização" e "> 2h / > 10h (art. 4º)" quando o excedente do dia passa do teto legal por jornada.',
+        'Módulo legalConfig.js: constantes e regras de cálculo (jornadas, tetos de HE, fatores, repousos, ano eleitoral, mês de recesso) com norma, artigo e link.',
+        'Robustez: a montagem da interface ganhou fallback por setTimeout além do requestAnimationFrame.'
       ]
     },
     {

@@ -1,6 +1,6 @@
 # 📐 Regras de Cálculo da Frequência — Sistema Oficial do TSE (verificadas)
 
-**Versão do documento:** 1.1.0
+**Versão do documento:** 1.2.0
 **Data:** 02/09/2026
 **Escopo:** Espelho de Ponto Mensal (`EspelhoPontoMesAction`), Extrato do Banco de Horas (`BancoHorasAction`) e módulo de cálculo do TSE XT (`content/modules/balanceCalc.js`).
 **Método:** leitura do DOM autenticado via Chrome DevTools Protocol (porta 9222); texto das normas no site público do TSE (`tse.jus.br/legislacao/compilada`); estudo empírico de 2009–2026 dos espelhos e do Extrato do Banco de Horas do servidor 30901018 (SETOT).
@@ -113,10 +113,19 @@ São os mesmos percentuais do art. 9º da Res. 22.901/2008 (que os cita para o *
 
 Em mês fechado/homologado, a coluna física `h10` deixa de ser "HORAS EXCED." e passa a **"HORAS AJUST."** = **jornada ordinária reconhecida**. Quando falta marcação, a chefia lança apenas as horas suficientes para fechar a jornada ordinária (art. 6º §2º da Portaria 380/2026; art. 2º §2º da Portaria 642/2020). Ex.: **03/10/2024** — trabalhadas 05h21, `HORAS AJUST. = 07h00` (dia completado à jornada, sem débito).
 
-### 3.6. Intervalo e faixa da 7ª à 8ª hora
+### 3.6. Jornada diária por padrão de marcação (7h / 8h / 5h)
 
+- **8h (40h/semana)** é a jornada padrão do servidor do TSE (Lei 8.112/1990 art. 19). Admite-se **7h (35h/semana)** para quem cumpre a jornada em **turno único** — 1 entrada e 1 saída, **sem intervalo**. O gatilho de 8h é a existência de uma **2ª entrada** (`E2`): registrou 2ª entrada ⇒ tirou intervalo ⇒ o dia é de 8h e o excedente só conta a partir daí.
 - O intervalo mínimo de 1h só é exigível **quando a jornada excede 8h**; nesse caso, sem registro do intervalo, o sistema **desconta 1h automaticamente** (art. 7º caput/§1º da Portaria 380/2026).
-- A jornada que **excede a 7ª hora sem passar da 8ª** é **complementação da jornada mensal ordinária**, **não serviço extraordinário** (art. 7º §2º). Ou seja, a jornada de referência é de **7h**; a faixa 7h–8h não é crédito.
+- Para o turno único, a jornada que **excede a 7ª hora sem passar da 8ª** é **complementação da jornada mensal ordinária**, **não serviço extraordinário** (art. 7º §2º).
+- **Confirmação no DOM (via CDP):** o espelho tem uma coluna nativa **`Compl. Jorn. Mínima`** (entre `ADIC. NOTURNO` e `Ocorrência`) que isola a parcela de dias úteis **acima da 7ª hora**, usada para fechar a jornada mensal ordinária. Ex. 03/2024: dia com `TOTAL 07:42` → `Compl. Jorn. Mínima 00:42`; `08:34` → `01:34`; `08:59` → `01:59`. Reforça o [roadmap-conformidade.md R4](roadmap-conformidade.md): essa faixa não entra como excedente/crédito.
+
+### 3.10. Recesso — jornada reduzida a 5h e acúmulo de banco restrito
+
+- Em **janeiro** (todo ano) e em **julho de anos não eleitorais**, o expediente presencial é das 13h às 18h e a jornada em **turno único** passa a **5h** (Portaria-TSE 885/2024 e sucessoras anuais; para julho, Res.-TSE 461/2023). Dias com intervalo de almoço seguem 8h.
+- No recesso, **as horas que excedem o limite diário de 5h só podem virar banco de horas por decisão da Diretoria-Geral** — não há acúmulo automático (Portaria-TSE 885/2024). Na prática, para a Auditoria de Horas Perdidas, o excedente de recesso não pago nem homologado entra em **P2**.
+- "Ano eleitoral" = todo ano **par** (o Brasil tem eleição geral ou municipal a cada ano par). "Julho não eleitoral" = julho de ano **ímpar**.
+- **A confirmar** (ver [duvidas-normativas.md D7](duvidas-normativas.md)): se a redução para 5h alcança também quem faz jornada com intervalo, e o recorte exato de datas em janeiro (o recesso forense de 20/12 a 06/01 já é dispensa).
 - **Confirmação no DOM (via CDP):** o espelho tem uma coluna nativa **`Compl. Jorn. Mínima`** (entre `ADIC. NOTURNO` e `Ocorrência`) que isola a parcela de dias úteis **acima da 7ª hora**, usada para fechar a jornada mensal ordinária. Ex. 03/2024: dia com `TOTAL 07:42` → `Compl. Jorn. Mínima 00:42`; dia com `TOTAL 08:34` → `01:34`; dia com `08:59` → `01:59`. Reforça o [roadmap-conformidade.md R4](roadmap-conformidade.md): o alvo é 7h e essa faixa não entra como excedente/crédito.
 
 ### 3.7. Trabalho híbrido / teletrabalho — supressão integral do serviço extraordinário
