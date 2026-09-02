@@ -1,6 +1,6 @@
 # ❓ Dúvidas Normativas em Aberto
 
-**Versão do documento:** 2.1.0
+**Versão do documento:** 2.2.0
 **Data:** 02/09/2026
 
 > Perguntas que **ainda não têm resposta** e afetam o cálculo do TSE XT. Regras já verificadas estão em [regras-calculo-frequencia.md](regras-calculo-frequencia.md); ajustes planejados em [roadmap-conformidade.md](roadmap-conformidade.md).
@@ -60,3 +60,13 @@
 | **Em aberto** | A chefia pode homologar excedente **acima** do quantitativo que a DG autorizou via SAEX, ou a homologação fica limitada ao autorizado (e o restante é obrigatoriamente "não homologado")? A Res. 22.901/2008 art. 4º §1º e a Portaria 380/2026 art. 11 preveem deliberação da DG "limitada a 30h" apenas para a extrapolação do **teto mensal de 60h** — não para a diferença entre realizado e autorizado. |
 | **Como resolver** | Num mês fechado com HE autorizado, comparar excedente bruto diário × autorizado (SAEX / `detalharAutorizacao`) × o que entrou como `Horas Excedentes Homologadas`. Confirmar com `frequencia@tse.jus.br`. |
 | **Status** | Aberta. |
+
+## D7 — Jornada de 5h no recesso: escopo e datas exatas
+
+| | |
+| :--- | :--- |
+| **Por que importa** | O TSE XT já adota jornada de **5h** em janeiro e em julho de ano não eleitoral para o turno único ([regras-calculo-frequencia.md §3.10](regras-calculo-frequencia.md#310-recesso--jornada-reduzida-a-5h-e-acúmulo-de-banco-restrito)). Isso muda a meta do mês e a categoria **P2** da Auditoria de Horas Perdidas. Se o recorte estiver errado, a auditoria super/subestima janeiros e julhos inteiros. |
+| **O que se sabe** | Portaria-TSE 885/2024 (e sucessoras anuais, ex. 552/2025): no recesso o trabalho é presencial e observa **limite de 5h diárias**, salvo exceção justificada e pré-autorizada; o que excede 5h **só vira banco por decisão da DG**. Res.-TSE 461/2023: expediente de julho das 13h às 18h. As portarias são **anuais** — a data exata de início/fim em janeiro varia (o recesso forense de 20/12 a 06/01 já é dispensa à parte). |
+| **Em aberto** | (a) A redução para 5h vale também para quem cumpre jornada **com intervalo** (8h), ou só para o turno único? (b) Quais os dias exatos de janeiro (todo o mês? a partir de 07/01?). (c) Confirmar que julho de **ano par** (eleitoral) nunca tem redução. (d) A cada dezembro, cadastrar a portaria do ano seguinte. |
+| **Como resolver** | Inspecionar via CDP um espelho fechado de janeiro e de julho ímpar (ex.: 01/2025, 07/2025) e ver o alvo diário que o sistema aplicou; confirmar com `frequencia@tse.jus.br`. |
+| **Status** | Aberta — implementação atual assume mês inteiro e só turno único. |

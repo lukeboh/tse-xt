@@ -125,9 +125,11 @@ window.JEPessoasKPI = (function () {
 
           const isDispensed = isHolidayOrRecess || isLicense || isHybrid || isVacation || isTravel || (abonoMin >= targetDailyMinutes);
 
-          // Verifica se houve intervalo de almoço (2 entradas e 2 saídas preenchidas)
-          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
-          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : targetDailyMinutes; // 8h ou 7h
+          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em
+          // mês de recesso reduzido (turno único), senão 7h. Fonte: legalConfig.
+          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: yearNum, month: monthNum })
+            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : targetDailyMinutes);
 
           // Contabilização de dias úteis e meta esperada (exclui fins de semana e dispensas)
           const todayObj = new Date();
@@ -197,10 +199,12 @@ window.JEPessoasKPI = (function () {
       }
     });
 
-    // Cálculo 1: Previsão de saída para completar expediente diário
+    // Cálculo 1: Previsão de saída para completar expediente diário.
+    // Usa a jornada real de hoje (7h/8h/5h) e não o valor fixo.
+    const todayTarget = (todayData && todayData.dayTargetMinutes) || targetDailyMinutes;
     let estimatedExit = '--:--';
     let estimatedExitMinutes = null;
-    let remainingMinutesToday = targetDailyMinutes;
+    let remainingMinutesToday = todayTarget;
     let workedMinutesToday = 0;
 
     if (todayData) {
@@ -211,24 +215,24 @@ window.JEPessoasKPI = (function () {
 
       // 1. Cenário: Entrou (E1) e não saiu ainda
       if (e1M !== null && s1M === null) {
-        estimatedExitMinutes = e1M + targetDailyMinutes;
+        estimatedExitMinutes = e1M + todayTarget;
         estimatedExit = formatMinutesToTime(estimatedExitMinutes % (24 * 60));
         const now = new Date();
         const curMinutes = now.getHours() * 60 + now.getMinutes();
         workedMinutesToday = Math.max(0, curMinutes - e1M);
-        remainingMinutesToday = Math.max(0, targetDailyMinutes - workedMinutesToday);
+        remainingMinutesToday = Math.max(0, todayTarget - workedMinutesToday);
       }
       // 2. Cenário: Fez 1º turno e está no 2º turno
       else if (e1M !== null && s1M !== null && e2M !== null && s2M === null) {
         const firstTurn = Math.max(0, s1M - e1M);
-        const needed = Math.max(0, targetDailyMinutes - firstTurn);
+        const needed = Math.max(0, todayTarget - firstTurn);
         estimatedExitMinutes = e2M + needed;
         estimatedExit = formatMinutesToTime(estimatedExitMinutes % (24 * 60));
         const now = new Date();
         const curMinutes = now.getHours() * 60 + now.getMinutes();
         const secondTurn = Math.max(0, curMinutes - e2M);
         workedMinutesToday = firstTurn + secondTurn;
-        remainingMinutesToday = Math.max(0, targetDailyMinutes - workedMinutesToday);
+        remainingMinutesToday = Math.max(0, todayTarget - workedMinutesToday);
       }
       // 3. Cenário: Concluído
       else if (todayData.totalDay && todayData.totalDay !== '00:00') {
@@ -247,6 +251,22 @@ window.JEPessoasKPI = (function () {
     // mas a aquisição (parcela homologada) continua.
     const hasAuthIcon = !!table.querySelector('[onclick*="detalharAutorizacao"], a[href*="detalharAutorizacao"], img[title*="utoriza" i]');
     const hasAuthorizedHEInMonth = !hasHybridWorkInMonth && (hasAuthIcon || (pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes) > 0);
+
+    // R4 — mês de recesso com jornada reduzida a 5h (janeiro; julho não eleitoral).
+    // Nesses meses a jornada em turno único é 5h e o acúmulo de banco só ocorre
+    // por decisão da DG (Portaria-TSE 885/2024). Detecta pelo mês/ano visualizado.
+    let viewYear = null, viewMonth = null;
+    const mSel = document.getElementById('mesSelecionado');
+    const aSel = document.getElementById('anoSelecionado');
+    if (mSel && mSel.value) viewMonth = parseInt(mSel.value, 10);
+    if (aSel && aSel.value) viewYear = parseInt(aSel.value, 10);
+    if (!viewMonth || !viewYear) {
+      const firstDate = table.querySelector('td.h01, .h01');
+      const md = firstDate && (firstDate.innerText || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (md) { viewMonth = parseInt(md[2], 10); viewYear = parseInt(md[3], 10); }
+    }
+    const isReducedRecessMonth = !!(window.JEPessoasLegal && window.JEPessoasLegal.isReducedRecessMonth
+      && viewYear && viewMonth && window.JEPessoasLegal.isReducedRecessMonth(viewYear, viewMonth));
 
     // Prévia do crédito real no banco = parcela HOMOLOGADA com fator por tipo de dia
     // (Úteis ×1 + Sáb ×1,5 + Dom/Feriado ×2). Vem do rodapé do espelho, não da
@@ -327,6 +347,7 @@ window.JEPessoasKPI = (function () {
       hasTodayRow: !!todayData,
       hasHybridWorkInMonth,
       hasAuthorizedHEInMonth,
+      isReducedRecessMonth,
       homologPreviewMinutes,
       homologPreviewFormatted: formatMinutesToTime(homologPreviewMinutes),
       estimatedExit,

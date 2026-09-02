@@ -55,15 +55,16 @@
 - **Relacionado:** o `Resíduo de Horas` fortemente negativo dos meses híbridos (−70h a −98h) é **cosmético** — não é debitado do banco — e **não pode** alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês" (ver [regras §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). A guarda de meta precisa do mesmo cuidado que hoje só a coluna tem.
 - **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (parcialmente resolvida — falta confirmar a vedação de **consumo** no mês com HE autorizado).
 
-## R4 — 🟡 Jornada-alvo de 7h e faixa de complementação 7h–8h
+## R4 — 🟡 Jornada-alvo diária (7h / 8h / 5h no recesso)
 
-- **Hoje:** alvo diário = 480 min quando há duas entradas e duas saídas; senão 420 min ([especificacao-negocio.md §2.3](especificacao-negocio.md); `dayTargetMinutes` em [balanceCalc.js:79](../content/modules/balanceCalc.js#L79)).
-- **Regra oficial:** jornada ordinária de referência = **7h**; a faixa 7ª–8ª hora é **complementação da jornada mensal ordinária**, não HE (art. 7º §2º da Portaria 380/2026). Intervalo de 1h só é exigível acima de 8h.
-- **Ação:**
-  1. Adotar alvo diário de **420 min**.
-  2. Classificar a faixa 420–480 min como complementação ordinária — **não** entra como crédito no `SALDO ACUM.`
-  3. Só o que passa de **480 min líquidos de intervalo** é serviço extraordinário.
-- **Depende de:** [duvidas-normativas.md D1](duvidas-normativas.md) (a coluna `TOTAL` já vem líquida do intervalo?).
+- **Regra oficial:**
+  - Servidor do TSE cumpre **40h/semana** (≈ 8h/dia — Lei 8.112/1990 art. 19).
+  - Admite-se **7h/dia** (35h/semana) para quem cumpre a jornada em **turno único** (1 entrada / 1 saída, **sem intervalo**). Havendo **2ª entrada** registrada (intervalo tirado), a jornada do dia é **8h** e o excedente só começa a contar depois disso.
+  - A faixa 7ª–8ª hora, para quem faz turno único, é **complementação da jornada mensal ordinária**, não HE (Portaria 380/2026 art. 7º §2º).
+  - **Recesso — jornada reduzida a 5h:** em **janeiro** (todo ano) e em **julho de anos não eleitorais**, para o turno único, a jornada passa a **5h** e o acúmulo de banco de horas só ocorre **por decisão da Diretoria-Geral** (Portaria-TSE 885/2024 e sucessoras anuais; Res.-TSE 461/2023 para julho). Dias com intervalo de almoço seguem 8h.
+- **Implementado (v0.4.3):** `legalConfig.dailyTargetMinutes({ e2, e3, year, month })` é a fonte única — usada por `kpiExtractor`, `domModernizer` (`modernizeMonthlyTable`) e `authorizationScan.analyzeEspelho` (que alimenta a Auditoria de Horas Perdidas). O gatilho de 8h passou a ser **a 2ª entrada** (`e2`), não mais as 4 batidas completas. O card **Saída Expediente** projeta com a jornada real de hoje. Meses de recesso ganham selo *"Recesso · jornada 5h"* no card Banco de Horas e *"meta reduzida · recesso 5h"* no card Meta; a Auditoria marca o regime `Recesso 5h`.
+- **Falta:** classificar a faixa 420–480 min (turno único) como complementação ordinária que **não** credita o `SALDO ACUM.` (converge com R1); e tratar a vedação de acúmulo no recesso no `SALDO ACUM.` (hoje só há aviso).
+- **Depende de:** [duvidas-normativas.md D1](duvidas-normativas.md) (a coluna `TOTAL` já vem líquida do intervalo?) e [D7](duvidas-normativas.md) (norma exata e escopo da jornada de 5h no recesso).
 - **Feature correlata no README:** "Detecção automática de jornada de 7h e 8h".
 
 ## R5 — 🟡 Tetos legais de horas extras
