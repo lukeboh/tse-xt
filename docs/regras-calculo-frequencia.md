@@ -1,6 +1,6 @@
 # 📐 Regras de Cálculo da Frequência — Sistema Oficial do TSE (verificadas)
 
-**Versão do documento:** 1.0.0
+**Versão do documento:** 1.1.0
 **Data:** 02/09/2026
 **Escopo:** Espelho de Ponto Mensal (`EspelhoPontoMesAction`), Extrato do Banco de Horas (`BancoHorasAction`) e módulo de cálculo do TSE XT (`content/modules/balanceCalc.js`).
 **Método:** leitura do DOM autenticado via Chrome DevTools Protocol (porta 9222); texto das normas no site público do TSE (`tse.jus.br/legislacao/compilada`); estudo empírico de 2009–2026 dos espelhos e do Extrato do Banco de Horas do servidor 30901018 (SETOT).
@@ -117,6 +117,7 @@ Em mês fechado/homologado, a coluna física `h10` deixa de ser "HORAS EXCED." e
 
 - O intervalo mínimo de 1h só é exigível **quando a jornada excede 8h**; nesse caso, sem registro do intervalo, o sistema **desconta 1h automaticamente** (art. 7º caput/§1º da Portaria 380/2026).
 - A jornada que **excede a 7ª hora sem passar da 8ª** é **complementação da jornada mensal ordinária**, **não serviço extraordinário** (art. 7º §2º). Ou seja, a jornada de referência é de **7h**; a faixa 7h–8h não é crédito.
+- **Confirmação no DOM (via CDP):** o espelho tem uma coluna nativa **`Compl. Jorn. Mínima`** (entre `ADIC. NOTURNO` e `Ocorrência`) que isola a parcela de dias úteis **acima da 7ª hora**, usada para fechar a jornada mensal ordinária. Ex. 03/2024: dia com `TOTAL 07:42` → `Compl. Jorn. Mínima 00:42`; dia com `TOTAL 08:34` → `01:34`; dia com `08:59` → `01:59`. Reforça o [roadmap-conformidade.md R4](roadmap-conformidade.md): o alvo é 7h e essa faixa não entra como excedente/crédito.
 
 ### 3.7. Trabalho híbrido / teletrabalho — supressão integral do serviço extraordinário
 
@@ -129,6 +130,31 @@ Verificado em **16 meses com dias de `TRABALHO HIBRIDO`** (2022–2026), sem exc
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
 
 Meses híbridos fecham com `Resíduo de Horas` de **−70h a −98h** (ex.: 03/2026 = −98:04) porque os dias híbridos não somam horas ao `TOTAL` mensal, mas a meta ordinária continua contando os dias. Esse débito **não é levado ao banco** (`Horas Utilizadas do Banco = 00:00`, saldo do Extrato inalterado) — é um número de exibição, não uma dívida real.
+
+### 3.9. Excedente além do quantitativo de HE autorizado — homologação é a única porta para o banco
+
+Num mês com serviço extraordinário **autorizado**, o excedente diário segue os três destinos de §3.1, com o recorte abaixo — confirmado por cruzamento **Espelho × Extrato do Banco de Horas** do servidor 30901018 ([§5.3](#53-excedente-em-meses-com-he-autorizada)):
+
+| Situação do excedente | Para onde vai | Efeito no banco |
+| :--- | :--- | :--- |
+| Dentro do quantitativo autorizado e pago via SAEX | **Pecúnia** (`.h12`) | Nada (Regra de Ouro, §3.3) |
+| Fora do quantitativo autorizado, **não** homologado pela chefia | **"Horas Excedentes Não Homologadas"** no rodapé; ou, nos dias úteis, absorvido como **`Compl. Jorn. Mínima`** / travado no teto da jornada ordinária (`HORAS AJUST. = 07:00`) | **Nada — perda.** Não gera linha no Extrato. |
+| Fora do quantitativo autorizado, **homologado** pela chefia | **"Horas Excedentes Homologadas"** | **Creditado no banco** com fator por tipo de dia (§3.2), **mesmo no mês que também teve pecúnia** |
+
+**Não há conversão automática.** O único caminho do excedente não pago para o banco é a **homologação ativa pela chefia**. Sem ela, o excedente some: cai em "Não Homologadas" (fim de semana/feriado) ou é reclassificado como complementação da jornada ordinária (dias úteis).
+
+**Não há vedação à *aquisição* de banco no mês com HE autorizado.** A Portaria 380/2026 art. 13 veda a **utilização** (consumo) do saldo, não o **crédito**. Meses com pecúnia **e** homologadas simultâneas que creditaram o Extrato:
+
+| Mês (com HE autorizado) | Pecúnia | Homologadas | `Horas Adquiridas` no Extrato |
+| :--- | :--- | :--- | :--- |
+| **04/2026** (Portaria 380/2026 vigente) | 06:00 (Dom) | 05:50 (Úteis) | **05:50** — ×1,0 exato |
+| **09/2025** | 05:34 (Dom) | 04:36 (Úteis) | **04:36** — ×1,0 exato |
+| **01/2016** | 15:00 (Dom) | 19:28 (Úteis) | **19:28** — ×1,0 exato |
+| **12/2015** | 10:00 (Dom) | 21:42 (Úteis+Dom) | 40:10 — maior que a fórmula, ver [duvidas-normativas.md D4](duvidas-normativas.md) |
+
+**Caso-referência de perda — 03/2024** (mês fechado, HE autorizado em 13 dias): trabalhadas 183h05; **38h19 pagas em pecúnia** (sáb/dom/feriado autorizados); **15h34 de excedente não autorizado → "Horas Excedentes Não Homologadas"**; `Horas Excedentes Homologadas = 00:00`; **nenhuma linha de 03/2024 no Extrato** → as 15h34 **não viraram banco, foram perdidas**. `Resíduo` e `Utilizadas do Banco` = 00:00. Mesmo padrão em 11/2024 (pecúnia 08:00 + não homologadas 03:15, zero no Extrato) e 12/2020.
+
+> **Resposta à dúvida prática** ("fiz 60h excedentes, só 30h de HE autorizadas"): as 30h autorizadas vão para **pecúnia**; as outras 30h **não viram banco de horas automaticamente**. Só entram no banco se a chefia **homologar** essa parcela (aí com fator por tipo de dia). Caso contrário, aparecem como **"Horas Excedentes Não Homologadas"** (perda) ou são absorvidas como complementação da jornada ordinária. A Portaria 380/2026 art. 13 **não** impede esse crédito — impede apenas **usar** o saldo do banco naquele mês. Ver limite ainda em aberto em [duvidas-normativas.md D6](duvidas-normativas.md).
 
 ---
 
@@ -190,6 +216,27 @@ Alguns meses "sujos" (09–10/2009, 12/2015, 07/2016, 03/2014) têm `Horas Adqui
 | 07/2026 | 11 | 00:00 | 00:00 | 00:00 | 00:00 | −78:37 |
 
 **Em 100% dos meses híbridos: tudo zerado.** Nos meses com pecúnia > 0 (03,04,09,10/2024; 06,07/2025; 08/2026) **não há** nenhum dia híbrido. Caso decisivo: 04/07/2026 (§3.7).
+
+### 5.3. Excedente em meses com HE autorizada
+
+**Método:** varredura via CDP (porta 9222) do `EspelhoPontoMesAction_recuperar.action` de **01/2014 a 12/2026** e do `BancoHorasAction_recuperarExtrato.action` completo (105 lançamentos, 2009–2026), cruzando, mês a mês, o rodapé do espelho (`Pecúnia`, `Horas Excedentes Homologadas`, `Horas Excedentes Não Homologadas`, `Horas Utilizadas do Banco`, `Resíduo`) com as colunas `Horas Adquiridas` / `Horas Utilizadas` do Extrato. "HE autorizado" = presença de chamadas `detalharAutorizacao(` nas linhas do dia e/ou `Pecúnia > 0`.
+
+**Achado 1 — o excedente não pago só chega ao banco via homologação da chefia.**
+
+| Mês | HE autoriz. | Pecúnia | Homologadas | Não Homolog. | `Adquiridas` (Extrato) | Leitura |
+| :--- | :--: | :--: | :--: | :--: | :--: | :--- |
+| **03/2024** (fechado) | 13 dias | 38:19 | **00:00** | **15:34** | *(sem linha)* | excedente não autorizado → perda total |
+| **11/2024** (fechado) | 1 dia | 08:00 | 00:00 | 03:15 | *(sem linha)* | idem |
+| **12/2020** (fechado) | 19 dias | 49:39 | 00:00 | 01:13 | *(sem linha)* | idem |
+| **10/2024** (fechado) | 20 dias | 50:55 | 00:00 | 00:00 | *(sem linha)* | excedente de dia útil travado em `HORAS AJUST. = 07:00`, some sem virar "não homologada" |
+| **12/2015** | 25 dias | 10:00 | 21:42 | 00:00 | **40:10** | chefia homologou → creditou (valor > fórmula, ver D4) |
+| **01/2016** | 28 dias | 15:00 | 19:28 | 00:00 | **19:28** | homologado → creditou ×1,0 exato |
+| **09/2025** | 30 dias | 05:34 | 04:36 | 00:00 | **04:36** | homologado → creditou ×1,0 exato |
+| **04/2026** | 4 dias | 06:00 | 05:50 | 00:00 | **05:50** | **Portaria 380/2026 vigente** → homologado ainda credita |
+
+**Achado 2 — a Portaria 380/2026 art. 13 veda o *consumo*, não a *aquisição*.** Em 04/2026 e 09/2025 (meses com HE autorizado e pecúnia) o Extrato registrou `Horas Adquiridas` da parcela homologada, com `Horas Utilizadas = 00:00`. Não há, na base do servidor 30901018, um mês de 2026 com HE autorizado **e** tentativa de usufruto do banco — a metade "veda a utilização" do art. 13 fica sem caso de teste (ver [duvidas-normativas.md D3](duvidas-normativas.md)).
+
+**Achado 3 — antes da Portaria 380/2026, banco creditava e debitava livremente em mês de pecúnia.** Ex.: 04/2018 (pecúnia 22:18 + `Utilizadas 44:13`), 05/2018 (pecúnia 39:29 + `Utilizadas 59:02`), 01/2020 (pecúnia 10:00 + homologadas 02:47 + não homologadas 02:51 + `Utilizadas 07:20`, os quatro destinos no mesmo mês).
 
 ---
 

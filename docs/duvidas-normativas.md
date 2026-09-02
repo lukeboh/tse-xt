@@ -1,6 +1,6 @@
 # ❓ Dúvidas Normativas em Aberto
 
-**Versão do documento:** 2.0.0
+**Versão do documento:** 2.1.0
 **Data:** 02/09/2026
 
 > Perguntas que **ainda não têm resposta** e afetam o cálculo do TSE XT. Regras já verificadas estão em [regras-calculo-frequencia.md](regras-calculo-frequencia.md); ajustes planejados em [roadmap-conformidade.md](roadmap-conformidade.md).
@@ -31,9 +31,9 @@
 | | |
 | :--- | :--- |
 | **Por que importa** | A Portaria 380/2026 art. 13 veda a **utilização** de banco de horas para qualquer finalidade no mês em que o servidor for autorizado a realizar serviço extraordinário. É o terceiro estado de [roadmap-conformidade.md R3](roadmap-conformidade.md). |
-| **Em aberto** | (a) Como a extensão detecta que o mês tem HE **autorizado** — ícone/coluna de autorização (`detalharAutorizacao`), presença de pecúnia, ou consulta a outra tela? (b) É uma decisão de produto se o TSE XT deve *bloquear* o KPI "Saída p/ Zerar Mês" nesses meses ou apenas *avisar*. |
-| **Como resolver** | Levantar via CDP um mês com HE autorizado e ver quais sinais ficam disponíveis no DOM do espelho; decidir o comportamento do KPI. |
-| **Status** | Aberta. |
+| **Em aberto** | (a) Como a extensão detecta que o mês tem HE **autorizado** — ícone/coluna de autorização (`detalharAutorizacao`), presença de pecúnia, ou consulta a outra tela? (b) É uma decisão de produto se o TSE XT deve *bloquear* o KPI "Saída p/ Zerar Mês" nesses meses ou apenas *avisar*. (c) **Falta caso de teste** para a metade "veda a **utilização**" do art. 13: na base do servidor 30901018 não há mês de 2026 com HE autorizado **e** tentativa de usufruto do banco. |
+| **Verificado (02/09/2026, CDP)** | O art. 13 **não veda a aquisição**: em 04/2026 e 09/2025 (HE autorizado + pecúnia) a parcela homologada creditou `Horas Adquiridas` no Extrato, com `Utilizadas = 00:00` — ver [regras-calculo-frequencia.md §5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada). O sinal de "mês com HE autorizado" no DOM é a chamada `detalharAutorizacao(` nas linhas do dia (+ `Pecúnia > 0`). Consequência: a tabela de três estados do [roadmap-conformidade.md R3](roadmap-conformidade.md) foi corrigida (crédito ✅ da parcela homologada, débito ❌). |
+| **Status** | Parcialmente resolvida — resta confirmar a vedação de **consumo** do saldo no mês com HE autorizado. |
 
 ## D4 — Por que alguns meses têm `Horas Adquiridas` maior que a fórmula de multiplicador?
 
@@ -50,4 +50,13 @@
 | :--- | :--- |
 | **Por que importa** | Meses híbridos fecham com `Resíduo de Horas` de −70h a −98h ([regras-calculo-frequencia.md §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). Nos casos observados esse valor **não** foi debitado do banco (`Horas Utilizadas do Banco = 00:00`, saldo do Extrato inalterado). Se em algum cenário ele **for** cobrado (acerto de contas, exoneração — Portaria 378/2019 art. 1º), o TSE XT precisaria tratá-lo. |
 | **Como resolver** | Acompanhar o Extrato do Banco de Horas nos meses seguintes a um mês híbrido de resíduo alto e verificar se aparece débito posterior; checar a tela de "Validade" (`BancoHorasAction_recuperarValidade`). |
+| **Status** | Aberta. |
+
+## D6 — A homologação de excedente pela chefia tem teto no quantitativo de HE autorizado?
+
+| | |
+| :--- | :--- |
+| **Por que importa** | Define se a parcela **não paga** de um mês com HE autorizado pode ser resgatada para o banco. Empiricamente ([regras-calculo-frequencia.md §5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada)): em 12/2015, 01/2016, 09/2025 e 04/2026 a chefia homologou excedente e ele creditou o Extrato **mesmo havendo pecúnia no mês**; já em 03/2024 e 11/2024 o excedente não autorizado foi **100% para "Não Homologadas"** (perda). Não se sabe o que determina um caminho ou outro. |
+| **Em aberto** | A chefia pode homologar excedente **acima** do quantitativo que a DG autorizou via SAEX, ou a homologação fica limitada ao autorizado (e o restante é obrigatoriamente "não homologado")? A Res. 22.901/2008 art. 4º §1º e a Portaria 380/2026 art. 11 preveem deliberação da DG "limitada a 30h" apenas para a extrapolação do **teto mensal de 60h** — não para a diferença entre realizado e autorizado. |
+| **Como resolver** | Num mês fechado com HE autorizado, comparar excedente bruto diário × autorizado (SAEX / `detalharAutorizacao`) × o que entrou como `Horas Excedentes Homologadas`. Confirmar com `frequencia@tse.jus.br`. |
 | **Status** | Aberta. |
