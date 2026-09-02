@@ -32,8 +32,11 @@ window.JEPessoasBalance = (function () {
    * @param {number}  o.exceedMin          coluna nativa h10, em minutos
    *                                       (aberto = HORAS EXCED. líquida; fechado = HORAS AJUST.)
    * @param {number}  o.pecuniaMin         coluna PECÚNIA, em minutos
-   * @param {number}  o.dayTargetMinutes   jornada esperada do dia (ex.: 420 = 7h, 480 = 8h)
-   * @returns {{delta:number, multiplierPct:(0|50|100), bucket:('weekday'|'sunday')}}
+   * @param {number}  o.dayTargetMinutes   jornada esperada do dia (ex.: 420 = 7h, 480 = 8h, 300 = 5h)
+   * @param {boolean} o.projectFromTotal   dia corrente de mês aberto: projeta o saldo
+   *                                        a partir do TOTAL quando a coluna nativa (noturna)
+   *                                        ainda não foi processada
+   * @returns {{delta:number, multiplierPct:(0|50|100), bucket:('weekday'|'sunday'), projected?:boolean}}
    */
   function computeDailyDelta(o) {
     o = o || {};
@@ -80,6 +83,13 @@ window.JEPessoasBalance = (function () {
     }
 
     // Mês aberto: h10 = "HORAS EXCED." já é o saldo líquido do dia.
+    // Exceção — dia corrente: a coluna nativa só é processada à noite. Se pedido
+    // (projectFromTotal) e ela ainda está zerada, o TSE XT projeta o saldo do dia
+    // a partir do TOTAL, como num mês fechado, e marca o resultado como projetado.
+    if (o.projectFromTotal && exceedMin === 0 && totalMin > 0) {
+      return { delta: totalMin - target, multiplierPct: 0, bucket: 'weekday', projected: true };
+    }
+
     return { delta: exceedMin - pecuniaMin, multiplierPct: 0, bucket: 'weekday' };
   }
 

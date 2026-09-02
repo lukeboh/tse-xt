@@ -167,7 +167,8 @@ window.JEPessoasKPI = (function () {
               totalMin,
               exceedMin,
               pecuniaMin,
-              dayTargetMinutes
+              dayTargetMinutes,
+              projectFromTotal: isToday && !isClosedMonth
             });
 
             // Soma da PECÚNIA (horas que serão pagas) por tipo de dia — alimenta o card "Horas Extras".
