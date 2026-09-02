@@ -93,14 +93,15 @@
 | **Conflito** | Sem distinguir esses destinos, o `SALDO ACUM.` soma como crédito multiplicado horas que na verdade viraram pecúnia (não vão ao banco) ou não foram homologadas (perdidas). Em um mês eleitoral típico recente isso infla o saldo em dezenas de horas. |
 | **Ação** | Usar as agregações do rodapé do próprio espelho: creditar no `SALDO ACUM.` apenas `Horas Excedentes Homologadas` (com fator por tipo de dia); tratar `Pecúnia` e `Não Homologadas` como fora do banco. Reconciliar com o Extrato do Banco de Horas quando disponível. **Roadmap:** "Horas executadas não homologadas no KPI Banco de Horas" ([README](../README.md#-roadmap)). |
 
-### 🔴 C2 — Pecúnia mantida em meses de teletrabalho/trabalho híbrido
+### 🟡 C2 — Pecúnia mantida em meses de teletrabalho/trabalho híbrido — *sistema oficial já cumpre; risco só na projeção do TSE XT*
 
 | | |
 | :--- | :--- |
 | **TSE XT** | "A pecúnia não é mais zerada em meses de regime híbrido/teletrabalho" (README, série 0.3.x); card "Horas Extras" soma pecúnia por tipo de dia. |
 | **Norma** | Portaria 380/2026 **art. 12**; Portaria 490/2022 **art. 23**; Portaria 642/2020 **art. 7** — **vedado o pagamento de serviço extraordinário** a quem está em teletrabalho ou trabalho híbrido. |
-| **Conflito** | Exibir pecúnia > 0 nesses meses contraria a vedação; tende a superestimar o card "Horas Extras". Pode haver nuance para dias presenciais do híbrido, mas a regra geral é vedação. |
-| **Ação** | Nesses meses, zerar a pecúnia projetada **ou** exibir aviso explícito ("pagamento de HE vedado — art. 12 Portaria-TSE 380/2026"). |
+| **Evidência (§9)** | 16 meses com dias de `TRABALHO HÍBRIDO` (2022–2026): em **todos**, `Pecúnia = 00:00`, `Homologadas = 00:00`, `Não Homologadas = 00:00` e `Horas Adquiridas` no banco = 00:00. Até **trabalho real de sábado** dentro de mês híbrido (04/07/2026, 08:03) foi **descartado** — sem pecúnia, sem banco, sem sequer figurar como "não homologada". O sistema oficial **suprime integralmente** o serviço extraordinário no mês híbrido, conforme a norma. |
+| **Conclusão** | O comportamento **oficial** confirma a norma. A regressão do TSE XT (deixar de zerar) só causa dano se a extensão **projetar** pecúnia para o mês corrente antes do fechamento, ou se **calcular** pecúnia a partir de horas trabalhadas em vez de ler a coluna `.h12` (que já vem 00:00). |
+| **Ação** | (1) Restaurar a zeragem da pecúnia projetada em meses com ≥ 1 dia híbrido/teletrabalho. (2) Novo: **alertar** quando houver trabalho em fim de semana/feriado dentro de mês híbrido — essas horas são perdidas (nem pecúnia, nem banco), art. 22-23 da Portaria 490/2022. (3) Ver **C3** sobre o `Resíduo de Horas` fortemente negativo desses meses (−78:37, −97:21, −98:04…), que **não** é debitado do banco e **não** pode alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês". |
 
 ### 🔴 C3 — Regime híbrido zera a coluna `SALDO ACUM.` e o card de BH inteiros
 
@@ -273,3 +274,43 @@
 - **C1b (novo, 🔴):** o `SALDO ACUM.` deve creditar **apenas `Horas Excedentes Homologadas`** (com o fator por tipo de dia). Excedente que virou **pecúnia** ou ficou **não homologado** não entra no banco — hoje o TSE XT credita tudo e infla o saldo, sobretudo em meses eliterais recentes (todo o fim de semana vira pecúnia e o `SALDO ACUM.` não deveria subir por isso).
 - **Rótulo:** deixar claro na UI/tooltip que `SALDO ACUM.` é uma **prévia do "Horas Adquiridas" do Extrato do Banco de Horas**, não uma leitura da coluna nativa do espelho.
 - **Regime recente:** desde ~2020 o fim de semana do servidor foi 100% pecúnia; o TSE XT precisa detectar isso (rodapé `Pecúnia` > 0 nos sábados/domingos) e **não** creditar essas horas no `SALDO ACUM.`
+
+---
+
+## 9. Estudo empírico — pecúnia em meses de trabalho híbrido (C2)
+
+**Método:** varredura via CDP de 2022–2026 do `EspelhoPontoMesAction_recuperar.action`, cruzando a coluna Ocorrência (`TRABALHO HIBRIDO`) com o rodapé (`Pecúnia`, `Horas Excedentes Homologadas`, `Horas Excedentes Não Homologadas`, `Horas Utilizadas do Banco`, `Resíduo de Horas`). Servidor 30901018.
+
+### 9.1. Resultado — 16 meses com dias de trabalho híbrido
+
+| Mês | Dias híbridos | Pecúnia | Homolog. | Não homolog. | Adq. banco | Resíduo de Horas |
+| :--- | :--: | :--: | :--: | :--: | :--: | :--: |
+| 08/2022 | 7 | 00:00 | 00:00 | 00:00 | 00:00 | −09:09 |
+| 09/2022 | 10 | 00:00 | 00:00 | 00:00 | 00:00 | −05:41 |
+| 10/2022 | 10 | 00:00 | 00:00 | 00:00 | 00:00 | 00:00 |
+| 11/2022 | 4 | 00:00 | 00:00 | 00:00 | 00:00 | −06:11 |
+| 12/2022 | 8 | 00:00 | 00:00 | 00:00 | 00:00 | −12:50 |
+| 01/2023 | 9 | 00:00 | 00:00 | 00:00 | 00:00 | −06:37 |
+| 02/2023 | 11 | 00:00 | 00:00 | 00:00 | 00:00 | −02:27 |
+| 03/2023 | 8 | 00:00 | 00:00 | 00:00 | 00:00 | −90:14 |
+| 12/2024 | 8 | 00:00 | 00:00 | 00:00 | 00:00 | −64:07 |
+| 02/2025 | 10 | 00:00 | 00:00 | 00:00 | 00:00 | −77:40 |
+| 10/2025 | 12 | 00:00 | 00:00 | 00:00 | 00:00 | −97:21 |
+| 11/2025 | 2 | 00:00 | 00:00 | 00:00 | 00:00 | −20:31 |
+| 03/2026 | 12 | 00:00 | 00:00 | 00:00 | 00:00 | −98:04 |
+| 05/2026 | 12 | 00:00 | 00:00 | 00:00 | 00:00 | −95:41 |
+| 06/2026 | 9 | 00:00 | 00:00 | 00:00 | 00:00 | −70:15 |
+| 07/2026 | 11 | 00:00 | 00:00 | 00:00 | 00:00 | −78:37 |
+
+**Em 100% dos meses híbridos: pecúnia, homologadas, não homologadas e aquisição de banco = zero.** Nos meses com pecúnia > 0 (03,04,09,10/2024; 06,07/2025; 08/2026) **não há** nenhum dia híbrido.
+
+### 9.2. Caso decisivo — trabalho de sábado dentro de mês híbrido
+
+**07/2026** (11 dias híbridos): **04/07/2026 (SÁBADO)** — entrada 08:05, saída 16:08, `TOTAL = 08:03`. Resultado no espelho: `HORAS AJUST. = 00:00`, `PECÚNIA = 00:00`. As 8h03 trabalhadas **não geraram pecúnia, não entraram no banco e não aparecem como "não homologadas"** — foram simplesmente descartadas. Confirma o art. 22-23 da Portaria 490/2022 e o art. 12 da Portaria 380/2026.
+
+### 9.3. Implicações para o TSE XT
+
+- **C2 rebaixado para 🟡:** o sistema oficial já zera tudo. O risco remanescente é o TSE XT **projetar** pecúnia (mês corrente) ou **calcular** pecúnia a partir de horas em vez de ler `.h12`.
+  - **Ação 1:** restaurar a zeragem da pecúnia projetada quando o mês tem ≥ 1 dia híbrido/teletrabalho.
+  - **Ação 2 (nova feature):** alertar quando houver marcação de trabalho em fim de semana/feriado num mês híbrido — as horas são perdidas.
+- **Resíduo de Horas fortemente negativo (C3):** meses híbridos fecham com `Resíduo` de −70h a −98h porque os dias híbridos não somam horas ao `TOTAL` mensal, mas a meta ordinária continua contando. Esse débito **não** é levado ao banco (`Horas Utilizadas do Banco = 00:00`, saldo do Extrato inalterado) — é um número cosmético. O TSE XT **não pode** usar esse `Resíduo` como débito real nos KPIs **"Meta do Mês"** e **"Saída p/ Zerar Mês"**; hoje a supressão da coluna em regime híbrido (§2.2) evita parte disso, mas os KPIs de meta precisam da mesma guarda.
