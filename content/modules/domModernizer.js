@@ -483,6 +483,12 @@ window.JEPessoasModernizer = (function () {
     // Limpa injeções anteriores para garantir idempotência
     table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
+    // Selos R5/R6 injetados na coluna de ocorrência — removidos antes de reprocessar,
+    // senão o texto deles é relido como "ocorrência" e vira um 2º badge na re-execução.
+    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach(el => el.remove());
+    table.querySelectorAll('td.h16 span.je-occurrence-badge').forEach((el) => {
+      if (!el.querySelector('a') && /art\.\s*4|sem autoriza|>\s*10h/i.test(el.textContent || '')) el.remove();
+    });
 
     // Se o TSE XT estiver desabilitado, interrompe a injeção de colunas customizadas
     const isXTEnabled = document.body.classList.contains('je-xt-enabled') || localStorage.getItem('je_xt_theme_enabled') !== 'false';
@@ -575,7 +581,14 @@ window.JEPessoasModernizer = (function () {
         const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
         const exceedDay = tr.querySelector('td.h10')?.innerText.trim() || '';
         const occCell = tr.querySelector('td.h16');
-        const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
+        // Ocorrência "real" — ignora selos R5/R6 que o próprio TSE XT injetou aqui,
+        // senão numa re-execução o texto deles é lido como ocorrência e duplicado.
+        let occText = '';
+        if (occCell) {
+          const occClone = occCell.cloneNode(true);
+          occClone.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach((n) => n.remove());
+          occText = occClone.innerText.trim().toUpperCase();
+        }
 
         // Verificação de Data Passada para Inconsistência de Batida
         const dateParts = dateText.split('/');
@@ -718,7 +731,7 @@ window.JEPessoasModernizer = (function () {
             if (canBadge && pecuniaMin === 0 && !hasAuth && grossExcessMin >= 30
                 && !occCell.querySelector('.je-occ-sem-autorizacao')) {
               const tag = document.createElement('span');
-              tag.className = 'je-occurrence-badge je-occ-sem-autorizacao';
+              tag.className = 'je-occ-sem-autorizacao';
               tag.textContent = 'sem autorização';
               tag.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} sem autorização de serviço extraordinário vinculada — não gera pecúnia nem compensação automática (Portaria 380/2026 art. 3º).`;
               occCell.appendChild(document.createTextNode(' '));
@@ -736,7 +749,7 @@ window.JEPessoasModernizer = (function () {
                 && !occCell.querySelector('.je-occ-acima-teto')) {
               const over = grossExcessMin - capMin;
               const tag2 = document.createElement('span');
-              tag2.className = 'je-occurrence-badge je-occ-acima-teto';
+              tag2.className = 'je-occ-acima-teto';
               tag2.textContent = isWeekendOrHoliday ? '> 10h (art. 4º)' : '> 2h (art. 4º)';
               tag2.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} — ${formatSigned(over).replace('+', '')} acima do teto de ${isWeekendOrHoliday ? '10h' : '2h'} por jornada (Res. 22.901/2008 art. 4º). O que passa do teto não é compensável.`;
               occCell.appendChild(document.createTextNode(' '));

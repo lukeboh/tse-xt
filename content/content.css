@@ -3327,7 +3327,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 .je-audit-hero-num {
   font-size: 40px !important;
   font-weight: 900 !important;
-  color: #e11d48 !important;
+  color: var(--je-primary) !important;
   letter-spacing: -1px !important;
   font-variant-numeric: tabular-nums !important;
 }
