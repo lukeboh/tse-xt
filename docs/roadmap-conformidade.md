@@ -1,0 +1,114 @@
+# 🗺️ Roadmap de Conformidade — Ajustes de regra no TSE XT
+
+**Versão do documento:** 1.0.0
+**Data:** 02/09/2026
+
+> Itens **acionáveis** para alinhar o cálculo do TSE XT às regras verificadas do sistema oficial ([regras-calculo-frequencia.md](regras-calculo-frequencia.md)). Perguntas ainda sem resposta estão em [duvidas-normativas.md](duvidas-normativas.md). Os IDs `R#` são estáveis para rastreio em commits e no [README](../README.md#-roadmap). Severidade: 🔴 alto · 🟡 médio · 🟢 baixo.
+
+| ID | Título | Sev. | Origem |
+| :--- | :--- | :--: | :--- |
+| R1 | `SALDO ACUM.` só creditar horas **homologadas** | 🔴 | ex-C1b |
+| R2 | Pecúnia zerada em mês híbrido + alerta de trabalho de FDS perdido | 🟡 | ex-C2 |
+| R3 | Três estados de banco de horas | 🔴 | ex-C3 |
+| R4 | Jornada-alvo de 7h e faixa de complementação 7h–8h | 🟡 | ex-C4 |
+| R5 | Tetos legais de horas extras (2h / 10h / 60h) | 🟡 | ex-C5 |
+| R6 | Excedente sem autorização prévia | 🟡 | ex-C6 |
+| R7 | Conceito de "plantão/eleição" para pecúnia de domingo/feriado | 🟡 | ex-C7 |
+| R8 | Alerta de repouso interjornada < 8h | 🟢 | ex-C8 |
+| R9 | Adicional noturno — documentar limitação | 🟢 | ex-C9 |
+| R10 | Atualizar a seção "Legislação de referência" injetada | 🟢 | ex-C11 |
+
+---
+
+## R1 — 🔴 `SALDO ACUM.` só creditar horas homologadas
+
+- **Hoje:** todo excedente líquido de sábado/domingo entra no `SALDO ACUM.` com fator 1,5/2,0 ([balanceCalc.js:50](../content/modules/balanceCalc.js#L50), [:62](../content/modules/balanceCalc.js#L62)).
+- **Regra oficial:** só as `Horas Excedentes Homologadas` vão ao banco (com fator por tipo de dia). O que virou **pecúnia** ou ficou **não homologado** não entra — ver [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário).
+- **Impacto:** em meses eleitorais recentes (todo o FDS vira pecúnia) o `SALDO ACUM.` sobe dezenas de horas indevidamente.
+- **Ação:**
+  1. Creditar no `SALDO ACUM.` apenas a parcela `Horas Excedentes Homologadas` do rodapé, aplicando `SATURDAY_FACTOR` / `SUNDAY_HOLIDAY_FACTOR`.
+  2. Tratar `Pecúnia` e `Não Homologadas` como fora do banco.
+  3. Rotular o `SALDO ACUM.` como **prévia do "Horas Adquiridas" do Extrato do Banco de Horas**, não leitura da coluna nativa.
+  4. Reconciliar com o Extrato do Banco de Horas quando disponível.
+- **Feature correlata no README:** "Horas executadas não homologadas no KPI Banco de Horas" (destacar/contabilizar à parte as `Horas Excedentes Não Homologadas`).
+
+## R2 — 🟡 Pecúnia zerada em mês híbrido + alerta de trabalho de FDS perdido
+
+- **Hoje:** "a pecúnia não é mais zerada em meses de regime híbrido/teletrabalho" (README, série 0.3.x).
+- **Regra oficial:** em mês com trabalho híbrido/teletrabalho o sistema **suprime integralmente** o serviço extraordinário — pecúnia, homologadas e banco = 00:00; trabalho de fim de semana é descartado (art. 22-23 da Portaria 490/2022; art. 12 da Portaria 380/2026). Confirmado em 16 meses — ver [regras §3.7](regras-calculo-frequencia.md#37-trabalho-híbrido--teletrabalho--supressão-integral-do-serviço-extraordinário).
+- **Ação:**
+  1. Restaurar a zeragem da **pecúnia projetada** (mês corrente) quando o mês tem ≥ 1 dia híbrido/teletrabalho. Meses fechados já vêm com `.h12 = 00:00`.
+  2. **Novo:** alertar quando houver marcação de trabalho em fim de semana/feriado num mês híbrido — essas horas não geram pecúnia nem banco.
+
+## R3 — 🔴 Três estados de banco de horas
+
+- **Hoje:** ≥ 1 dia híbrido/teletrabalho ⇒ coluna `SALDO ACUM.` suprimida, KPI de BH "Sem acúmulo", KPI "Saída p/ Zerar Mês" desativado ([ESPECIFICACAO_NEGOCIO.md §2.2](ESPECIFICACAO_NEGOCIO.md)).
+- **Regra oficial:** Portaria 490/2022 art. 22 veda **adquirir** BH mas **assegura o usufruto** do saldo. Portaria 380/2026 art. 13 é mais restritiva: no mês com **HE autorizado**, veda a **utilização** de BH para qualquer fim.
+- **Ação:** modelar três estados:
+  | Estado | Crédito | Débito (consumo) | Saldo visível |
+  | :--- | :--: | :--: | :--: |
+  | **Normal** | ✅ | ✅ | ✅ |
+  | **Híbrido/teletrabalho sem HE** | ❌ | ✅ | ✅ |
+  | **Mês com HE autorizado** (art. 13) | ❌ | ❌ | ✅ |
+- **Relacionado:** o `Resíduo de Horas` fortemente negativo dos meses híbridos (−70h a −98h) é **cosmético** — não é debitado do banco — e **não pode** alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês" (ver [regras §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). A guarda de meta precisa do mesmo cuidado que hoje só a coluna tem.
+- **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (como detectar "mês com HE autorizado").
+
+## R4 — 🟡 Jornada-alvo de 7h e faixa de complementação 7h–8h
+
+- **Hoje:** alvo diário = 480 min quando há duas entradas e duas saídas; senão 420 min ([ESPECIFICACAO_NEGOCIO.md §2.3](ESPECIFICACAO_NEGOCIO.md); `dayTargetMinutes` em [balanceCalc.js:79](../content/modules/balanceCalc.js#L79)).
+- **Regra oficial:** jornada ordinária de referência = **7h**; a faixa 7ª–8ª hora é **complementação da jornada mensal ordinária**, não HE (art. 7º §2º da Portaria 380/2026). Intervalo de 1h só é exigível acima de 8h.
+- **Ação:**
+  1. Adotar alvo diário de **420 min**.
+  2. Classificar a faixa 420–480 min como complementação ordinária — **não** entra como crédito no `SALDO ACUM.`
+  3. Só o que passa de **480 min líquidos de intervalo** é serviço extraordinário.
+- **Depende de:** [duvidas-normativas.md D1](duvidas-normativas.md) (a coluna `TOTAL` já vem líquida do intervalo?).
+- **Feature correlata no README:** "Detecção automática de jornada de 7h e 8h".
+
+## R5 — 🟡 Tetos legais de horas extras
+
+- **Regra oficial:** 2h/dia útil, 10h/sábado-domingo-feriado, 60h/mês; extrapolação excepcional até +30h só para compensação (art. 4º da Portaria 380/2026 e da Res. 22.901/2008).
+- **Ação:** badges/alertas na tabela e no card:
+  - `> 2h (art. 4º)` em dia útil
+  - `> 10h` em fim de semana/feriado
+  - `mês > 60h`
+  - faixa 60–90h marcada como "sujeita a deliberação da DG"
+
+## R6 — 🟡 Excedente sem autorização prévia
+
+- **Regra oficial:** serviço extraordinário exige requerimento até o dia 25 do mês anterior e autorização prévia da DG (art. 3º/§4º da Portaria 380/2026); relatório homologado até o 3º dia útil (art. 10). Excedente **não autorizado** não gera pecúnia nem compensação automática.
+- **Ação:** cruzar com o ícone de autorização já existente (`detalharAutorizacao` / `formEspelhoPontoMes_detalharAutorizacao`); sinalizar dias com excedente **sem** autorização vinculada.
+- **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras".
+
+## R7 — 🟡 Conceito de "plantão/eleição" para pecúnia de domingo/feriado
+
+- **Hoje:** o card "Horas Extras", linha "Domingo / Feriados", soma pecúnia desses dias.
+- **Regra oficial:** pagamento aos domingos e feriados é **vedado** fora de plantão eleitoral / dias de eleição (art. 4º §2º da Res. 22.901/2008; art. 5º da Portaria 380/2026). Fora desse contexto a pecúnia de domingo/feriado é normalmente `00:00` e o excedente vai para **compensação** (fator 2,0).
+- **Ação:** introduzir o conceito de "dia de plantão/eleição" (lista de datas ou toggle); fora dele, direcionar excedente de domingo/feriado para compensação, não para a linha de pecúnia.
+
+## R8 — 🟢 Alerta de repouso interjornada < 8h
+
+- **Regra oficial:** mínimo de 8h ininterruptas entre jornadas (art. 7º da Res. 22.901/2008).
+- **Ação:** alertar quando o intervalo entre a última saída de um dia e a primeira entrada do dia seguinte for < 8h.
+
+## R9 — 🟢 Adicional noturno — documentar limitação
+
+- **Regra oficial:** hora noturna (22h–5h) computada como 52min30s, com adicional (Lei 8.112/1990 art. 75). Colunas `ADIC. NOTURNO` / `ADIC. NOTURNO PECÚNIA` (`.h13`) existem no espelho.
+- **Hoje:** o TSE XT não modela hora noturna reduzida nem o adicional; `.h13` fica fora do saldo.
+- **Ação:** documentar a limitação de forma visível (tooltip/aviso). Modelagem completa fica como avaliação futura.
+
+## R10 — 🟢 Atualizar a seção "Legislação de referência" injetada
+
+- **Fato:** a página oficial cita só normas de 2019–2021; omite a Portaria 490/2022 e a Portaria 380/2026.
+- **Ação:** o TSE XT já reescreve essa página — injetar os links vigentes ou um aviso de "lista possivelmente desatualizada".
+
+---
+
+## Tarefas transversais de código
+
+| # | Tarefa | Serve a |
+| :--- | :--- | :--- |
+| T1 | **`content/modules/legalConfig.js`** — constantes com `{ valor, norma, artigo, url }`: `SATURDAY_FACTOR`, `SUNDAY_HOLIDAY_FACTOR`, `MAX_HE_DIA_UTIL_MIN = 120`, `MAX_HE_FDS_MIN = 600`, `MAX_HE_MES_MIN = 3600`, `EXTRAPOLACAO_COMP_MIN = 1800`, `REPOUSO_INTRA_MIN = 60`, `REPOUSO_INTER_MIN = 480`, `JORNADA_ORDINARIA_MIN = 420`, `COMPLEMENTACAO_MAX_MIN = 480` | R4, R5, R8 |
+| T2 | Separar **pecúnia × compensação** em `balanceCalc.computeDailyDelta` — retornar `{ deltaCompensacao, valorPecunia }` distintos | R1, R7 |
+| T3 | **Modo conferência** — `saldo TSE XT` × `saldo oficial` lado a lado, com destaque de divergência, sem sobrescrever a coluna nativa | R1, R3, R4 |
+| T4 | **Testes unitários** de `balanceCalc` com casos derivados das normas e dos estudos empíricos (11/2015, 11/2017, 08/2019, 04/07/2026) | todos |
+| T5 | **Tooltips** de cada cálculo citando norma + artigo | R1–R9 |
