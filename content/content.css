@@ -2037,6 +2037,25 @@ body.je-xt-disabled .je-occ-sem-autorizacao {
   display: none !important;
 }
 
+/* R5 — excedente acima do teto legal por jornada */
+body.je-xt-enabled .je-occ-acima-teto {
+  display: inline-block !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #b91c1c !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+  padding: 1px 7px !important;
+  white-space: nowrap !important;
+  cursor: help !important;
+}
+
+body.je-xt-disabled .je-occ-acima-teto {
+  display: none !important;
+}
+
 /* Linhas com Pendência de Ajuste de Ponto (Batida Incompleta em Data Passada) */
 body.je-xt-enabled tr.je-row-ajuste-pendente td,
 body.je-xt-enabled tr.je-row-ajuste-pendente {
@@ -3414,6 +3433,108 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   color: #94a3b8 !important;
   margin: 12px 2px 0 !important;
   line-height: 1.5 !important;
+}
+
+.je-audit-intro {
+  font-size: 12px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  background: rgba(0, 119, 255, 0.06) !important;
+  border: 1px solid rgba(0, 119, 255, 0.16) !important;
+  border-radius: 10px !important;
+  padding: 9px 12px !important;
+  margin: 0 0 12px !important;
+}
+
+.je-audit-card-id {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+
+.je-audit-tag {
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+  padding: 1px 5px !important;
+  border-radius: 999px !important;
+}
+
+.je-audit-tag-exato {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
+}
+
+.je-audit-tag-est {
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #b45309 !important;
+}
+
+.je-audit-explain {
+  border: 1px solid rgba(10, 37, 64, 0.12) !important;
+  border-radius: 12px !important;
+  margin-bottom: 16px !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.je-audit-explain > summary {
+  cursor: pointer !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  padding: 10px 12px !important;
+  list-style: none !important;
+  user-select: none !important;
+}
+
+.je-audit-explain > summary::-webkit-details-marker { display: none !important; }
+.je-audit-explain > summary::before { content: '▸ '; color: #94a3b8 !important; }
+.je-audit-explain[open] > summary::before { content: '▾ '; }
+
+.je-audit-explain-body {
+  padding: 2px 14px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.je-audit-def-h {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin-bottom: 3px !important;
+}
+
+.je-audit-def-id {
+  background: var(--je-primary) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  padding: 1px 6px !important;
+  border-radius: 5px !important;
+}
+
+.je-audit-def p {
+  margin: 0 !important;
+  font-size: 11.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+}
+
+.je-audit-def em { font-style: normal !important; color: #0f172a !important; font-weight: 600 !important; }
+
+.je-audit-regime-legend {
+  font-size: 11px !important;
+  line-height: 1.9 !important;
+  color: #64748b !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+  padding-top: 10px !important;
+  margin: 2px 0 0 !important;
 }
 
 body.je-xt-disabled .je-audit-modal {

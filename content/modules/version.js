@@ -5,18 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.0';
+  const CURRENT_VERSION = '0.4.1';
 
   const CHANGELOG = [
     {
-      version: '0.4.0',
+      version: '0.4.1',
       date: '2026-09-02',
-      title: 'Conformidade de banco de horas e Auditoria de Horas Perdidas',
+      title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
         'Auditoria de Horas Perdidas: novo modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais que não viraram pecúnia nem banco de horas, em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula). O resultado é persistido por matrícula; a tela abre sempre com o último resultado e atualiza só o delta, com barra de progresso e data da última varredura. Full Update refaz tudo.',
-        'R3 — três estados de banco de horas: além do regime híbrido, o mês com hora extra autorizada passa a ser reconhecido (Portaria 380/2026 art. 13). Nesse mês o consumo do saldo é vedado, mas a aquisição (parcela homologada) continua — o card Banco de Horas e a coluna SALDO ACUM. exibem aviso em vez de serem suprimidos.',
-        'R6 — excedente sem autorização prévia: dias com horas excedentes e sem autorização de serviço extraordinário vinculada recebem selo de alerta na tabela (Portaria 380/2026 art. 3º).',
-        'Módulo legalConfig.js: constantes de cálculo (tetos de HE, jornada ordinária, fatores, repousos) com norma, artigo e link, para tooltips e avisos.'
+        'A tela da Auditoria explica cada categoria (B1–B4) em linguagem clara, com a origem de cada número, marca "valor exato" vs "estimativa" e traz legenda dos regimes de mês.',
+        'R3 — três estados de banco de horas: o mês com hora extra autorizada passa a ser reconhecido (Portaria 380/2026 art. 13). O consumo do saldo é vedado (KPI "Saída p/ Zerar Mês" desativado com aviso), mas a aquisição continua — o card Banco de Horas mostra a prévia das horas homologadas que serão creditadas.',
+        'R5/R6 — selos na tabela: "sem autorização" nos dias com excedente sem serviço extraordinário vinculado, e "> 2h / > 10h (art. 4º)" quando o excedente do dia passa do teto legal por jornada, mesmo autorizado.',
+        'Módulo legalConfig.js: constantes de cálculo (tetos de HE, jornada ordinária, fatores, repousos) com norma, artigo e link, para tooltips e avisos.',
+        'Robustez: a montagem da interface ganhou fallback por setTimeout além do requestAnimationFrame, garantindo a renderização mesmo em aba de segundo plano.'
       ]
     },
     {
