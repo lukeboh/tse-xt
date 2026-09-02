@@ -5,14 +5,15 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.3';
+  const CURRENT_VERSION = '0.4.4';
 
   const CHANGELOG = [
     {
-      version: '0.4.3',
+      version: '0.4.4',
       date: '2026-09-02',
       title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
+        'Dia corrente: a coluna oficial "HORAS EXCED." só é processada à noite. Enquanto isso o TSE XT projeta o saldo do dia de hoje a partir do TOTAL (inclusive débito, quando você trabalhou menos que a jornada) e destaca a célula em âmbar com o selo "app". Os KPIs "Saída p/ Zerar Mês" e a coluna SALDO ACUM. passam a considerar esse valor.',
         'Auditoria de Horas Perdidas: novo modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais que não viraram pecúnia nem banco de horas, em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula). O resultado é persistido por matrícula; a tela abre sempre com o último resultado e atualiza só o delta, com barra de progresso e data da última varredura. Full Update refaz tudo.',
         'A tela da Auditoria explica cada categoria (P1–P4) em linguagem clara, com a origem de cada número, link para a norma que a fundamenta e marca "valor exato" vs "estimativa"; tem gráfico de barras cronológico das perdas por ano, tooltips completos nas colunas, e cada linha da tabela abre (com confirmação) o Espelho de Ponto do mês correspondente.',
         'R4 — jornada diária automática: 7h em turno único (1 entrada / 1 saída), 8h quando há 2ª entrada (intervalo de almoço), e 5h nos meses de recesso (janeiro; julho de ano não eleitoral — Portaria-TSE 885/2024). Fonte única em legalConfig.js, usada pelo cálculo de saldo, pelos KPIs e pela Auditoria. Selos "Recesso · jornada 5h" e "meta reduzida" nos cards.',

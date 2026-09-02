@@ -745,6 +745,7 @@ window.JEPessoasModernizer = (function () {
           } catch (e) { /* não bloqueia a modernização */ }
 
           // Cálculo do saldo do dia pela fonte única (evita divergência com o card de KPI).
+          const isTodayRow = dateText === todayFormatted;
           const dayResult = window.JEPessoasBalance.computeDailyDelta({
             dayOfWeek,
             isClosedMonth: isClosedMonthTable,
@@ -753,9 +754,11 @@ window.JEPessoasModernizer = (function () {
             totalMin,
             exceedMin,
             pecuniaMin,
-            dayTargetMinutes
+            dayTargetMinutes,
+            projectFromTotal: isTodayRow && !isClosedMonthTable
           });
           const dailyDelta = dayResult.delta;
+          const isProjectedToday = !!dayResult.projected && isTodayRow;
           let multiplierBadge = '';
           let deltaTooltip = '';
 
@@ -826,6 +829,16 @@ window.JEPessoasModernizer = (function () {
 
           if (currentAnchor && currentAnchor.parentNode) {
             currentAnchor.parentNode.insertBefore(tdAccum, currentAnchor.nextSibling);
+          }
+
+          // Dia corrente de mês aberto: a coluna nativa "HORAS EXCED." só é
+          // processada à noite. Enquanto isso o TSE XT projeta o saldo do dia a
+          // partir do TOTAL e destaca a célula como calculada pelo app.
+          if (isProjectedToday && exceedCell) {
+            exceedCell.classList.add('je-cell-app-calc');
+            exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
+            exceedCell.innerHTML = `<strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">app</span>`;
+            tdAccum.classList.add('je-cell-app-calc');
           }
         }
       }
