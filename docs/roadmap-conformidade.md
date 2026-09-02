@@ -42,7 +42,7 @@
 
 ## R3 — 🔴 Três estados de banco de horas
 
-- **Hoje:** ≥ 1 dia híbrido/teletrabalho ⇒ coluna `SALDO ACUM.` suprimida, KPI de BH "Sem acúmulo", KPI "Saída p/ Zerar Mês" desativado ([ESPECIFICACAO_NEGOCIO.md §2.2](ESPECIFICACAO_NEGOCIO.md)).
+- **Hoje:** ≥ 1 dia híbrido/teletrabalho ⇒ coluna `SALDO ACUM.` suprimida, KPI de BH "Sem acúmulo", KPI "Saída p/ Zerar Mês" desativado ([especificacao-negocio.md §2.2](especificacao-negocio.md)).
 - **Regra oficial:** Portaria 490/2022 art. 22 veda **adquirir** BH mas **assegura o usufruto** do saldo. Portaria 380/2026 art. 13 é mais restritiva: no mês com **HE autorizado**, veda a **utilização** de BH para qualquer fim.
 - **Ação:** modelar três estados:
   | Estado | Crédito | Débito (consumo) | Saldo visível |
@@ -55,7 +55,7 @@
 
 ## R4 — 🟡 Jornada-alvo de 7h e faixa de complementação 7h–8h
 
-- **Hoje:** alvo diário = 480 min quando há duas entradas e duas saídas; senão 420 min ([ESPECIFICACAO_NEGOCIO.md §2.3](ESPECIFICACAO_NEGOCIO.md); `dayTargetMinutes` em [balanceCalc.js:79](../content/modules/balanceCalc.js#L79)).
+- **Hoje:** alvo diário = 480 min quando há duas entradas e duas saídas; senão 420 min ([especificacao-negocio.md §2.3](especificacao-negocio.md); `dayTargetMinutes` em [balanceCalc.js:79](../content/modules/balanceCalc.js#L79)).
 - **Regra oficial:** jornada ordinária de referência = **7h**; a faixa 7ª–8ª hora é **complementação da jornada mensal ordinária**, não HE (art. 7º §2º da Portaria 380/2026). Intervalo de 1h só é exigível acima de 8h.
 - **Ação:**
   1. Adotar alvo diário de **420 min**.

@@ -104,4 +104,4 @@ A série 0.3.x consolidou o mecanismo de cálculo, o suporte a meses fechados e 
 ## 🔒 Privacidade, Segurança e Especificações
 
 - **[Política de Privacidade](PRIVACY.md)**: Declaração de não coleta de dados, processamento 100% local (*client-side*) e conformidade com o Manifest V3.
-- **[Especificação de Negócio & Regras de Cálculo](docs/ESPECIFICACAO_NEGOCIO.md)**: Detalhamento completo das fórmulas matemáticas, desconsideração de pecúnia, regime híbrido e regras de jornada (7h/8h).
+- **[Especificação de Negócio & Regras de Cálculo](docs/especificacao-negocio.md)**: Detalhamento completo das fórmulas matemáticas, desconsideração de pecúnia, regime híbrido e regras de jornada (7h/8h).
