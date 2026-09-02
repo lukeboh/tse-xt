@@ -51,6 +51,7 @@
   | **Híbrido/teletrabalho sem HE** | ❌ | ✅ | ✅ |
   | **Mês com HE autorizado** (art. 13) | ✅ *(só parcela `Horas Excedentes Homologadas`)* | ❌ | ✅ |
 - **Correção empírica (02/09/2026, CDP):** o estado "mês com HE autorizado" **credita sim** a parcela homologada — 04/2026 (Portaria 380/2026 vigente) e 09/2025 registraram `Horas Adquiridas` no Extrato havendo pecúnia no mês. O art. 13 veda a **utilização** (consumo), não a aquisição. Ver [regras §3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco) e [§5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada). Detecção do estado: chamada `detalharAutorizacao(` nas linhas do dia + `Pecúnia > 0`.
+- **Implementado (v0.4.0 — parcial):** `kpiExtractor.hasAuthorizedHEInMonth` detecta o estado; o card **Banco de Horas** passa a exibir o selo "HE autorizada · Consumo vedado neste mês (art. 13)" em vez de ser suprimido. **Falta:** creditar no `SALDO ACUM.` apenas a parcela `Horas Excedentes Homologadas` (converge com R1) e tratar o bloqueio de débito nos KPIs "Saída p/ Zerar Mês" / "Meta do Mês".
 - **Relacionado:** o `Resíduo de Horas` fortemente negativo dos meses híbridos (−70h a −98h) é **cosmético** — não é debitado do banco — e **não pode** alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês" (ver [regras §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). A guarda de meta precisa do mesmo cuidado que hoje só a coluna tem.
 - **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (parcialmente resolvida — falta confirmar a vedação de **consumo** no mês com HE autorizado).
 
@@ -81,6 +82,7 @@
 - **Ação:**
   1. Cruzar com o ícone de autorização já existente (`detalharAutorizacao` / `formEspelhoPontoMes_detalharAutorizacao`); sinalizar dias com excedente **sem** autorização vinculada.
   2. Badge/aviso no dia e no card quando o excedente do dia **exceder** o autorizado — deixando claro que a diferença só vira crédito se homologada, senão é perda.
+- **Implementado (v0.4.0 — parcial):** `authorizationScan.rowHasAuthorization()` + selo `sem autorização` (âmbar) nos dias já encerrados com excedente ≥ 30 min, sem pecúnia e sem autorização vinculada ([domModernizer.js](../content/modules/domModernizer.js) `modernizeMonthlyTable`). **Falta:** ler o valor efetivamente autorizado no SAEX (`detalharAutorizacao` faz consulta assíncrona) para o badge "> autorizado".
 - **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras" e "Horas executadas não homologadas no KPI Banco de Horas" (R1).
 - **Depende de:** [duvidas-normativas.md D6](duvidas-normativas.md) (a homologação da chefia tem teto no autorizado?).
 

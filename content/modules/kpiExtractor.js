@@ -241,6 +241,13 @@ window.JEPessoasKPI = (function () {
     const tableText = table.innerText.toUpperCase();
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
+    // R3 — mês com HE autorizado (Portaria 380/2026 art. 13): há autorização de
+    // serviço extraordinário vinculada a algum dia, ou pecúnia registrada, e o
+    // mês não é de regime híbrido. Nesse estado o consumo do banco é vedado,
+    // mas a aquisição (parcela homologada) continua.
+    const hasAuthIcon = !!table.querySelector('[onclick*="detalharAutorizacao"], a[href*="detalharAutorizacao"], img[title*="utoriza" i]');
+    const hasAuthorizedHEInMonth = !hasHybridWorkInMonth && (hasAuthIcon || (pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes) > 0);
+
     // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado.
     // (A pecúnia NÃO é zerada: é valor a pagar, independente do regime de banco de horas.)
     if (hasHybridWorkInMonth) {
@@ -301,6 +308,7 @@ window.JEPessoasKPI = (function () {
       todayData,
       hasTodayRow: !!todayData,
       hasHybridWorkInMonth,
+      hasAuthorizedHEInMonth,
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,

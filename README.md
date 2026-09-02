@@ -41,6 +41,10 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 9. **Ações Rápidas & Exportação**:
    - Exportação completa do espelho de ponto para Excel/CSV com formatação e codificação UTF-8.
 
+10. **Auditoria de Horas Perdidas** (v0.4.0):
+   - Modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais trabalhadas que **não viraram pecúnia nem banco de horas**, separadas em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula).
+   - Resultado persistido por matrícula no navegador: a tela abre com a última varredura e atualiza só o **delta** (meses novos ou ainda abertos); barra de progresso e data da última atualização; **Full Update** refaz tudo. Exportação CSV.
+
 ---
 
 ## 🧾 Evolução da Série 0.3.x (ago/2026 – set/2026)
@@ -84,6 +88,8 @@ A série 0.3.x consolidou o mecanismo de cálculo, o suporte a meses fechados e 
 ## 🗺️ Roadmap
 
 - **Persistência (sticky) ao rolar a tela**: manter o menu/topbar, a linha de KPIs e os cabeçalhos da tabela fixos durante a rolagem do espelho.
+- **R3 — três estados de banco de horas** _(parcial na v0.4.0: detecção de "mês com HE autorizado" e aviso no card Banco de Horas; falta separar o crédito para só a parcela homologada — ver R1)_.
+- **R6 — excedente sem autorização prévia** _(parcial na v0.4.0: selo "sem autorização" nos dias; falta cruzar com o valor efetivamente autorizado no SAEX)_.
 - **Horas extras autorizadas no card "Horas Extras"**: exibir, junto da pecúnia, a quantidade de horas extras efetivamente **autorizadas** no período.
 - **Horas executadas não homologadas no KPI "Banco de Horas"**: destacar na tabela e contabilizar à parte no card **Banco de Horas** as horas efetivamente trabalhadas em excesso que **não foram homologadas pela chefia** (rodapé `Horas Excedentes Não Homologadas` do espelho) — hoje elas não entram no saldo e passam despercebidas. Inclui o excedente feito **além do quantitativo de HE autorizado** num mês com hora extra autorizada: a parcela não paga e não homologada é **perdida** (não vira banco de horas automaticamente). Ver [roadmap-conformidade.md](docs/roadmap-conformidade.md) R1/R6 e [regras-calculo-frequencia.md §3.9](docs/regras-calculo-frequencia.md).
 - **Detecção automática de jornada de 7h e 8h**: identificar por dia/servidor se a jornada aplicável é de 7h ou 8h, sem depender de configuração manual nem apenas da presença de intervalo de almoço ([roadmap-conformidade.md](docs/roadmap-conformidade.md) R4).

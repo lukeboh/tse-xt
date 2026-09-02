@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.3.0';
+  const CURRENT_VERSION = '0.4.0';
 
   const CHANGELOG = [
+    {
+      version: '0.4.0',
+      date: '2026-09-02',
+      title: 'Conformidade de banco de horas e Auditoria de Horas Perdidas',
+      features: [
+        'Auditoria de Horas Perdidas: novo modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais que não viraram pecúnia nem banco de horas, em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula). O resultado é persistido por matrícula; a tela abre sempre com o último resultado e atualiza só o delta, com barra de progresso e data da última varredura. Full Update refaz tudo.',
+        'R3 — três estados de banco de horas: além do regime híbrido, o mês com hora extra autorizada passa a ser reconhecido (Portaria 380/2026 art. 13). Nesse mês o consumo do saldo é vedado, mas a aquisição (parcela homologada) continua — o card Banco de Horas e a coluna SALDO ACUM. exibem aviso em vez de serem suprimidos.',
+        'R6 — excedente sem autorização prévia: dias com horas excedentes e sem autorização de serviço extraordinário vinculada recebem selo de alerta na tabela (Portaria 380/2026 art. 3º).',
+        'Módulo legalConfig.js: constantes de cálculo (tetos de HE, jornada ordinária, fatores, repousos) com norma, artigo e link, para tooltips e avisos.'
+      ]
+    },
     {
       version: '0.3.0',
       date: '2026-09-01',

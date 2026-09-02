@@ -325,7 +325,7 @@ window.JEPessoasModernizer = (function () {
       </div>
 
       <!-- Card 2: Saldo Acumulado do Banco de Horas -->
-      <div class="je-kpi-card" title="Saldo homologado no banco de horas institucional">
+      <div class="je-kpi-card" title="${kpiData.hasAuthorizedHEInMonth && !kpiData.hasHybridWorkInMonth ? 'Mês com hora extra autorizada: o consumo do banco é vedado (Portaria 380/2026 art. 13), mas a parcela homologada continua sendo creditada.' : 'Saldo homologado no banco de horas institucional'}">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Banco de Horas</span>
           <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
@@ -340,9 +340,11 @@ window.JEPessoasModernizer = (function () {
           ${kpiData.accumulatedBankBalance}
         </div>
         <div class="je-kpi-subtext">
-          ${kpiData.hasHybridWorkInMonth 
+          ${kpiData.hasHybridWorkInMonth
             ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>Sem acúmulo de BH</span>`
-            : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`}
+            : (kpiData.hasAuthorizedHEInMonth
+              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span title="Portaria 380/2026 art. 13">Consumo vedado neste mês</span>`
+              : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`)}
         </div>
       </div>
 
@@ -685,6 +687,31 @@ window.JEPessoasModernizer = (function () {
           const isVacation = occU.includes('FÉRIAS') || occU.includes('FERIAS');
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
           const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
+
+          // R6 — excedente sem autorização prévia (Portaria 380/2026 art. 3º).
+          // Marca dias já encerrados com horas trabalhadas em excesso que não
+          // têm autorização de serviço extraordinário vinculada nem viraram
+          // pecúnia — logo não geram pagamento nem compensação automática.
+          try {
+            const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6 || isHolidayOrRecess;
+            // Em mês fechado a coluna h10 é "HORAS AJUST." (jornada reconhecida),
+            // não excedente — nesse caso o excesso do dia útil vem de TOTAL - jornada.
+            const grossExcessMin = isWeekendOrHoliday
+              ? (totalMin > 0 ? totalMin : exceedMin)
+              : (isClosedMonthTable ? (totalMin - dayTargetMinutes) : exceedMin);
+            const hasAuth = window.JEPessoasAuthScan && window.JEPessoasAuthScan.rowHasAuthorization(tr);
+            if (isStrictlyPast && !isDispensed && pecuniaMin === 0 && !hasAuth
+                && grossExcessMin >= 30
+                && occCell && !occCell.querySelector('.je-occurrence-ajuste-pendente')
+                && !occCell.querySelector('.je-occ-sem-autorizacao')) {
+              const tag = document.createElement('span');
+              tag.className = 'je-occurrence-badge je-occ-sem-autorizacao';
+              tag.textContent = 'sem autorização';
+              tag.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} sem autorização de serviço extraordinário vinculada — não gera pecúnia nem compensação automática (Portaria 380/2026 art. 3º).`;
+              occCell.appendChild(document.createTextNode(' '));
+              occCell.appendChild(tag);
+            }
+          } catch (e) { /* não bloqueia a modernização */ }
 
           // Cálculo do saldo do dia pela fonte única (evita divergência com o card de KPI).
           const dayResult = window.JEPessoasBalance.computeDailyDelta({
