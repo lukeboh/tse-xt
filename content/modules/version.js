@@ -5,11 +5,11 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.6';
+  const CURRENT_VERSION = '0.4.7';
 
   const CHANGELOG = [
     {
-      version: '0.4.6',
+      version: '0.4.7',
       date: '2026-09-02',
       title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
