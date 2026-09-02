@@ -1,6 +1,6 @@
 # 🗺️ Roadmap de Conformidade — Ajustes de regra no TSE XT
 
-**Versão do documento:** 1.0.0
+**Versão do documento:** 1.1.0
 **Data:** 02/09/2026
 
 > Itens **acionáveis** para alinhar o cálculo do TSE XT às regras verificadas do sistema oficial ([regras-calculo-frequencia.md](regras-calculo-frequencia.md)). Perguntas ainda sem resposta estão em [duvidas-normativas.md](duvidas-normativas.md). Os IDs `R#` são estáveis para rastreio em commits e no [README](../README.md#-roadmap). Severidade: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -49,9 +49,10 @@
   | :--- | :--: | :--: | :--: |
   | **Normal** | ✅ | ✅ | ✅ |
   | **Híbrido/teletrabalho sem HE** | ❌ | ✅ | ✅ |
-  | **Mês com HE autorizado** (art. 13) | ❌ | ❌ | ✅ |
+  | **Mês com HE autorizado** (art. 13) | ✅ *(só parcela `Horas Excedentes Homologadas`)* | ❌ | ✅ |
+- **Correção empírica (02/09/2026, CDP):** o estado "mês com HE autorizado" **credita sim** a parcela homologada — 04/2026 (Portaria 380/2026 vigente) e 09/2025 registraram `Horas Adquiridas` no Extrato havendo pecúnia no mês. O art. 13 veda a **utilização** (consumo), não a aquisição. Ver [regras §3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco) e [§5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada). Detecção do estado: chamada `detalharAutorizacao(` nas linhas do dia + `Pecúnia > 0`.
 - **Relacionado:** o `Resíduo de Horas` fortemente negativo dos meses híbridos (−70h a −98h) é **cosmético** — não é debitado do banco — e **não pode** alimentar os KPIs "Meta do Mês" / "Saída p/ Zerar Mês" (ver [regras §3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético)). A guarda de meta precisa do mesmo cuidado que hoje só a coluna tem.
-- **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (como detectar "mês com HE autorizado").
+- **Depende de:** [duvidas-normativas.md D3](duvidas-normativas.md) (parcialmente resolvida — falta confirmar a vedação de **consumo** no mês com HE autorizado).
 
 ## R4 — 🟡 Jornada-alvo de 7h e faixa de complementação 7h–8h
 
@@ -76,8 +77,12 @@
 ## R6 — 🟡 Excedente sem autorização prévia
 
 - **Regra oficial:** serviço extraordinário exige requerimento até o dia 25 do mês anterior e autorização prévia da DG (art. 3º/§4º da Portaria 380/2026); relatório homologado até o 3º dia útil (art. 10). Excedente **não autorizado** não gera pecúnia nem compensação automática.
-- **Ação:** cruzar com o ícone de autorização já existente (`detalharAutorizacao` / `formEspelhoPontoMes_detalharAutorizacao`); sinalizar dias com excedente **sem** autorização vinculada.
-- **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras".
+- **Confirmado empiricamente** ([regras §3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco) / [§5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada)): num mês com HE autorizado, o excedente **além do quantitativo autorizado** que a chefia **não homologa** cai em `Horas Excedentes Não Homologadas` (perda — zero no Extrato) ou é absorvido como `Compl. Jorn. Mínima` / travado no teto da jornada ordinária. Ex.: 03/2024 — 38h19 pagas, **15h34 perdidas**. Só vira banco de horas o que a chefia homologa ativamente (aí com fator por tipo de dia), como em 12/2015, 01/2016, 09/2025 e 04/2026. **Não há conversão automática de excedente não pago em banco de horas.**
+- **Ação:**
+  1. Cruzar com o ícone de autorização já existente (`detalharAutorizacao` / `formEspelhoPontoMes_detalharAutorizacao`); sinalizar dias com excedente **sem** autorização vinculada.
+  2. Badge/aviso no dia e no card quando o excedente do dia **exceder** o autorizado — deixando claro que a diferença só vira crédito se homologada, senão é perda.
+- **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras" e "Horas executadas não homologadas no KPI Banco de Horas" (R1).
+- **Depende de:** [duvidas-normativas.md D6](duvidas-normativas.md) (a homologação da chefia tem teto no autorizado?).
 
 ## R7 — 🟡 Conceito de "plantão/eleição" para pecúnia de domingo/feriado
 
