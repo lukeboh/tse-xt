@@ -837,7 +837,7 @@ window.JEPessoasModernizer = (function () {
           if (isProjectedToday && exceedCell) {
             exceedCell.classList.add('je-cell-app-calc');
             exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
-            exceedCell.innerHTML = `<strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">app</span>`;
+            exceedCell.innerHTML = `<strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span>`;
             tdAccum.classList.add('je-cell-app-calc');
           }
         }
