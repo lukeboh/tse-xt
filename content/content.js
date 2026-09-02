@@ -43,8 +43,20 @@
       const targetHours = items.targetHours || 7;
       const isEnabled = items.xtThemeEnabled !== false;
 
-      // Executa toda a montagem do DOM em um único frame atômico do navegador
-      requestAnimationFrame(() => {
+      // Executa toda a montagem do DOM em um único frame atômico do navegador.
+      // requestAnimationFrame é pausado em abas em segundo plano — um fallback
+      // por setTimeout garante a montagem mesmo assim (aba restaurada, etc.).
+      // As funções de montagem são idempotentes, então rodar duas vezes é seguro.
+      let mounted = false;
+      const mountOnce = () => {
+        if (mounted) return;
+        mounted = true;
+        mountXT();
+      };
+      requestAnimationFrame(mountOnce);
+      setTimeout(mountOnce, 400);
+
+      function mountXT() {
         if (window.JEPessoasModernizer) {
           window.JEPessoasModernizer.applyThemeState(isEnabled, false);
           window.JEPessoasModernizer.modernizeHeader();
@@ -70,7 +82,7 @@
 
         // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
         if (window.JEPessoasVersion) window.JEPessoasVersion.maybeShowDisclaimer();
-      });
+      }
     });
   }
 
