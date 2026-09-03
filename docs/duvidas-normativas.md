@@ -1,6 +1,6 @@
 # ❓ Dúvidas Normativas em Aberto
 
-**Versão do documento:** 2.2.0
+**Versão do documento:** 2.3.0
 **Data:** 02/09/2026
 
 > Perguntas que **ainda não têm resposta** e afetam o cálculo do TSE XT. Regras já verificadas estão em [regras-calculo-frequencia.md](regras-calculo-frequencia.md); ajustes planejados em [roadmap-conformidade.md](roadmap-conformidade.md).
@@ -22,9 +22,9 @@
 | | |
 | :--- | :--- |
 | **Por que importa** | O TSE XT calcula ao minuto exato. Se houver tolerância oficial (5/10/15 min) antes de computar atraso ou excedente, o saldo do TSE XT diverge sistematicamente do oficial. |
-| **O que se sabe** | Nenhuma das normas analisadas (Res. 22.901/2008, Portarias 380/2026, 490/2022, 642/2020, 641/2020, 378/2019) fixa tolerância. A regra geral do serviço público federal (fora do TSE) costuma citar 15 min. |
-| **Como resolver** | Buscar na legislação compilada do TSE uma portaria de controle de frequência (a lista da página do espelho está desatualizada); confirmar com `frequencia@tse.jus.br`. Alternativamente, inferir empiricamente comparando marcações reais com o `TOTAL` calculado pelo sistema em dias de atraso pequeno. |
-| **Status** | Aberta. |
+| **O que se sabe** | Nenhuma das normas analisadas (Res. 22.901/2008, Portarias 380/2026, 490/2022, 642/2020, 641/2020, 378/2019) fixa tolerância. A regra geral do serviço público federal (fora do TSE) costuma citar 15 min. **Existe** uma regra de compensação intra-mês (pesquisa web, 03/09/2026): *"não cumprida a carga horária mensal e não havendo saldo no banco de horas, a compensação se dará com horas trabalhadas no próprio mês"* — confirmado empiricamente ([regras §3.11](regras-calculo-frequencia.md#311-compensação-intra-mês--o-excedente-de-um-dia-paga-o-débito-de-outro)). Falta identificar a portaria exata (provável "Portaria de Controle de Frequência do TSE") e nela: tolerância de marcação, arredondamento, prazo de compensação. |
+| **Como resolver** | Buscar na legislação compilada do TSE a portaria de controle de frequência; confirmar com `frequencia@tse.jus.br`. Alternativamente, inferir empiricamente comparando marcações reais com o `TOTAL` calculado pelo sistema em dias de atraso pequeno. |
+| **Status** | Aberta — regra de compensação intra-mês já verificada, mas a portaria-fonte e a tolerância de marcação seguem sem identificação. |
 
 ## D3 — O TSE XT deve refletir a vedação total de uso de BH no mês com HE autorizado?
 
