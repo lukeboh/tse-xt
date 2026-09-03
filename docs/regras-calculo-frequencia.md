@@ -1,6 +1,6 @@
 # 📐 Regras de Cálculo da Frequência — Sistema Oficial do TSE (verificadas)
 
-**Versão do documento:** 1.2.0
+**Versão do documento:** 1.3.0
 **Data:** 02/09/2026
 **Escopo:** Espelho de Ponto Mensal (`EspelhoPontoMesAction`), Extrato do Banco de Horas (`BancoHorasAction`) e módulo de cálculo do TSE XT (`content/modules/balanceCalc.js`).
 **Método:** leitura do DOM autenticado via Chrome DevTools Protocol (porta 9222); texto das normas no site público do TSE (`tse.jus.br/legislacao/compilada`); estudo empírico de 2009–2026 dos espelhos e do Extrato do Banco de Horas do servidor 30901018 (SETOT).
@@ -136,6 +136,16 @@ Verificado em **16 meses com dias de `TRABALHO HIBRIDO`** (2022–2026), sem exc
 - **Trabalho real de fim de semana é descartado.** Ex.: **04/07/2026 (sábado)** dentro de mês híbrido — trabalhadas 08h03, `HORAS AJUST. = 00:00`, `PECÚNIA = 00:00`; as horas não geraram pecúnia, não entraram no banco e não figuram sequer como "não homologadas". Outro caso: **10/2022** — 2 fins de semana trabalhados (15/10 09h08 sáb, 30/10 12h29 dom) + excedente de dias úteis presenciais, `Resíduo de Horas = 00:00`, tudo absorvido em `HORAS AJUST.`.
 - Base: art. 22-23 da Portaria 490/2022; art. 12 da Portaria 380/2026.
 - **Na Auditoria de Horas Perdidas** esse descarte **não** é contado como "perda" (a partir da v0.4.9): como a norma suprime o serviço extraordinário e veda o acúmulo de banco no mês, não há direito a compensar — é estrutural do regime. O total descartado fica registrado só como informação (tooltip do selo "Híbrido" e coluna `DescartadoHibrido_info` no CSV). Meses híbridos passam a somar 0 à perda (só P1/P4, que já são 00:00 nesses meses).
+
+### 3.11. Compensação intra-mês — o excedente de um dia paga o débito de outro
+
+Regra de controle de frequência (redação: *"não cumprida a carga horária mensal e não havendo saldo no banco de horas, a compensação se dará com horas trabalhadas no próprio mês"* — portaria específica ainda a confirmar, ver [duvidas-normativas.md D2](duvidas-normativas.md)):
+
+1. O sistema reconcilia o **mês inteiro**: total trabalhado nos dias úteis × jornada do mês.
+2. **Mês net positivo** — dias curtos são completados sozinhos (`HORAS AJUST. = jornada`, sem débito, `Horas Utilizadas do Banco = 00:00`); o **excedente líquido que sobra** vai para `Horas Excedentes Não Homologadas` (perdido) a menos que a chefia homologue (→ banco, com fator). Ex.: **01/2018** (jornada 5h de recesso) — dias de 4h48/4h54 completados a 5h sem consumir banco, e as 08h05 de excedente líquido do mês foram para "Não Homologadas".
+3. **Mês net negativo** — o débito é coberto **consumindo o banco de horas** (`Horas Utilizadas do Banco`); sem saldo, vira `Resíduo de Horas` negativo. Nesse caso os dias de excedente são travados na jornada (`HORAS AJUST. = 07:00`). Ex.: **12/2019** — `Utilizadas 08:43`, `Resíduo −08:43`, dias de 8h57 travados em 7h.
+
+**Consequência para a Auditoria:** a categoria **P2** já usa o **saldo líquido do mês** (`Σ total − jornada` dos dias úteis, com os déficits entrando como negativos), então o excedente que "pagou" um dia curto do mesmo mês **não** é contado como perda — só o remanescente líquido sem destino. Horas **acima do teto diário** (2h útil / 10h FDS) entram normalmente nessa conta do mês; o que não entra é o descarte de fim de semana acima de 10h (**P3**, §3.4) e o excedente não homologado (**P1**).
 
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
 
