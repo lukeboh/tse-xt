@@ -123,7 +123,7 @@ Em mês fechado/homologado, a coluna física `h10` deixa de ser "HORAS EXCED." e
 ### 3.10. Recesso — jornada reduzida a 5h e acúmulo de banco restrito
 
 - Em **janeiro** (todo ano) e em **julho de anos não eleitorais**, o expediente presencial é das 13h às 18h e a jornada em **turno único** passa a **5h** (Portaria-TSE 885/2024 e sucessoras anuais; para julho, Res.-TSE 461/2023). Dias com intervalo de almoço seguem 8h.
-- No recesso, **as horas que excedem o limite diário de 5h só podem virar banco de horas por decisão da Diretoria-Geral** — não há acúmulo automático (Portaria-TSE 885/2024). Na prática, para a Auditoria de Horas Perdidas, o excedente de recesso não pago nem homologado entra em **P2**.
+- No recesso, **as horas que excedem o limite diário de 5h só podem virar banco de horas por decisão da Diretoria-Geral** — não há acúmulo automático (Portaria-TSE 885/2024). Na prática, para a Auditoria de Horas Perdidas, o excedente de recesso não pago nem homologado entra em **P2** — **exceto** se o mês também for de regime híbrido, caso em que nada conta como perda (ver §3.7).
 - "Ano eleitoral" = todo ano **par** (o Brasil tem eleição geral ou municipal a cada ano par). "Julho não eleitoral" = julho de ano **ímpar**.
 - **A confirmar** (ver [duvidas-normativas.md D7](duvidas-normativas.md)): se a redução para 5h alcança também quem faz jornada com intervalo, e o recorte exato de datas em janeiro (o recesso forense de 20/12 a 06/01 já é dispensa).
 - **Confirmação no DOM (via CDP):** o espelho tem uma coluna nativa **`Compl. Jorn. Mínima`** (entre `ADIC. NOTURNO` e `Ocorrência`) que isola a parcela de dias úteis **acima da 7ª hora**, usada para fechar a jornada mensal ordinária. Ex. 03/2024: dia com `TOTAL 07:42` → `Compl. Jorn. Mínima 00:42`; dia com `TOTAL 08:34` → `01:34`; dia com `08:59` → `01:59`. Reforça o [roadmap-conformidade.md R4](roadmap-conformidade.md): o alvo é 7h e essa faixa não entra como excedente/crédito.
@@ -133,8 +133,9 @@ Em mês fechado/homologado, a coluna física `h10` deixa de ser "HORAS EXCED." e
 Verificado em **16 meses com dias de `TRABALHO HIBRIDO`** (2022–2026), sem exceção ([§5.2](#52-pecúnia-em-meses-de-trabalho-híbrido)):
 
 - `Pecúnia`, `Horas Excedentes Homologadas`, `Horas Excedentes Não Homologadas` e `Horas Adquiridas` no banco = **00:00**.
-- **Trabalho real de fim de semana é descartado.** Ex.: **04/07/2026 (sábado)** dentro de mês híbrido — trabalhadas 08h03, `HORAS AJUST. = 00:00`, `PECÚNIA = 00:00`; as horas não geraram pecúnia, não entraram no banco e não figuram sequer como "não homologadas".
+- **Trabalho real de fim de semana é descartado.** Ex.: **04/07/2026 (sábado)** dentro de mês híbrido — trabalhadas 08h03, `HORAS AJUST. = 00:00`, `PECÚNIA = 00:00`; as horas não geraram pecúnia, não entraram no banco e não figuram sequer como "não homologadas". Outro caso: **10/2022** — 2 fins de semana trabalhados (15/10 09h08 sáb, 30/10 12h29 dom) + excedente de dias úteis presenciais, `Resíduo de Horas = 00:00`, tudo absorvido em `HORAS AJUST.`.
 - Base: art. 22-23 da Portaria 490/2022; art. 12 da Portaria 380/2026.
+- **Na Auditoria de Horas Perdidas** esse descarte **não** é contado como "perda" (a partir da v0.4.9): como a norma suprime o serviço extraordinário e veda o acúmulo de banco no mês, não há direito a compensar — é estrutural do regime. O total descartado fica registrado só como informação (tooltip do selo "Híbrido" e coluna `DescartadoHibrido_info` no CSV). Meses híbridos passam a somar 0 à perda (só P1/P4, que já são 00:00 nesses meses).
 
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
 

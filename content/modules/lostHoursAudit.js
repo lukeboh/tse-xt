@@ -196,7 +196,7 @@ window.JEPessoasLostHours = (function () {
       netWeekday += d.totalMin - d.targetMin;
     });
     const contabilizadoUtil = f.pecunia.uteis + f.homolog.uteis + f.naoHomolog.uteis;
-    const p2 = Math.max(0, netWeekday - contabilizadoUtil);
+    let p2 = Math.max(0, netWeekday - contabilizadoUtil);
 
     // P3 — descarte de fim de semana / feriado
     let p3 = 0;
@@ -205,11 +205,22 @@ window.JEPessoasLostHours = (function () {
       const worked = d.totalMin > 0 ? d.totalMin : d.h10Min;
       if (worked <= 0) return;
       if (a.hybrid) {
-        if (d.pecuniaMin === 0) p3 += worked; // FDS em mês híbrido: descartado
+        if (d.pecuniaMin === 0) p3 += worked; // trabalho de FDS em mês híbrido
       } else if (worked > 600) {
         p3 += worked - 600; // acima do teto de 10h
       }
     });
+
+    // Mês de regime híbrido/teletrabalho: o serviço extraordinário é suprimido
+    // por norma e não há como adquirir banco (Portaria 490/2022 art. 22-23). O
+    // sistema absorve tudo em HORAS AJUST. e fecha com Resíduo 00:00 — não é
+    // "perda" de um direito, é o regime. Guarda-se o descarte só como informação.
+    let discardedHybridMin = 0;
+    if (a.hybrid) {
+      discardedHybridMin = p2 + p3;
+      p2 = 0;
+      p3 = 0;
+    }
 
     // P4 — crédito no Extrato aquém da fórmula
     let p4 = 0;
@@ -224,6 +235,7 @@ window.JEPessoasLostHours = (function () {
     return {
       p1, p2, p3, p4,
       totalLost: p1 + p2 + p3 + p4,
+      discardedHybridMin,
       pecuniaMin: f.pecunia.total,
       homologMin: f.homolog.total,
       naoHomologMin: f.naoHomolog.total,
@@ -233,11 +245,20 @@ window.JEPessoasLostHours = (function () {
     };
   }
 
-  // Registros gravados antes da v0.4.2 usavam b1..b4 — normaliza na leitura.
+  // Normalização de registros gravados por versões anteriores.
   function normMonth(r) {
     if (!r) return r;
+    // b1..b4 (antes da v0.4.2) -> p1..p4
     if (r.p1 == null && r.b1 != null) {
       r.p1 = r.b1; r.p2 = r.b2; r.p3 = r.b3; r.p4 = r.b4;
+    }
+    // Mês híbrido: P2/P3 não são perda (ver computeMonth). Corrige snapshots
+    // anteriores à v0.4.9 sem exigir um novo Full Update.
+    if (r.hybrid && !r.empty && (r.p2 || r.p3)) {
+      r.discardedHybridMin = (r.discardedHybridMin || 0) + (r.p2 || 0) + (r.p3 || 0);
+      r.p2 = 0;
+      r.p3 = 0;
+      r.totalLost = (r.p1 || 0) + (r.p4 || 0);
     }
     return r;
   }
@@ -499,8 +520,8 @@ window.JEPessoasLostHours = (function () {
           </div>
           <div class="je-audit-def">
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Descarte de fim de semana / feriado <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
-            <p>Duas situações: (a) horas trabalhadas <strong>acima do teto de 10h</strong> num sábado, domingo ou feriado — o que passa disso é cortado; (b) qualquer trabalho de fim de semana feito num <strong>mês de regime híbrido/teletrabalho</strong>, que é descartado por inteiro.</p>
-            <p class="je-audit-src">Base: ${lk('res22901', 'Res.-TSE 22.901/2008')}, art. 4º (teto de 10h) · ${lk('prt380_2026', 'Portaria-TSE 380/2026')}, art. 12 e ${lk('prt490_2022', 'Portaria-TSE 490/2022')}, art. 23 (híbrido) · <em>regras-calculo-frequencia.md §3.4 e §3.7</em>.</p>
+            <p>Horas trabalhadas <strong>acima do teto de 10h</strong> num sábado, domingo ou feriado — o que passa disso é cortado. <strong>Meses de regime híbrido/teletrabalho não entram aqui</strong>: neles a norma suprime o serviço extraordinário e veda o acúmulo de banco, então o trabalho extra é estrutural do regime, não perda de um direito — aparece só como informação no selo "Híbrido".</p>
+            <p class="je-audit-src">Base: ${lk('res22901', 'Res.-TSE 22.901/2008')}, art. 4º (teto de 10h) · ${lk('prt490_2022', 'Portaria-TSE 490/2022')}, art. 22-23 (híbrido) · <em>regras-calculo-frequencia.md §3.4 e §3.7</em>.</p>
           </div>
           <div class="je-audit-def">
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p4}">P4</span> Crédito aquém da fórmula <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
@@ -512,7 +533,7 @@ window.JEPessoasLostHours = (function () {
             <span class="je-audit-badge je-audit-badge-norm">Normal</span> mês comum ·
             <span class="je-audit-badge je-audit-badge-he">HE autoriz.</span> mês com hora extra autorizada (consumo do banco vedado, ${lk('prt380_2026', 'Portaria 380/2026')} art. 13) ·
             <span class="je-audit-badge je-audit-badge-rec">Recesso 5h</span> janeiro / julho não eleitoral — jornada de 5h, acúmulo de banco só por decisão da DG (${lk('prt885_2024', 'Portaria 885/2024')}) ·
-            <span class="je-audit-badge je-audit-badge-hib">Híbrido</span> mês com teletrabalho/híbrido (serviço extraordinário suprimido).
+            <span class="je-audit-badge je-audit-badge-hib">Híbrido</span> mês com teletrabalho/híbrido — serviço extraordinário suprimido e sem acúmulo de banco (${lk('prt490_2022', 'Portaria 490/2022')} art. 22-23); não conta como perda (o trabalho extra descartado aparece no tooltip do selo).
           </p>
         </div>
       </details>
@@ -612,9 +633,12 @@ window.JEPessoasLostHours = (function () {
 
   function rowHTML(r) {
     const rg = regimeOf(r);
+    const badgeTitle = (r.hybrid && r.discardedHybridMin > 0)
+      ? ` title="Regime híbrido: ${fmt(r.discardedHybridMin)} de trabalho extra foram absorvidos pelo sistema (HORAS AJUST.) e não contam como perda — a norma suprime o serviço extraordinário e veda o acúmulo de banco neste mês."`
+      : '';
     return `<tr class="je-audit-row" data-y="${r.y}" data-m="${r.m}" data-label="${escapeHTML(r.label)}" role="button" tabindex="0" title="Abrir o Espelho de Ponto de ${escapeHTML(r.label)}">
       <td>${escapeHTML(r.label)} <span class="je-audit-open-hint">↗</span></td>
-      <td><span class="je-audit-badge je-audit-badge-${rg.cls}">${rg.txt}</span></td>
+      <td><span class="je-audit-badge je-audit-badge-${rg.cls}"${badgeTitle}>${rg.txt}</span></td>
       <td>${fmt(r.pecuniaMin)}</td>
       <td>${fmt(r.homologMin)}</td>
       <td>${r.p1 ? fmt(r.p1) : '·'}</td>
@@ -725,14 +749,15 @@ window.JEPessoasLostHours = (function () {
 
   function exportCSV() {
     if (!currentSnapshot || !currentSnapshot.months) return;
-    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'TotalPerdido']];
+    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'TotalPerdido', 'DescartadoHibrido_info']];
     Object.values(currentSnapshot.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (x.y - y.y) || (x.m - y.m)).forEach((r) => {
       rows.push([
         r.label,
         r.hybrid ? 'Hibrido' : (r.heAuthorized ? 'HE autorizado' : (r.reducedRecess ? 'Recesso 5h' : 'Normal')),
         r.closed ? 'Sim' : 'Nao',
         fmt(r.pecuniaMin), fmt(r.homologMin),
-        fmt(r.p1), fmt(r.p2), fmt(r.p3), fmt(r.p4), fmt(r.totalLost)
+        fmt(r.p1), fmt(r.p2), fmt(r.p3), fmt(r.p4), fmt(r.totalLost),
+        fmt(r.discardedHybridMin || 0)
       ]);
     });
     const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
