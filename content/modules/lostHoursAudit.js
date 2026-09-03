@@ -519,28 +519,71 @@ window.JEPessoasLostHours = (function () {
 
       <div class="je-audit-tablewrap">
         <table class="je-audit-table">
-          <thead>
+          <thead id="je-audit-thead">
             <tr>
-              <th title="${escapeHTML(DEF.mes)}">Mês</th>
-              <th title="${escapeHTML(DEF.regime)}">Regime</th>
-              <th title="${escapeHTML(DEF.pecunia)}">Pecúnia</th>
-              <th title="${escapeHTML(DEF.homolog)}">Homolog.</th>
-              <th title="${escapeHTML(DEF.p1)}">P1</th>
-              <th title="${escapeHTML(DEF.p2)}">P2</th>
-              <th title="${escapeHTML(DEF.p3)}">P3</th>
-              <th title="${escapeHTML(DEF.p4)}">P4</th>
-              <th title="${escapeHTML(DEF.perdido)}">Perdido</th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.mes)} · clique para ordenar">Mês<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.regime)} · clique para ordenar">Regime<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.pecunia)} · clique para ordenar">Pecúnia<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.homolog)} · clique para ordenar">Homolog.<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.p1)} · clique para ordenar">P1<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.p2)} · clique para ordenar">P2<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.p3)} · clique para ordenar">P3<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.p4)} · clique para ordenar">P4<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.perdido)} · clique para ordenar">Perdido<span class="je-audit-sort-ind"></span></th>
             </tr>
           </thead>
-          <tbody>
-            ${withLoss.map(rowHTML).join('') || `<tr><td colspan="9" class="je-audit-none">Nenhuma hora perdida detectada 🎉</td></tr>`}
-          </tbody>
+          <tbody id="je-audit-tbody"></tbody>
         </table>
       </div>
-      <p class="je-audit-foot">Clique numa linha para abrir o Espelho de Ponto do mês. P2 e P3 são reconstruções dia a dia — trate como ordem de grandeza. Meses ainda abertos são reprocessados a cada "Atualizar". Base normativa: <em>regras-calculo-frequencia.md §3.9</em>.</p>
+      <p class="je-audit-foot">Clique numa linha para abrir o Espelho de Ponto do mês; clique num cabeçalho para ordenar. P2 e P3 são reconstruções dia a dia — trate como ordem de grandeza. Meses ainda abertos são reprocessados a cada "Atualizar". Base normativa: <em>regras-calculo-frequencia.md §3.9</em>.</p>
     `;
 
-    body.querySelectorAll('.je-audit-row').forEach((tr) => {
+    auditRows = withLoss;
+    auditSort = { key: 'label', dir: 'desc' };
+    body.querySelectorAll('#je-audit-thead th').forEach((th, i) => {
+      th.addEventListener('click', () => {
+        const k = SORT_KEYS[i];
+        if (!k) return;
+        if (auditSort.key === k) auditSort.dir = auditSort.dir === 'asc' ? 'desc' : 'asc';
+        else auditSort = { key: k, dir: 'desc' };
+        paintTable();
+      });
+    });
+    paintTable();
+  }
+
+  // ------------------------------------------------------------------------
+  // Ordenação da tabela
+  // ------------------------------------------------------------------------
+  let auditRows = [];
+  let auditSort = { key: 'label', dir: 'desc' };
+  const SORT_KEYS = { 0: 'label', 1: 'regime', 2: 'pecuniaMin', 3: 'homologMin', 4: 'p1', 5: 'p2', 6: 'p3', 7: 'p4', 8: 'totalLost' };
+  const REGIME_RANK = { norm: 0, rec: 1, he: 2, hib: 3 };
+
+  function sortValue(r, key) {
+    if (key === 'label') return r.y * 100 + r.m;
+    if (key === 'regime') return REGIME_RANK[regimeOf(r).cls] || 0;
+    return r[key] || 0;
+  }
+
+  function paintTable() {
+    if (!overlay) return;
+    const tbody = overlay.querySelector('#je-audit-tbody');
+    if (!tbody) return;
+    const { key, dir } = auditSort;
+    const mul = dir === 'asc' ? 1 : -1;
+    const sorted = auditRows.slice().sort((a, b) => {
+      const d = (sortValue(a, key) - sortValue(b, key)) * mul;
+      return d !== 0 ? d : ((b.y * 100 + b.m) - (a.y * 100 + a.m)); // desempate: mês mais recente
+    });
+    tbody.innerHTML = sorted.map(rowHTML).join('') || `<tr><td colspan="9" class="je-audit-none">Nenhuma hora perdida detectada 🎉</td></tr>`;
+    overlay.querySelectorAll('#je-audit-thead th').forEach((th, i) => {
+      const k = SORT_KEYS[i];
+      const ind = th.querySelector('.je-audit-sort-ind');
+      if (ind) ind.textContent = (k === key) ? (dir === 'asc' ? ' ▲' : ' ▼') : '';
+      th.setAttribute('aria-sort', k === key ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    });
+    tbody.querySelectorAll('.je-audit-row').forEach((tr) => {
       const go = () => openEspelhoForMonth(+tr.dataset.y, +tr.dataset.m, tr.dataset.label);
       tr.addEventListener('click', go);
       tr.addEventListener('keydown', (e) => {
@@ -657,12 +700,27 @@ window.JEPessoasLostHours = (function () {
     const mes = document.getElementById('mesSelecionado');
     const ano = document.getElementById('anoSelecionado');
     close();
-    if (mes && ano) {
-      mes.value = String(m);
-      ano.value = String(y);
+    if (!mes || !ano) return;
+
+    mes.value = String(m);
+    ano.value = String(y);
+    // dispara os listeners de mudança (auto-consulta do TSE XT, se houver)
+    ['input', 'change'].forEach((evt) => {
+      mes.dispatchEvent(new Event(evt, { bubbles: true }));
+      ano.dispatchEvent(new Event(evt, { bubbles: true }));
+    });
+
+    // Clica o botão CONSULTAR nativo — é o caminho que o usuário faria à mão.
+    const btn = document.querySelector(
+      '#btnConsultar, [name="btnConsultar"], #formEspelhoPontoMes [id*="onsultar"], ' +
+      'button[value="CONSULTAR" i], input[value="CONSULTAR" i]'
+    );
+    if (btn) {
+      btn.click();
+    } else {
       executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { var f = document.getElementById("formEspelhoPontoMes"); if (f) f.submit(); }');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function exportCSV() {

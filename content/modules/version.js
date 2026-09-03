@@ -5,14 +5,15 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.7';
+  const CURRENT_VERSION = '0.4.8';
 
   const CHANGELOG = [
     {
-      version: '0.4.7',
+      version: '0.4.8',
       date: '2026-09-02',
       title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
+        'Auditoria de Horas Perdidas: as colunas da tabela agora ordenam ao clicar no cabeçalho (mês, regime, pecúnia, homologadas, P1–P4, perdido), e clicar numa linha já dispara a consulta do mês escolhido, sem precisar apertar CONSULTAR.',
         'Dia corrente: a coluna oficial "HORAS EXCED." só é processada à noite. Enquanto isso o TSE XT projeta o saldo do dia de hoje a partir do TOTAL (inclusive débito, quando você trabalhou menos que a jornada) e destaca a célula com selo "TSE XT" na cor institucional. Os KPIs "Saída p/ Zerar Mês" e a coluna SALDO ACUM. passam a considerar esse valor.',
         'Correção: os selos "sem autorização" e "> 2h/> 10h (art. 4º)" não duplicam mais quando a tabela é reprocessada; total de horas perdidas e selo do dia corrente na cor principal do TSE XT.',
         'Auditoria de Horas Perdidas: novo modal que varre o Espelho de Ponto desde 2009 e quantifica as horas adicionais que não viraram pecúnia nem banco de horas, em quatro categorias (Não Homologadas, excedente de dia útil absorvido, descarte de fim de semana/feriado e crédito aquém da fórmula). O resultado é persistido por matrícula; a tela abre sempre com o último resultado e atualiza só o delta, com barra de progresso e data da última varredura. Full Update refaz tudo.',
