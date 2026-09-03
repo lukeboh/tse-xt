@@ -3422,6 +3422,28 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   top: 0 !important;
 }
 
+.je-audit-table thead th.je-audit-sortable {
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background 0.12s ease !important;
+}
+
+.je-audit-table thead th.je-audit-sortable:hover {
+  background: rgba(0, 119, 255, 0.1) !important;
+  color: var(--je-primary) !important;
+}
+
+.je-audit-table thead th[aria-sort="ascending"],
+.je-audit-table thead th[aria-sort="descending"] {
+  color: var(--je-primary) !important;
+}
+
+.je-audit-sort-ind {
+  color: var(--je-primary) !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+}
+
 .je-audit-table tbody tr:last-child td {
   border-bottom: none !important;
 }
