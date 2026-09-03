@@ -5,14 +5,15 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.8';
+  const CURRENT_VERSION = '0.4.9';
 
   const CHANGELOG = [
     {
-      version: '0.4.8',
-      date: '2026-09-02',
+      version: '0.4.9',
+      date: '2026-09-03',
       title: 'Série 0.4.x — Conformidade de banco de horas e Auditoria de Horas Perdidas',
       features: [
+        'Auditoria: meses de regime híbrido/teletrabalho não contam mais como "horas perdidas" — a norma suprime o serviço extraordinário e veda o acúmulo de banco, então o trabalho extra é estrutural do regime, não perda de um direito. O total descartado fica no tooltip do selo "Híbrido" e no CSV.',
         'Auditoria de Horas Perdidas: as colunas da tabela agora ordenam ao clicar no cabeçalho (mês, regime, pecúnia, homologadas, P1–P4, perdido), e clicar numa linha já dispara a consulta do mês escolhido, sem precisar apertar CONSULTAR.',
         'Dia corrente: a coluna oficial "HORAS EXCED." só é processada à noite. Enquanto isso o TSE XT projeta o saldo do dia de hoje a partir do TOTAL (inclusive débito, quando você trabalhou menos que a jornada) e destaca a célula com selo "TSE XT" na cor institucional. Os KPIs "Saída p/ Zerar Mês" e a coluna SALDO ACUM. passam a considerar esse valor.',
         'Correção: os selos "sem autorização" e "> 2h/> 10h (art. 4º)" não duplicam mais quando a tabela é reprocessada; total de horas perdidas e selo do dia corrente na cor principal do TSE XT.',
