@@ -5,19 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.3';
+  const CURRENT_VERSION = '0.5.4';
 
   const CHANGELOG = [
     {
-      version: '0.5.3',
+      version: '0.5.4',
       date: '2026-09-03',
-      title: 'Painel de KPIs — planejamento (Fases 1 a 4)',
+      title: 'Painel de KPIs — planejamento (Fases 1 a 5)',
       features: [
         'Novo painel de 5 KPIs voltado ao planejamento do mês: (1) Saída de Hoje — jornada de hoje + horário para zerar o mês na 2ª linha; (2) Saldo do Mês — número único devedor/credor, líquido de pecúnia e com a projeção de hoje; (3) Banco de Horas — saldo atual + o que o mês tende a adicionar (homologáveis) ou consumir; (4) Hora Extra (Pecúnia) — separada em Semana/Sábado (+50%) e Domingo/Feriado (+100%); (5) Meta do Mês — jornada ordinária.',
         'F2 — controle da hora extra autorizada: o ⚙ do card Hora Extra abre um editor com dois campos (semana/sábado e domingo/feriado), salvos neste navegador por matrícula e mês. Com os campos preenchidos, o card passa a mostrar autorizado / feito / aberto com barra de progresso e alerta quando o feito passa do autorizado.',
         'F3 — mini-planejador: o link "planejar ›" no card Saldo do Mês abre uma simulação — quanto fazer por dia útil para zerar o mês, e o fechamento projetado do mês para um esforço diário informado (aceita valor negativo para simular sair mais cedo).',
-        'F4 — o quantitativo de hora extra autorizado no SAEX não é acessível pelo perfil comum (endpoint redireciona para a home); mantém-se o input manual, agora pré-preenchido com o que já foi pago em pecúnia no mês.',
-        'kpiExtractor.deriveMonthPlan(), domModernizer.buildKpiCardsHTML() e monthPlanner.simulate(): funções puras cobertas por testes (tests/, `npm test`).'
+        'F5 — hora extra autorizada lida direto do SAEX: o TSE XT consulta as autorizações por trás do ícone de relógio de cada dia do mês, deduplica por número, classifica cada uma como Semana/Sábado ou Domingo/Feriado e soma as horas autorizadas. O card Hora Extra passa a mostrar autorizado / feito / aberto sem você digitar nada (selo "via SAEX"). O resultado é cacheado por mês; o ⚙ continua permitindo ajuste manual.',
+        'kpiExtractor.deriveMonthPlan(), domModernizer.buildKpiCardsHTML(), monthPlanner.simulate() e heAuthFetch (parse/classify/aggregate das autorizações do SAEX): funções puras cobertas por testes (tests/, `npm test`).'
       ]
     },
     {

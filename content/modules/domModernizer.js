@@ -320,11 +320,25 @@ window.JEPessoasModernizer = (function () {
         e.stopPropagation();
         const mat = window.JEPessoasHEAuth.getMatricula();
         const mk = window.JEPessoasHEAuth.getMonthKey();
+        const doneHint = {
+          wkSatMin: kpiData.pecuniaWeekdaySatMinutes || 0,
+          sunHolMin: kpiData.pecuniaSundayHolidayMinutes || 0
+        };
         window.JEPessoasHEAuth.getEntry(mat, mk, (cur) => {
-          window.JEPessoasHEAuth.openEditor(mat, mk, cur, () => window.location.reload(), {
-            wkSatMin: kpiData.pecuniaWeekdaySatMinutes || 0,
-            sunHolMin: kpiData.pecuniaSundayHolidayMinutes || 0
-          });
+          const hasManual = cur && (cur.wkSatMin || cur.sunHolMin);
+          const finish = (prefill) => window.JEPessoasHEAuth.openEditor(
+            mat, mk, prefill, () => window.location.reload(), doneHint
+          );
+          // Sem valor manual, pré-preenche com o SAEX (do cache) se houver.
+          if (!hasManual && window.JEPessoasHEAuthFetch) {
+            window.JEPessoasHEAuthFetch.getForCurrentMonth(mat, mk, {}, (saex) => {
+              finish(saex && (saex.wkSatMin || saex.sunHolMin)
+                ? { wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin }
+                : cur);
+            });
+          } else {
+            finish(cur);
+          }
         });
       });
     }
@@ -464,6 +478,11 @@ window.JEPessoasModernizer = (function () {
           ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, kpiData.pecuniaOpenSundayHolidayFormatted, '#7c3aed')}
         </div>
         <div class="je-kpi-subtext">
+          ${hasHEConfig && kpiData.heAutorizadoSource === 'saex'
+            ? '<span class="je-badge-positive" title="Autorizado lido das autorizações do SAEX (backend do ícone de relógio).">via SAEX</span>'
+            : (hasHEConfig && kpiData.heAutorizadoSource === 'manual'
+              ? '<span class="je-badge-positive" style="background:rgba(100,116,139,0.14); color:#64748b;" title="Autorizado informado manualmente no ⚙.">manual</span>'
+              : '')}
           <span title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">Teto 60h/mês: resta <strong>${kpiData.pecuniaLegalMonthlyRemainingFormatted}</strong></span>
         </div>
       </div>

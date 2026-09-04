@@ -45,6 +45,7 @@ window.JEPessoasKPI = (function () {
     const heAut = opts.heAutorizado || {};
     const authWeekdaySatMin = Math.max(0, heAut.wkSatMin || 0);
     const authSundayHolidayMin = Math.max(0, heAut.sunHolMin || 0);
+    const heAutorizadoSource = heAut.source || null;
     const targetDailyMinutes = dailyTargetHours * 60;
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return null;
@@ -386,6 +387,7 @@ window.JEPessoasKPI = (function () {
       pecuniaOpenSundayHolidayFormatted: formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin),
       pecuniaLegalMonthlyRemainingFormatted: formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
       hasHEAutorizadoConfig,
+      heAutorizadoSource,
       authWeekdaySatMin,
       authSundayHolidayMin,
       authWeekdaySatFormatted: formatMinutesToTime(authWeekdaySatMin),
