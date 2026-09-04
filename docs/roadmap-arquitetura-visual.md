@@ -9,7 +9,7 @@
 | :--- | :--- | :--: | :--- | :--- |
 | F1 | Abrir injeção e criar registro de páginas suportadas | 🔴 | — | ✅ v0.6.1 |
 | F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 | ✅ v0.6.2 |
-| F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ⏳ |
+| F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ✅ v0.6.3 |
 | F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ⏳ |
 | F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ⏳ |
 | F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ⏳ |
@@ -48,11 +48,12 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 - **Cuidado registrado:** a exclusão de UI injetada não pode usar `.closest('[class*="je-"]')` — `<body class="je-xt-enabled">` sempre bate com esse seletor e faz a extração falhar para todo mundo (caiu num bug assim na implementação; corrigido checando só `id` com prefixo `je-`, parando a subida em `document.body`).
 - **Validado ao vivo (CDP):** Espelho de Ponto idêntico; Contracheque → "Meu Espaço / Financeiro / Contracheque e Rendimentos"; Extrato do Banco de Horas → "Meu Espaço / Banco de Horas / Extrato do banco de horas".
 
-## F3 — 🔴 Modernizador de tabela genérico
+## F3 — ✅ Modernizador de tabela genérico (v0.6.3)
 
-- **Hoje:** `modernizeTable()` só entende a tabela do Espelho (ID fixo + classes de coluna `h01`–`h17`).
-- **Ação:** novo módulo que decora **qualquer** tabela de resultados a partir do texto do `<th>` (zebra, alinhamento numérico, badges de status por palavra-chave), sem exigir classes nativas. Deve tolerar página sem tabela nenhuma (estado vazio/tela de filtro).
-- **Critério de pronto:** a tabela do Extrato do Banco de Horas (hoje sem nenhuma classe) recebe estilo coerente com o design system sem CSS específico de página.
+- **Era:** `modernizeTable()` só entendia a tabela do Espelho (ID fixo + classes de coluna `h01`–`h17`).
+- **Implementado:** novo módulo `tableModernizer.js` (`modernizeGenericTables()`, só roda quando não há perfil de página conhecido). `isDataTable()` distingue tabela de resultados de tabela de layout de formulário pela densidade de `input/select/textarea/button` dentro das células (acima de 25% das células com controle ⇒ é layout, ignora); tabelas aprovadas ganham as classes `je-modernized-table` (reaproveita o visual completo já existente para `.je-modernized-table`/`table.grid`) e `je-generic-data-table` (zebra + suporte a `.je-col-numeric`). `classifyNumericColumns()` marca como numérica qualquer coluna onde ≥80% das células não-vazias batem com número/moeda ou `hh:mm`. `classifyStatusBadges()` troca células de texto puro que batem exatamente com uma palavra-chave conhecida (Sim/Não, Homologado, Pendente, etc.) por um badge colorido, reaproveitando os tokens semânticos de sucesso/alerta/erro.
+- **Critério de pronto:** atingido — a tabela do Extrato do Banco de Horas (nativamente sem nenhuma classe) recebeu zebra, alinhamento numérico nas 4 colunas de hora e o visual completo do design system sem nenhum CSS específico daquela página.
+- **Validado ao vivo (CDP):** Extrato do Banco de Horas — colunas "Horas Adquiridas/Utilizadas/Vencidas/Saldo" corretamente marcadas `.je-col-numeric`, zebra alternando linha a linha; Contracheque (sem tabela) sem erro nenhum; Espelho de Ponto sem nenhuma marca `.je-generic-data-table` (path genérico nunca roda lá, confirmado).
 
 ## F4 — 🟢 Reorganização física do `content.css`
 

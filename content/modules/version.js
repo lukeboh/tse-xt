@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.2';
+  const CURRENT_VERSION = '0.6.3';
 
   const CHANGELOG = [
+    {
+      version: '0.6.3',
+      date: '2026-09-04',
+      title: 'Fase 3 do roadmap de arquitetura visual — modernizador genérico de tabela',
+      features: [
+        'Novo módulo tableModernizer.js decora qualquer tabela de resultados do Meu Espaço (fora do Espelho/Alteração de Ponto) sem depender de classes nativas: distingue tabela de dados de tabela de layout de formulário pela densidade de campos dentro das células, aplica zebra, alinha colunas numéricas/hh:mm à direita por análise do conteúdo, e transforma células com status isolados (Sim/Não, Homologado, Pendente, etc.) em badges coloridos usando as mesmas cores semânticas do resto da extensão. Validado ao vivo no Extrato do Banco de Horas (tabela nativa sem nenhuma classe) e sem nenhum efeito no Espelho de Ponto.'
+      ]
+    },
     {
       version: '0.6.2',
       date: '2026-09-04',
