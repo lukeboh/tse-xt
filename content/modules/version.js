@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.16';
+  const CURRENT_VERSION = '0.5.17';
 
   const CHANGELOG = [
+    {
+      version: '0.5.17',
+      date: '2026-09-04',
+      title: 'Ajustes do card Hora Extra: ícone e barras por bloco',
+      features: [
+        'O ícone de $ (que substituiu a engrenagem) agora usa a mesma caixinha colorida dos ícones dos demais KPIs, em vez de aparecer sem estilo.',
+        'Cada bloco (Semana/Sábado e Domingo/Feriado) ganhou sua própria barra de progresso — antes só uma aparecia quando faltava autorização do SAEX pro outro bloco. As três barras do card (2 blocos + "Executado") passam a usar o mesmo estilo das demais barras de KPI: 6px, trilho translúcido, preenchimento em gradiente com transição suave.'
+      ]
+    },
     {
       version: '0.5.16',
       date: '2026-09-04',

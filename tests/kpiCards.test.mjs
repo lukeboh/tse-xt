@@ -162,3 +162,31 @@ test('KPI 4 — feito passou do autorizado (cor de alerta na fração e na barra
   assert.ok(html.includes('/10:00'));
   assert.ok(html.includes('#db2777'), 'cor de alerta quando passa do autorizado');
 });
+
+// Isola o trecho de HTML de um card pelo título, pra não contar barras de
+// outros KPIs. Âncora em ">título<" (o <span class="je-kpi-title">), não só
+// no texto — senão bate primeiro no comentário HTML "<!-- KPI N: título -->".
+function extractCard(html, title) {
+  const start = html.indexOf('>' + title + '<');
+  assert.ok(start >= 0, `card "${title}" encontrado`);
+  const nextCard = html.indexOf('je-kpi-card', start + title.length);
+  return html.slice(start, nextCard >= 0 ? nextCard : html.length);
+}
+
+test('KPI 4 — ícone de $ usa a mesma caixa dos ícones dos demais KPIs', () => {
+  const card = extractCard(M.buildKpiCardsHTML(makeKpi()), 'Hora Extra (Pecúnia)');
+  assert.ok(/class="je-kpi-icon-wrapper je-kpi-heauth-icon"/.test(card), 'reaproveita .je-kpi-icon-wrapper');
+});
+
+test('KPI 4 — sempre 3 barras de progresso (Semana/Sáb, Dom/Fer, Executado), com ou sem SAEX', () => {
+  const semAuth = extractCard(M.buildKpiCardsHTML(makeKpi()), 'Hora Extra (Pecúnia)');
+  const comAuth = extractCard(M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
+    authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00'
+  })), 'Hora Extra (Pecúnia)');
+  for (const card of [semAuth, comAuth]) {
+    const bars = (card.match(/background:rgba\(0, 102, 204, 0\.08\)/g) || []).length;
+    assert.equal(bars, 3, 'uma barra por bloco (2) + a do rodapé "Executado" (1)');
+  }
+});
