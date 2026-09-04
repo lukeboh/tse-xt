@@ -87,6 +87,7 @@ A série 0.3.x consolidou o mecanismo de cálculo, o suporte a meses fechados e 
 
 ## 🗺️ Roadmap
 
+- **Expansão do padrão visual às demais funcionalidades do Meu Espaço** (série 0.6.x): plano de implantação em fases em [roadmap-arquitetura-visual.md](docs/roadmap-arquitetura-visual.md).
 - **Persistência (sticky) ao rolar a tela**: manter o menu/topbar, a linha de KPIs e os cabeçalhos da tabela fixos durante a rolagem do espelho.
 - **R3 — três estados de banco de horas** _(parcial na v0.4.0: detecção de "mês com HE autorizado" e aviso no card Banco de Horas; falta separar o crédito para só a parcela homologada — ver R1)_.
 - **R6 — excedente sem autorização prévia** _(parcial na v0.4.0: selo "sem autorização" nos dias; falta cruzar com o valor efetivamente autorizado no SAEX)_.

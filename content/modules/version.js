@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.0';
+  const CURRENT_VERSION = '0.6.0';
 
   const CHANGELOG = [
+    {
+      version: '0.6.0',
+      date: '2026-09-04',
+      title: 'Início da série 0.6.x — padronização da arquitetura CSS para expansão às demais funcionalidades do Meu Espaço',
+      features: [
+        'Trabalho em andamento: revisão dos tokens, classes semânticas e componentes de estilo do TSE XT para replicação consistente nas demais telas do Meu Espaço (além do Espelho de Ponto).'
+      ]
+    },
     {
       version: '0.5.0',
       date: '2026-09-04',
