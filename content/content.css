@@ -880,7 +880,7 @@ body.je-xt-enabled #marcacaoPonto_alteracao_motivo_justificativa:focus,
 body.je-xt-enabled textarea[name*="justificativa" i]:focus {
   border-color: var(--je-primary-light) !important;
   background: #ffffff !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Contador de Caracteres Moderno (500 máx) */
@@ -1018,13 +1018,13 @@ body.je-xt-enabled select {
   -webkit-appearance: auto !important;
 }
 
-body.je-xt-enabled select:focus, 
+body.je-xt-enabled select:focus,
 body.je-xt-enabled select:focus-visible,
-body.je-xt-enabled input[type="text"]:focus, 
+body.je-xt-enabled input[type="text"]:focus,
 body.je-xt-enabled input[type="text"]:focus-visible {
   border-color: var(--je-primary-light) !important;
   background: #ffffff !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Botão Consultar Moderno (Flexbox 100% Centralizado) */
@@ -1253,6 +1253,86 @@ body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover::after {
   body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card::after {
     animation: none;
     box-shadow: 0 0 0 1px rgba(0, 140, 255, 0.35), 0 0 20px 0 rgba(0, 170, 255, 0.4);
+  }
+}
+
+/* ==========================================================================
+   Glow animado de foco e seleção (sistema, não é uma preferência) —
+   reaplica o mesmo respirar do "Glow azul" dos KPIs em qualquer componente
+   que ganha destaque por interação: campo em foco, botão com foco de
+   teclado, item selecionado numa lista/tabela. Duas variantes:
+     jeGlowPulse    — pulsa box-shadow (inputs, botões, itens de lista/calendário)
+     jeRowGlowPulse — pulsa background/outline (linhas <tr>, onde box-shadow
+                      não renderiza de forma confiável)
+   Ambas caem para um brilho estático com prefers-reduced-motion: reduce
+   (bloco consolidado ao fim do arquivo).
+   ========================================================================== */
+
+@keyframes jeGlowPulse {
+  0%, 100% {
+    box-shadow: var(--je-glow-blue-soft);
+  }
+  50% {
+    box-shadow: var(--je-glow-blue);
+  }
+}
+
+@keyframes jeRowGlowPulse {
+  0%, 100% {
+    background-color: rgba(0, 119, 255, 0.07);
+    outline-color: rgba(0, 140, 255, 0.25);
+  }
+  50% {
+    background-color: rgba(0, 119, 255, 0.18);
+    outline-color: rgba(0, 140, 255, 0.55);
+  }
+}
+
+/* Foco de teclado em qualquer botão do TSE XT (Consultar, FAB, "Salvar" dos
+   modais etc.) — cobre a família toda de uma vez em vez de repetir por
+   componente. :focus-visible only: não pulsa em clique de mouse, só
+   navegando por Tab — é onde um indicador de foco realmente importa. */
+body.je-xt-enabled button:focus-visible {
+  outline: none !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
+}
+
+/* Quem pede menos movimento no SO não deve ver nenhum desses respirar —
+   todos caem para um brilho estático (o ponto médio do range do keyframe). */
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled select:focus,
+  body.je-xt-enabled select:focus-visible,
+  body.je-xt-enabled input[type="text"]:focus,
+  body.je-xt-enabled input[type="text"]:focus-visible,
+  body.je-xt-enabled #marcacaoPonto_alteracao_motivo_justificativa:focus,
+  body.je-xt-enabled textarea[name*="justificativa" i]:focus,
+  body.je-xt-enabled .je-topbar input.je-search-input:focus,
+  body.je-xt-enabled button:focus-visible,
+  .je-drawer-search-input:focus,
+  .je-card-input-time:focus,
+  .je-card-select-motivo:focus,
+  .je-card-textarea:focus {
+    animation: none !important;
+    box-shadow: var(--je-glow-blue) !important;
+  }
+
+  .je-result-item.selected {
+    animation: none;
+    box-shadow: var(--je-glow-blue-hover);
+  }
+
+  body.je-xt-enabled div.calendar td.selected,
+  body.je-xt-enabled .calendar td.selected,
+  body.je-xt-enabled div.calendar td.today,
+  body.je-xt-enabled .calendar td.today {
+    animation: none !important;
+    box-shadow: 0 2px 8px rgba(0, 119, 255, 0.4), var(--je-glow-blue-soft) !important;
+  }
+
+  .je-audit-row:focus-visible {
+    animation: none;
+    background-color: rgba(0, 119, 255, 0.12);
+    outline-color: rgba(0, 140, 255, 0.4);
   }
 }
 
@@ -1584,7 +1664,7 @@ body.je-xt-enabled .je-topbar input.je-search-input {
 body.je-xt-enabled .je-topbar input.je-search-input:focus {
   background: #ffffff !important;
   border-color: var(--je-primary-light) !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-search-icon {
@@ -1832,7 +1912,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-drawer-search-input:focus {
   background: #ffffff !important;
   border-color: var(--je-primary-light) !important;
-  box-shadow: var(--je-glow-blue-soft) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-drawer-content {
@@ -2471,9 +2551,16 @@ body.je-xt-disabled .je-row-today {
   transition: all 0.15s ease;
 }
 
-.je-result-item:hover, .je-result-item.selected {
+.je-result-item:hover {
   background: rgba(0, 119, 255, 0.08);
   box-shadow: var(--je-glow-blue-hover);
+}
+
+/* .selected = item ativo na navegação por teclado (setas), não o hover do
+   mouse — ganha o mesmo glow animado dos outros componentes em destaque. */
+.je-result-item.selected {
+  background: rgba(0, 119, 255, 0.08);
+  animation: jeGlowPulse 2.4s ease-in-out infinite;
 }
 
 .je-result-item-title {
@@ -2705,7 +2792,7 @@ body.je-xt-enabled .calendar td.today {
   background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  box-shadow: 0 2px 8px rgba(0, 119, 255, 0.4), var(--je-glow-blue-soft) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Fim de Semana no Calendário */
@@ -2984,7 +3071,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-input-time:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-select-motivo {
@@ -3006,7 +3093,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-select-motivo:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-row-2 {
@@ -3036,7 +3123,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-textarea:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-row-3 {
@@ -3787,10 +3874,22 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   transition: background 0.12s ease !important;
 }
 
-.je-audit-row:hover,
-.je-audit-row:focus-visible {
+.je-audit-row:hover {
   background: rgba(0, 119, 255, 0.08) !important;
   outline: none !important;
+}
+
+/* Linha selecionada por teclado (Tab, role="button" tabindex="0") — em <tr>
+   o box-shadow não renderiza de forma confiável, então o "glow" aqui pulsa
+   background + outline (jeRowGlowPulse) em vez de box-shadow. outline-color
+   não pode vir com !important aqui: precisa ficar livre pra animação
+   sobrescrever a cada quadro (animation nunca vence uma declaração
+   !important na mesma propriedade). */
+.je-audit-row:focus-visible {
+  outline-style: solid;
+  outline-width: 2px;
+  outline-offset: -2px;
+  animation: jeRowGlowPulse 2.4s ease-in-out infinite;
 }
 
 .je-audit-open-hint {
