@@ -3,6 +3,16 @@
    v0.1.15 - Isolamento Rigoroso de Estilos XT (Nada Modernizado no Modo OFF)
    ========================================================================== */
 
+/* Anti-FOUC: content.js marca <html class="je-xt-boot"> de forma síncrona em
+   document_start (antes do primeiro paint) quando o TSE XT está ativo, e só
+   remove a classe depois que a topbar, o formulário e a tabela já foram
+   modernizados — assim o usuário nunca chega a ver o layout nativo por um
+   instante antes da transformação. Uma válvula de segurança em content.js
+   garante a revelação mesmo se a montagem falhar. */
+html.je-xt-boot {
+  visibility: hidden !important;
+}
+
 :root {
   /* Paleta Institucional TSE Aprimorada */
   --je-primary-dark: #0a2540;
@@ -35,10 +45,14 @@
   --je-success-bg: rgba(16, 185, 129, 0.12);
   --je-success-text: #059669;
   --je-success-glow: 0 0 12px rgba(16, 185, 129, 0.25);
-  --je-warning-bg: rgba(245, 158, 11, 0.12);
-  --je-warning-text: #d97706;
-  --je-danger-bg: rgba(239, 68, 68, 0.12);
-  --je-danger-text: #dc2626;
+  --je-warning-bg: rgba(250, 204, 21, 0.12);
+  --je-warning-text: #a16207;
+  --je-warning-accent: #facc15;
+  --je-warning-glow: 0 0 12px rgba(250, 204, 21, 0.3);
+  --je-danger-bg: rgba(236, 72, 153, 0.12);
+  --je-danger-text: #db2777;
+  --je-danger-accent: #ec4899;
+  --je-danger-glow: 0 0 12px rgba(236, 72, 153, 0.28);
 
   /* Tipografia e Raio */
   --je-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -182,11 +196,15 @@ body.je-xt-disabled #menu-lateral {
   pointer-events: auto !important;
 }
 
-/* Contêiner Atômico Unificado do Topo (#je-app-header) */
+/* Contêiner Atômico Unificado do Topo (#je-app-header): topbar, banner de
+   título e barra de KPIs são filhos flex diretos. Um único gap: 16px cuida
+   do espaçamento entre os três — e da mesma distância até o conteúdo, via o
+   margin-bottom abaixo (mesmo valor). Não duplicar com margin-bottom nos
+   filhos (.je-topbar / .je-page-title-banner) — o gap já resolve. */
 .je-app-header {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0 !important;
+  gap: 16px !important;
   width: 100% !important;
   margin-bottom: 16px !important;
 }
@@ -209,8 +227,15 @@ body:not(.je-theme-transitioning) .je-kpi-card {
 .je-topbar {
   position: sticky;
   top: 12px;
+  /* margin-top igual ao "top" do sticky acima: sem isso, a topbar nasce
+     deslocada 12px do próprio lugar no fluxo (sticky se comporta como
+     relative até "grudar"), e esses 12px "comiam" o gap de 16px do
+     .je-app-header até o próximo irmão (sobrava só ~4px visual). Com o
+     mesmo valor aqui, a posição estática já nasce onde o sticky ia
+     empurrar — nenhum deslocamento sobra pra roubar do gap. */
+  margin-top: 12px;
   z-index: 1000;
-  margin-bottom: 16px;
+  /* espaçamento pro próximo irmão vem do gap do .je-app-header (16px) */
   background: var(--je-glass-header);
   backdrop-filter: var(--je-backdrop-blur);
   -webkit-backdrop-filter: var(--je-backdrop-blur);
@@ -399,7 +424,7 @@ body.je-xt-disabled .je-topbar {
   border: 1px solid var(--je-glass-border);
   border-radius: var(--je-radius-md);
   padding: 12px 20px;
-  margin-bottom: 16px;
+  /* espaçamento pros irmãos vem do gap do .je-app-header (16px) */
   box-shadow: var(--je-shadow-tactile);
   display: flex;
   align-items: center;
@@ -551,6 +576,9 @@ body.je-xt-enabled #opcoes-consulta {
   border: 1px solid var(--je-glass-border) !important;
   border-radius: var(--je-radius-md) !important;
   padding: 14px 18px !important;
+  /* margin-top: 0 — a distância até a barra de KPIs vem só do margin-bottom
+     do .je-app-header (16px), pra não somar com uma margem nativa e desalinhar. */
+  margin-top: 0 !important;
   margin-bottom: 16px !important;
   box-shadow: var(--je-shadow-tactile) !important;
   transition: var(--je-transition-smooth);
@@ -866,7 +894,7 @@ body.je-xt-enabled #marcacaoPonto_alteracao_motivo_justificativa:focus,
 body.je-xt-enabled textarea[name*="justificativa" i]:focus {
   border-color: var(--je-primary-light) !important;
   background: #ffffff !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Contador de Caracteres Moderno (500 máx) */
@@ -898,7 +926,7 @@ body.je-xt-enabled textarea[name*="justificativa" i]:focus {
 }
 
 .je-char-counter-container strong.je-char-warning {
-  color: #ef4444 !important;
+  color: #ec4899 !important;
 }
 
 /* Botões da Moldura (Salvar / Cancelar / Voltar / Incluir / Limpar) sem Espaço Vazio */
@@ -1004,13 +1032,13 @@ body.je-xt-enabled select {
   -webkit-appearance: auto !important;
 }
 
-body.je-xt-enabled select:focus, 
+body.je-xt-enabled select:focus,
 body.je-xt-enabled select:focus-visible,
-body.je-xt-enabled input[type="text"]:focus, 
+body.je-xt-enabled input[type="text"]:focus,
 body.je-xt-enabled input[type="text"]:focus-visible {
   border-color: var(--je-primary-light) !important;
   background: #ffffff !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Botão Consultar Moderno (Flexbox 100% Centralizado) */
@@ -1126,28 +1154,178 @@ body.je-xt-disabled .je-kpi-dashboard {
   transition: var(--je-transition-spring) !important;
 }
 
-.je-kpi-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2.5px;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  background: linear-gradient(90deg, var(--je-primary-light), var(--je-accent-cyan));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
 .je-kpi-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--je-shadow-md), var(--je-glow-blue-soft);
   border-color: rgba(0, 140, 255, 0.3);
 }
 
-.je-kpi-card:hover::before {
+/* ==========================================================================
+   Preferências de aparência dos KPIs (configuradas na janela da extensão)
+   Atributos setados por settings.js em <html>/<body> a partir do chrome.storage:
+     data-je-kpi-style    = flat (padrão) | gradient
+     data-je-kpi-emphasis = soft (padrão) | glow
+   O default não tem regra própria — usa o .je-kpi-card base.
+   ========================================================================== */
+
+/* Preenchimento com gradiente (proposta de identidade visual) */
+body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card {
+  background:
+    linear-gradient(152deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.86) 40%,
+      rgba(0, 198, 255, 0.12) 78%,
+      rgba(0, 102, 179, 0.17) 100%) !important;
+  border-color: rgba(0, 140, 255, 0.24) !important;
+}
+
+body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-title {
+  color: #47597a;
+}
+
+/* Destaque com glow azul mais profundo. O halo animado vive num ::after
+   dedicado (não no box-shadow do próprio card) para não competir com a
+   transição de hover do card — animation sempre vence transition na mesma
+   propriedade, então separar os dois evita que um "trave" o outro. */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card {
+  border-color: rgba(0, 140, 255, 0.38) !important;
+  box-shadow:
+    var(--je-shadow-tactile),
+    0 10px 30px -8px rgba(0, 86, 179, 0.5) !important;
+}
+
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover {
+  border-color: rgba(0, 140, 255, 0.5) !important;
+  box-shadow:
+    var(--je-shadow-md),
+    0 14px 38px -8px rgba(0, 86, 179, 0.6) !important;
+}
+
+.je-kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 0 1px rgba(0, 119, 255, 0.22), 0 0 14px -2px rgba(0, 170, 255, 0.28);
+  transition: opacity 0.3s ease;
+}
+
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card::after {
   opacity: 1;
+  animation: jeKpiGlowPulse 3.2s ease-in-out infinite;
+}
+
+/* Delay crescente por card: os 5 KPIs pulsam em leve cascata, não em uníssono
+   mecânico — lê mais "vivo" que um pisca-pisca sincronizado. */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(2)::after { animation-delay: 0.4s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(3)::after { animation-delay: 0.8s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(4)::after { animation-delay: 1.2s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(5)::after { animation-delay: 1.6s; }
+
+/* Hover acelera e intensifica a respiração do halo — reforça que o card
+   está reagindo ao cursor, além do transform/box-shadow do card em si. */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover::after {
+  animation-duration: 1.6s;
+}
+
+@keyframes jeKpiGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(0, 119, 255, 0.22), 0 0 14px -2px rgba(0, 170, 255, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(0, 140, 255, 0.45), 0 0 28px 1px rgba(0, 170, 255, 0.5);
+  }
+}
+
+/* Quem pede menos movimento na SO não deve ver esse halo respirar — fica
+   estático, no ponto médio do range acima. */
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card::after {
+    animation: none;
+    box-shadow: 0 0 0 1px rgba(0, 140, 255, 0.35), 0 0 20px 0 rgba(0, 170, 255, 0.4);
+  }
+}
+
+/* ==========================================================================
+   Glow animado de foco e seleção (sistema, não é uma preferência) —
+   reaplica o mesmo respirar do "Glow azul" dos KPIs em qualquer componente
+   que ganha destaque por interação: campo em foco, botão com foco de
+   teclado, item selecionado numa lista/tabela. Duas variantes:
+     jeGlowPulse    — pulsa box-shadow (inputs, botões, itens de lista/calendário)
+     jeRowGlowPulse — pulsa background/outline (linhas <tr>, onde box-shadow
+                      não renderiza de forma confiável)
+   Ambas caem para um brilho estático com prefers-reduced-motion: reduce
+   (bloco consolidado ao fim do arquivo).
+   ========================================================================== */
+
+@keyframes jeGlowPulse {
+  0%, 100% {
+    box-shadow: var(--je-glow-blue-soft);
+  }
+  50% {
+    box-shadow: var(--je-glow-blue);
+  }
+}
+
+@keyframes jeRowGlowPulse {
+  0%, 100% {
+    background-color: rgba(0, 119, 255, 0.07);
+    outline-color: rgba(0, 140, 255, 0.25);
+  }
+  50% {
+    background-color: rgba(0, 119, 255, 0.18);
+    outline-color: rgba(0, 140, 255, 0.55);
+  }
+}
+
+/* Foco de teclado em qualquer botão do TSE XT (Consultar, FAB, "Salvar" dos
+   modais etc.) — cobre a família toda de uma vez em vez de repetir por
+   componente. :focus-visible only: não pulsa em clique de mouse, só
+   navegando por Tab — é onde um indicador de foco realmente importa. */
+body.je-xt-enabled button:focus-visible {
+  outline: none !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
+}
+
+/* Quem pede menos movimento no SO não deve ver nenhum desses respirar —
+   todos caem para um brilho estático (o ponto médio do range do keyframe). */
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled select:focus,
+  body.je-xt-enabled select:focus-visible,
+  body.je-xt-enabled input[type="text"]:focus,
+  body.je-xt-enabled input[type="text"]:focus-visible,
+  body.je-xt-enabled #marcacaoPonto_alteracao_motivo_justificativa:focus,
+  body.je-xt-enabled textarea[name*="justificativa" i]:focus,
+  body.je-xt-enabled .je-topbar input.je-search-input:focus,
+  body.je-xt-enabled button:focus-visible,
+  .je-drawer-search-input:focus,
+  .je-card-input-time:focus,
+  .je-card-select-motivo:focus,
+  .je-card-textarea:focus {
+    animation: none !important;
+    box-shadow: var(--je-glow-blue) !important;
+  }
+
+  .je-result-item.selected {
+    animation: none;
+    box-shadow: var(--je-glow-blue-hover);
+  }
+
+  body.je-xt-enabled div.calendar td.selected,
+  body.je-xt-enabled .calendar td.selected,
+  body.je-xt-enabled div.calendar td.today,
+  body.je-xt-enabled .calendar td.today {
+    animation: none !important;
+    box-shadow: 0 2px 8px rgba(0, 119, 255, 0.4), var(--je-glow-blue-soft) !important;
+  }
+
+  .je-audit-row:focus-visible {
+    animation: none;
+    background-color: rgba(0, 119, 255, 0.12);
+    outline-color: rgba(0, 140, 255, 0.4);
+  }
 }
 
 .je-kpi-header {
@@ -1167,6 +1345,45 @@ body.je-xt-disabled .je-kpi-dashboard {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Ícone de $ do card Hora Extra: mesma caixa dos demais ícones de KPI
+   (.je-kpi-icon-wrapper) — só ganha cursor de ajuda, porque não é um botão
+   (não há ajuste manual, só leitura do SAEX). */
+body.je-xt-enabled .je-kpi-heauth-icon {
+  cursor: help !important;
+}
+
+/* Spinner minúsculo no lugar do denominador (feito/AUTORIZADO) enquanto a
+   consulta ao SAEX ainda está em andamento — mesma animação (jeSpin) do
+   .je-spinner grande da Auditoria, só que na escala do texto do card. */
+.je-kpi-heauth-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 4px;
+  vertical-align: middle;
+  border: 1.5px solid rgba(0, 119, 255, 0.2);
+  border-top-color: var(--je-primary-light);
+  border-radius: 50%;
+  animation: jeSpin 0.7s linear infinite;
+}
+
+body.je-xt-enabled .je-kpi-planner-link {
+  background: transparent !important;
+  border: none !important;
+  color: var(--je-primary-light) !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  height: auto !important;
+  white-space: nowrap !important;
+}
+
+body.je-xt-enabled .je-kpi-planner-link:hover {
+  text-decoration: underline !important;
 }
 
 .je-kpi-icon-wrapper {
@@ -1444,7 +1661,7 @@ body.je-xt-enabled .je-topbar input.je-search-input {
 body.je-xt-enabled .je-topbar input.je-search-input:focus {
   background: #ffffff !important;
   border-color: var(--je-primary-light) !important;
-  box-shadow: var(--je-glow-blue) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-search-icon {
@@ -1540,9 +1757,9 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 }
 
 .je-logout-btn {
-  background: rgba(239, 68, 68, 0.08) !important;
+  background: rgba(236, 72, 153, 0.08) !important;
   color: var(--je-danger-text) !important;
-  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(236, 72, 153, 0.2) !important;
   border-radius: var(--je-radius-full) !important;
   padding: 6px 14px !important;
   font-size: 12px !important;
@@ -1559,7 +1776,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-logout-btn:hover {
   background: var(--je-danger-text) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.35) !important;
 }
 
 /* ==========================================================================
@@ -1658,7 +1875,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 }
 
 .je-drawer-close-btn:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
+  background: rgba(236, 72, 153, 0.1) !important;
   color: var(--je-danger-text) !important;
 }
 
@@ -1692,7 +1909,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-drawer-search-input:focus {
   background: #ffffff !important;
   border-color: var(--je-primary-light) !important;
-  box-shadow: var(--je-glow-blue-soft) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-drawer-content {
@@ -1852,8 +2069,8 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-badge-restrito {
   font-size: 9.5px;
   font-weight: 700;
-  color: #d97706;
-  background: rgba(245, 158, 11, 0.12);
+  color: #a16207;
+  background: rgba(250, 204, 21, 0.12);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -2018,24 +2235,43 @@ body.je-xt-enabled .je-occurrence-feriado {
   font-weight: 800 !important;
 }
 
+/* R5 — excedente acima do teto legal por jornada */
+body.je-xt-enabled .je-occ-acima-teto {
+  display: inline-block !important;
+  background: rgba(236, 72, 153, 0.14) !important;
+  color: #be185d !important;
+  border: 1px solid rgba(236, 72, 153, 0.4) !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+  padding: 1px 7px !important;
+  white-space: nowrap !important;
+  cursor: help !important;
+}
+
+body.je-xt-disabled .je-occ-acima-teto {
+  display: none !important;
+}
+
 /* Linhas com Pendência de Ajuste de Ponto (Batida Incompleta em Data Passada) */
 body.je-xt-enabled tr.je-row-ajuste-pendente td,
 body.je-xt-enabled tr.je-row-ajuste-pendente {
-  background: rgba(239, 68, 68, 0.18) !important;
-  color: #7f1d1d !important;
+  background: rgba(236, 72, 153, 0.18) !important;
+  color: #831843 !important;
 }
 
 body.je-xt-enabled tr.je-row-ajuste-pendente td:first-child {
-  border-left: 5px solid #b91c1c !important;
+  border-left: 5px solid #be185d !important;
 }
 
 /* Chip Vermelho Elegante para Ajuste de Ponto / Inconsistência (Alerta Não Clicável) */
 body.je-xt-enabled .je-occurrence-ajuste-pendente,
 body.je-xt-enabled a.je-occurrence-ajuste-pendente {
-  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%) !important;
-  color: #991b1b !important;
-  border: 1px solid rgba(239, 68, 68, 0.45) !important;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15) !important;
+  background: linear-gradient(135deg, #fce7f3 0%, #f9a8d4 100%) !important;
+  color: #9d174d !important;
+  border: 1px solid rgba(236, 72, 153, 0.45) !important;
+  box-shadow: 0 1px 3px rgba(236, 72, 153, 0.15) !important;
   font-weight: 800 !important;
   letter-spacing: 0.2px !important;
   cursor: default !important;
@@ -2044,10 +2280,10 @@ body.je-xt-enabled a.je-occurrence-ajuste-pendente {
 
 body.je-xt-enabled a.je-occurrence-ajuste-pendente:hover,
 body.je-xt-enabled .je-occurrence-ajuste-pendente:hover {
-  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%) !important;
-  color: #991b1b !important;
-  border-color: rgba(239, 68, 68, 0.45) !important;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15) !important;
+  background: linear-gradient(135deg, #fce7f3 0%, #f9a8d4 100%) !important;
+  color: #9d174d !important;
+  border-color: rgba(236, 72, 153, 0.45) !important;
+  box-shadow: 0 1px 3px rgba(236, 72, 153, 0.15) !important;
   transform: none !important;
   cursor: default !important;
   text-decoration: none !important;
@@ -2071,14 +2307,16 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente th.je-col-daily-exceed,
 body.je-xt-enabled #tblEspelhoPontoMesCorrente thead th.je-col-daily-exceed,
 body.je-xt-enabled table th.je-col-accumulated-balance,
 body.je-xt-enabled table th.je-col-daily-exceed {
-  background: linear-gradient(180deg, #002b5c 0%, #004080 100%) !important;
+  /* mesmo degradê do .je-btn-consultar, pra header e botão lerem como a
+     mesma família visual */
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 10px !important;
   line-height: 1.15 !important;
   letter-spacing: 0.3px !important;
-  border: 1px solid #002b5c !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid #0056b3 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
   white-space: nowrap !important;
   width: 1% !important;
   min-width: 88px !important;
@@ -2137,8 +2375,8 @@ body.je-xt-enabled table td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-saturday td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-sunday td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-feriado td.je-col-daily-exceed.je-balance-negative {
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: #be185d !important;
+  background: #fce7f3 !important;
   border: 1px solid rgba(203, 213, 225, 0.9) !important;
 }
 
@@ -2193,9 +2431,9 @@ body.je-xt-enabled .je-multiplier-tag {
 }
 
 body.je-xt-enabled .je-multiplier-tag-sat {
-  background: #fef3c7 !important;
-  color: #b45309 !important;
-  border: 1px solid #fde68a !important;
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+  border: 1px solid #fde047 !important;
 }
 
 body.je-xt-enabled .je-multiplier-tag-sun {
@@ -2293,9 +2531,16 @@ body.je-xt-disabled .je-row-today {
   transition: all 0.15s ease;
 }
 
-.je-result-item:hover, .je-result-item.selected {
+.je-result-item:hover {
   background: rgba(0, 119, 255, 0.08);
   box-shadow: var(--je-glow-blue-hover);
+}
+
+/* .selected = item ativo na navegação por teclado (setas), não o hover do
+   mouse — ganha o mesmo glow animado dos outros componentes em destaque. */
+.je-result-item.selected {
+  background: rgba(0, 119, 255, 0.08);
+  animation: jeGlowPulse 2.4s ease-in-out infinite;
 }
 
 .je-result-item-title {
@@ -2354,8 +2599,8 @@ body.je-xt-disabled .je-fab-container {
 
 .je-fab-container.active .je-fab-main {
   transform: rotate(45deg) !important;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35) !important;
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35) !important;
 }
 
 .je-fab-menu {
@@ -2527,7 +2772,7 @@ body.je-xt-enabled .calendar td.today {
   background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  box-shadow: 0 2px 8px rgba(0, 119, 255, 0.4), var(--je-glow-blue-soft) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 /* Fim de Semana no Calendário */
@@ -2605,17 +2850,17 @@ body.je-xt-enabled .je-overtime-clock-btn:active {
 }
 
 body.je-xt-enabled .je-btn-ajustar-pendente {
-  background: rgba(239, 68, 68, 0.12) !important;
-  color: #dc2626 !important;
-  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  background: rgba(236, 72, 153, 0.12) !important;
+  color: #db2777 !important;
+  border: 1px solid rgba(236, 72, 153, 0.35) !important;
   animation: jePulseWarning 2.2s infinite ease-in-out !important;
 }
 
 body.je-xt-enabled .je-btn-ajustar-pendente:hover {
-  background: #dc2626 !important;
+  background: #db2777 !important;
   color: #ffffff !important;
-  border-color: #dc2626 !important;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45) !important;
+  border-color: #db2777 !important;
+  box-shadow: 0 4px 14px rgba(219, 39, 119, 0.45) !important;
   transform: translateY(-1.5px) scale(1.1) !important;
 }
 
@@ -2806,7 +3051,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-input-time:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-select-motivo {
@@ -2828,7 +3073,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-select-motivo:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-row-2 {
@@ -2858,7 +3103,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 
 .je-card-textarea:focus {
   border-color: #0077ff !important;
-  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
 .je-card-row-3 {
@@ -2886,7 +3131,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 }
 
 .je-card-char-rem strong.je-char-warning {
-  color: #dc2626 !important;
+  color: #db2777 !important;
 }
 
 .je-card-row-4 {
@@ -2980,15 +3225,15 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 }
 
 .je-modal-alert-warning {
-  background: rgba(254, 243, 199, 0.8);
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: rgba(254, 249, 195, 0.8);
+  border: 1px solid #fde047;
+  color: #854d0e;
 }
 
 .je-modal-alert-error {
-  background: rgba(254, 226, 226, 0.8);
-  border: 1px solid #fca5a5;
-  color: #b91c1c;
+  background: rgba(252, 231, 243, 0.8);
+  border: 1px solid #f9a8d4;
+  color: #be185d;
 }
 
 .je-modal-alert-success {
@@ -3061,18 +3306,18 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
   justify-content: center !important;
   width: 28px !important;
   height: 28px !important;
-  border: 1px solid #fca5a5 !important;
+  border: 1px solid #f9a8d4 !important;
   border-radius: 6px !important;
-  background: #fef2f2 !important;
-  color: #ef4444 !important;
+  background: #fdf2f8 !important;
+  color: #ec4899 !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
 }
 
 .je-btn-delete-mark:hover {
-  background: #ef4444 !important;
+  background: #ec4899 !important;
   color: #ffffff !important;
-  border-color: #dc2626 !important;
+  border-color: #db2777 !important;
   transform: scale(1.08) !important;
 }
 
@@ -3099,12 +3344,592 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
   white-space: nowrap !important;
 }
 
+/* Dia corrente: saldo projetado pelo TSE XT enquanto a coluna oficial
+   (noturna) não roda. A célula (nativa — não é uma coluna sintética do TSE
+   XT) guarda os dois lados: o conteúdo original (.je-app-calc-native) e a
+   projeção (.je-app-calc-override). Por padrão — inclusive no modo OFF, ou
+   se o interruptor for desligado sem recarregar a página — só o nativo
+   aparece; o CSS só troca para a projeção com o tema ativo. */
+.je-app-calc-override {
+  display: none;
+}
+
+body.je-xt-enabled .je-app-calc-native {
+  display: none;
+}
+
+body.je-xt-enabled .je-app-calc-override {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-cell-app-calc,
+body.je-xt-enabled td.je-cell-app-calc,
+body.je-xt-enabled .je-cell-app-calc {
+  background: rgba(0, 119, 255, 0.12) !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 119, 255, 0.35) !important;
+  font-weight: 800 !important;
+  color: var(--je-primary) !important;
+}
+
+body.je-xt-enabled td.je-cell-app-calc strong {
+  color: var(--je-primary) !important;
+  line-height: 1 !important;
+}
+
+/* inline-flex + line-height:1 em vez de vertical-align:middle: o pill (8.5px)
+   e o valor em negrito (bem maior) têm métricas de linha muito diferentes —
+   vertical-align fica sujeito a arredondamento e desalinha; flex centraliza
+   de verdade, não importa a diferença de tamanho de fonte. */
+body.je-xt-enabled .je-app-calc-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  color: #ffffff !important;
+  background: var(--je-primary) !important;
+  border-radius: 999px !important;
+  padding: 2px 6px !important;
+}
+
 body.je-xt-disabled .je-btn-ajustar-ponto,
 body.je-xt-disabled .je-point-modal-overlay,
 body.je-xt-disabled .je-col-daily-exceed,
 body.je-xt-disabled .je-col-accumulated-balance,
 body:not(.je-xt-enabled) .je-col-daily-exceed,
 body:not(.je-xt-enabled) .je-col-accumulated-balance {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Auditoria de Horas Perdidas (v0.4.0)
+   ========================================================================== */
+
+.je-audit-modal .je-audit-content {
+  max-width: 780px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 82vh !important;
+}
+
+.je-audit-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 18px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
+  background: rgba(248, 250, 252, 0.85) !important;
+}
+
+.je-audit-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+}
+
+.je-audit-x {
+  background: transparent !important;
+  border: none !important;
+  color: #64748b !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  padding: 2px 8px !important;
+  box-shadow: none !important;
+  height: auto !important;
+}
+
+.je-audit-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 10px 18px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+  flex-wrap: wrap !important;
+}
+
+.je-audit-updated {
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.je-audit-warn {
+  color: var(--je-warning-text) !important;
+  font-weight: 700 !important;
+}
+
+.je-audit-actions {
+  display: flex !important;
+  gap: 6px !important;
+}
+
+.je-audit-btn {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(10, 37, 64, 0.14) !important;
+  background: #fff !important;
+  color: var(--je-primary) !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  height: auto !important;
+}
+
+.je-audit-btn:hover:not(:disabled) {
+  background: rgba(0, 119, 255, 0.08) !important;
+}
+
+.je-audit-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: default !important;
+}
+
+.je-audit-btn-primary {
+  background: linear-gradient(135deg, #0056b3, #0077ff) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.je-audit-btn-ghost {
+  border-color: transparent !important;
+  color: #db2777 !important;
+}
+
+.je-audit-progress {
+  padding: 12px 18px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+}
+
+.je-audit-progress-bar {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: rgba(10, 37, 64, 0.1) !important;
+  overflow: hidden !important;
+}
+
+.je-audit-progress-fill {
+  height: 100% !important;
+  width: 0% !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, #0056b3, #00c6ff) !important;
+  transition: width 0.25s ease !important;
+}
+
+.je-audit-progress-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 6px !important;
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.je-audit-body {
+  padding: 16px 18px 20px !important;
+  overflow-y: auto !important;
+}
+
+.je-audit-empty {
+  text-align: center !important;
+  color: #64748b !important;
+  font-size: 13.5px !important;
+  line-height: 1.7 !important;
+  padding: 30px 10px !important;
+}
+
+.je-audit-alert {
+  background: var(--je-warning-bg) !important;
+  color: var(--je-warning-text) !important;
+  border: 1px solid rgba(250, 204, 21, 0.35) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  margin-bottom: 14px !important;
+}
+
+.je-audit-hero {
+  text-align: center !important;
+  padding: 12px 0 18px !important;
+}
+
+.je-audit-hero-num {
+  font-size: 40px !important;
+  font-weight: 900 !important;
+  color: var(--je-primary) !important;
+  letter-spacing: -1px !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.je-audit-hero-cap {
+  font-size: 13px !important;
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+.je-audit-hero-sub {
+  font-size: 11.5px !important;
+  color: #94a3b8 !important;
+  margin-top: 3px !important;
+}
+
+.je-audit-cards {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  margin-bottom: 16px !important;
+}
+
+.je-audit-card {
+  border: 1px solid rgba(10, 37, 64, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 10px 8px !important;
+  text-align: center !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.je-audit-card-id {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.5px !important;
+}
+
+.je-audit-card-val {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  font-variant-numeric: tabular-nums !important;
+  margin: 2px 0 !important;
+}
+
+.je-audit-card-title {
+  font-size: 10.5px !important;
+  color: #64748b !important;
+  line-height: 1.3 !important;
+}
+
+.je-audit-tablewrap {
+  overflow-x: auto !important;
+  border: 1px solid rgba(10, 37, 64, 0.1) !important;
+  border-radius: 12px !important;
+}
+
+.je-audit-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 12px !important;
+}
+
+.je-audit-table th,
+.je-audit-table td {
+  padding: 7px 10px !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.je-audit-table th:first-child,
+.je-audit-table td:first-child,
+.je-audit-table th:nth-child(2),
+.je-audit-table td:nth-child(2) {
+  text-align: left !important;
+}
+
+.je-audit-table thead th {
+  background: rgba(248, 250, 252, 0.9) !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+  position: sticky !important;
+  top: 0 !important;
+}
+
+.je-audit-table thead th.je-audit-sortable {
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background 0.12s ease !important;
+}
+
+.je-audit-table thead th.je-audit-sortable:hover {
+  background: rgba(0, 119, 255, 0.1) !important;
+  color: var(--je-primary) !important;
+}
+
+.je-audit-table thead th[aria-sort="ascending"],
+.je-audit-table thead th[aria-sort="descending"] {
+  color: var(--je-primary) !important;
+}
+
+.je-audit-sort-ind {
+  color: var(--je-primary) !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+}
+
+.je-audit-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+.je-audit-none {
+  text-align: center !important;
+  color: #059669 !important;
+  font-weight: 600 !important;
+  padding: 18px !important;
+}
+
+.je-audit-badge {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 7px !important;
+  border-radius: 999px !important;
+}
+
+.je-audit-badge-hib {
+  background: rgba(14, 165, 233, 0.14) !important;
+  color: #0284c7 !important;
+}
+
+.je-audit-badge-he {
+  background: rgba(139, 92, 246, 0.14) !important;
+  color: #7c3aed !important;
+}
+
+.je-audit-badge-norm {
+  background: rgba(100, 116, 139, 0.12) !important;
+  color: #64748b !important;
+}
+
+.je-audit-badge-rec {
+  background: rgba(250, 204, 21, 0.16) !important;
+  color: #854d0e !important;
+}
+
+.je-audit-foot {
+  font-size: 10.5px !important;
+  color: #94a3b8 !important;
+  margin: 12px 2px 0 !important;
+  line-height: 1.5 !important;
+}
+
+.je-audit-intro {
+  font-size: 12px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  background: rgba(0, 119, 255, 0.06) !important;
+  border: 1px solid rgba(0, 119, 255, 0.16) !important;
+  border-radius: 10px !important;
+  padding: 9px 12px !important;
+  margin: 0 0 12px !important;
+}
+
+.je-audit-card-id {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+
+.je-audit-tag {
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+  padding: 1px 5px !important;
+  border-radius: 999px !important;
+}
+
+.je-audit-tag-exato {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
+}
+
+.je-audit-tag-est {
+  background: rgba(250, 204, 21, 0.16) !important;
+  color: #854d0e !important;
+}
+
+.je-audit-explain {
+  border: 1px solid rgba(10, 37, 64, 0.12) !important;
+  border-radius: 12px !important;
+  margin-bottom: 16px !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.je-audit-explain > summary {
+  cursor: pointer !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  padding: 10px 12px !important;
+  list-style: none !important;
+  user-select: none !important;
+}
+
+.je-audit-explain > summary::-webkit-details-marker { display: none !important; }
+.je-audit-explain > summary::before { content: '▸ '; color: #94a3b8 !important; }
+.je-audit-explain[open] > summary::before { content: '▾ '; }
+
+.je-audit-explain-body {
+  padding: 2px 14px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.je-audit-def-h {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin-bottom: 3px !important;
+}
+
+.je-audit-def-id {
+  background: var(--je-primary) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  padding: 1px 6px !important;
+  border-radius: 5px !important;
+}
+
+.je-audit-def p {
+  margin: 0 !important;
+  font-size: 11.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+}
+
+.je-audit-def em { font-style: normal !important; color: #0f172a !important; font-weight: 600 !important; }
+
+.je-audit-regime-legend {
+  font-size: 11px !important;
+  line-height: 1.9 !important;
+  color: #64748b !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+  padding-top: 10px !important;
+  margin: 2px 0 0 !important;
+}
+
+.je-audit-src {
+  font-size: 10.5px !important;
+  color: #94a3b8 !important;
+  margin: 4px 0 0 !important;
+  line-height: 1.55 !important;
+}
+
+.je-audit-src a,
+.je-audit-regime-legend a {
+  color: var(--je-primary-light) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+}
+
+.je-audit-swatch {
+  display: inline-block !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 3px !important;
+  flex: 0 0 auto !important;
+}
+
+.je-audit-def-id {
+  /* a cor de fundo vem inline (cor da categoria) */
+}
+
+/* linhas da tabela clicáveis (abrem o espelho do mês) */
+.je-audit-row {
+  cursor: pointer !important;
+  transition: background 0.12s ease !important;
+}
+
+.je-audit-row:hover {
+  background: rgba(0, 119, 255, 0.08) !important;
+  outline: none !important;
+}
+
+/* Linha selecionada por teclado (Tab, role="button" tabindex="0") — em <tr>
+   o box-shadow não renderiza de forma confiável, então o "glow" aqui pulsa
+   background + outline (jeRowGlowPulse) em vez de box-shadow. outline-color
+   não pode vir com !important aqui: precisa ficar livre pra animação
+   sobrescrever a cada quadro (animation nunca vence uma declaração
+   !important na mesma propriedade). */
+.je-audit-row:focus-visible {
+  outline-style: solid;
+  outline-width: 2px;
+  outline-offset: -2px;
+  animation: jeRowGlowPulse 2.4s ease-in-out infinite;
+}
+
+.je-audit-open-hint {
+  color: #cbd5e1 !important;
+  font-weight: 700 !important;
+  margin-left: 2px !important;
+}
+
+.je-audit-row:hover .je-audit-open-hint {
+  color: var(--je-primary-light) !important;
+}
+
+/* gráfico de barras por ano */
+.je-audit-chart {
+  border: 1px solid rgba(10, 37, 64, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px 8px !important;
+  margin-bottom: 16px !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+}
+
+.je-audit-chart-h {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  margin-bottom: 4px !important;
+}
+
+.je-audit-chart svg {
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+.je-chart-grid { stroke: rgba(10, 37, 64, 0.08) !important; stroke-width: 1 !important; }
+.je-chart-axis { stroke: rgba(10, 37, 64, 0.25) !important; stroke-width: 1 !important; }
+.je-chart-tick { fill: #94a3b8 !important; font-size: 8px !important; font-family: var(--je-font) !important; }
+.je-chart-xlabel { fill: #64748b !important; font-size: 8.5px !important; font-family: var(--je-font) !important; }
+.je-chart-total { fill: #475569 !important; font-size: 8px !important; font-weight: 700 !important; font-family: var(--je-font) !important; }
+
+.je-audit-chart-legend {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  margin-top: 6px !important;
+  padding-top: 6px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.7) !important;
+}
+
+.je-chart-leg {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+}
+
+body.je-xt-disabled .je-audit-modal {
   display: none !important;
 }
 
