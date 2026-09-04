@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.14';
+  const CURRENT_VERSION = '0.5.15';
 
   const CHANGELOG = [
+    {
+      version: '0.5.15',
+      date: '2026-09-04',
+      title: 'Reforço: modernização também se recupera com a aba em 2º plano',
+      features: [
+        'Identificada a causa raiz exata da corrida da v0.5.14: o navegador não computa o texto renderizado (innerText) de uma aba em segundo plano, pra economizar recurso — se o TSE XT monta nesse instante, a leitura de data/cabeçalho da tabela encontra tudo em branco.',
+        'Além do observador de mutações e das verificações ativas nos primeiros segundos, agora a modernização também é reavaliada quando a aba volta a ficar visível (visibilitychange) ou a janela ganha foco — o momento exato em que a leitura volta a ser confiável.'
+      ]
+    },
     {
       version: '0.5.14',
       date: '2026-09-04',

@@ -148,24 +148,20 @@
     init();
   }
 
-  // Observador para caso a tabela/formulário seja recarregado via Ajax/Struts sem refresh total
-  //
-  // Também cobre uma corrida rara: o TSE XT pode montar (criar a topbar e a
-  // barra de KPIs) ANTES de o portal terminar de preencher/reorganizar as
-  // linhas da tabela (ex.: tablesorter.js rodando por cima depois). Como
-  // .je-kpi-dashboard já existe nesse momento, a condição de re-tentativa
-  // de baixo nunca disparava de novo — a modernização ficava "travada"
-  // pela metade: cabeçalho sintético criado mas sem célula de dado em
-  // parte (ou todas) as linhas, o que também desalinha as colunas nativas
-  // seguintes (o botão de hora extra do h17 passa a cair visualmente em
-  // cima da coluna Ocorrência). dateCellCount vs. accumCellCount detecta
-  // esse descompasso (tolera até 2 de diferença — linhas h01 legitimamente
-  // em branco, ex. cabeçalho de totais); staleRetries limita as
-  // re-tentativas pra não virar loop se o mês realmente não tiver dias
-  // com data válida.
+  // Detecta e corrige uma corrida rara: o TSE XT pode montar (criar a
+  // topbar e a barra de KPIs) ANTES de o portal terminar de preencher as
+  // linhas da tabela. O cabeçalho sintético "SALDO ACUM." chega a ser
+  // criado, mas nenhuma célula de dado — e como .je-kpi-dashboard já
+  // existe, nada indicava que a modernização ficou pela metade (isso
+  // também desalinha colunas nativas seguintes: o botão de hora extra do
+  // h17 passa a cair visualmente em cima da coluna Ocorrência).
+  // dateCellCount vs. accumCellCount detecta esse descompasso (tolera até
+  // 2 de diferença — linhas h01 legitimamente em branco); staleRetries
+  // limita as re-tentativas pra não virar loop se o mês realmente não
+  // tiver dias com data válida.
   let staleRetries = 0;
   const MAX_STALE_RETRIES = 5;
-  const observer = new MutationObserver(() => {
+  function checkStaleAndRetry() {
     const tableMes = document.getElementById('tblEspelhoPontoMesCorrente');
     const hasTopBar = !!document.querySelector('.je-topbar');
     const hasKpiDash = !!document.querySelector('.je-kpi-dashboard');
@@ -176,7 +172,31 @@
       if (isStale) staleRetries++;
       init();
     }
+  }
+
+  // Observador para caso a tabela/formulário seja recarregado via Ajax/Struts
+  // sem refresh total (e como um dos gatilhos de checkStaleAndRetry).
+  const observer = new MutationObserver(checkStaleAndRetry);
+
+  // O observer só reage a NOVAS mutações — se a tabela terminar de carregar
+  // num único lote e depois ficar quieta, nenhuma mutação nova dispara o
+  // callback pra pegar o descompasso. Por isso também checamos de forma
+  // ativa, algumas vezes, nos primeiros segundos após o carregamento.
+  [800, 1600, 3000].forEach((delay) => setTimeout(checkStaleAndRetry, delay));
+
+  // Causa raiz mais comum do descompasso: a aba está em segundo plano
+  // (document.hidden) quando a montagem roda — innerText não é computado
+  // pra elementos de uma aba oculta (o navegador pula o layout pra
+  // economizar recurso), então a leitura de data/cabeçalho em
+  // modernizeTable() encontra tudo em branco e a modernização "trava" com
+  // zero linhas processadas. Nenhuma re-tentativa ajuda enquanto a aba
+  // seguir oculta — só reavaliar quando ela volta a ficar visível resolve.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkStaleAndRetry();
   });
+  // Rede extra: em alguns fluxos (troca de janela do SO, não só de aba) o
+  // Chrome dispara focus sem um visibilitychange correspondente.
+  window.addEventListener('focus', checkStaleAndRetry);
 
   if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });
