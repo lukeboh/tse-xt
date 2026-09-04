@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.0';
+  const CURRENT_VERSION = '0.6.1';
 
   const CHANGELOG = [
+    {
+      version: '0.6.1',
+      date: '2026-09-04',
+      title: 'Fase 1 do roadmap de arquitetura visual — casca do TSE XT chega às demais telas do Meu Espaço',
+      features: [
+        'A injeção da extensão deixou de ficar restrita ao Espelho de Ponto e à Alteração de Ponto: agora roda em qualquer tela autenticada do Meu Espaço (exceto login/logout). A topbar, o menu de serviços (drawer), a busca rápida (Ctrl+K), o FAB de ações e o toggle de tema já aparecem em todas as telas do menu — o título de página, o formulário e a modernização de tabela continuam exclusivos do Espelho/Alteração de Ponto até os próximos passos do roadmap (ver docs/roadmap-arquitetura-visual.md).'
+      ]
+    },
     {
       version: '0.6.0',
       date: '2026-09-04',
