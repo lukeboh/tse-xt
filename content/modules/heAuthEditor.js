@@ -126,7 +126,7 @@ window.JEPessoasHEAuth = (function () {
       <div class="je-modal-content" style="max-width: 420px; padding: 0;">
         <div style="padding: 14px 18px; border-bottom: 1px solid rgba(226,232,240,0.85); background: rgba(248,250,252,0.85);">
           <h3 style="margin:0; font-size:14px; font-weight:800; color:#0a2540;">Hora extra autorizada — ${monthKey || 'mês'}</h3>
-          <p style="margin:4px 0 0; font-size:11px; color:#64748b;">O quantitativo autorizado no SAEX não é acessível pelo perfil comum — informe manualmente. Fica salvo neste navegador, por mês.</p>
+          <p style="margin:4px 0 0; font-size:11px; color:#64748b;">Os campos vêm das autorizações do SAEX (ícone de relógio). Ajuste se precisar — o valor salvo aqui passa a ter prioridade e fica só neste navegador. Zere os dois campos para voltar a usar o SAEX.</p>
         </div>
         <div style="padding: 16px 18px; display:flex; flex-direction:column; gap:12px;">
           <label style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; color:#334155;">
