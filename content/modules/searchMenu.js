@@ -37,6 +37,15 @@ window.JEPessoasSearch = (function () {
         }
       },
       {
+        title: '⚠️ Auditoria de Horas Perdidas',
+        category: 'Ações Rápidas',
+        action: () => {
+          if (window.JEPessoasLostHours) {
+            window.JEPessoasLostHours.open();
+          }
+        }
+      },
+      {
         title: 'Frequência - Alteração de Ponto',
         category: 'Navegação',
         action: () => {

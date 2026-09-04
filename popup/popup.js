@@ -1,34 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const segmentBtns = document.querySelectorAll('.segment-btn');
-  const btnReload = document.getElementById('btnReload');
   const popupVersion = document.getElementById('popupVersion');
   if (popupVersion && chrome.runtime?.getManifest) {
-    popupVersion.innerText = 'v' + chrome.runtime.getManifest().version;
+    popupVersion.textContent = 'v' + chrome.runtime.getManifest().version;
   }
 
-  // Carrega configuração salva
-  chrome.storage?.local?.get({ targetHours: 7 }, (items) => {
-    const savedHours = items.targetHours || 7;
-    segmentBtns.forEach((btn) => {
-      if (parseInt(btn.getAttribute('data-hours'), 10) === savedHours) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
+  // Preferências de aparência do painel de KPIs (lidas pelo content script em
+  // content/modules/settings.js via chrome.storage.local).
+  const DEFAULTS = { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' };
+  const VALUES = {
+    kpiCardStyle: ['flat', 'gradient'],
+    kpiCardEmphasis: ['soft', 'glow']
+  };
+
+  function paint(key, value) {
+    const ctrl = document.querySelector(`.segmented-control[data-setting="${key}"]`);
+    if (!ctrl) return;
+    ctrl.querySelectorAll('.segment-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-value') === value);
+    });
+  }
+
+  chrome.storage?.local?.get(DEFAULTS, (items) => {
+    Object.keys(DEFAULTS).forEach((k) => {
+      const v = VALUES[k].indexOf(items[k]) >= 0 ? items[k] : DEFAULTS[k];
+      paint(k, v);
     });
   });
 
-  // Alterna configuração de jornada
-  segmentBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      segmentBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const hours = parseInt(btn.getAttribute('data-hours'), 10);
-      chrome.storage?.local?.set({ targetHours: hours });
+  document.querySelectorAll('.segmented-control[data-setting]').forEach((ctrl) => {
+    const key = ctrl.getAttribute('data-setting');
+    ctrl.querySelectorAll('.segment-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.getAttribute('data-value');
+        paint(key, value);
+        chrome.storage?.local?.set({ [key]: value });
+      });
     });
   });
 
-  // Botão de recarregar a aba ativa
+  const btnReload = document.getElementById('btnReload');
   if (btnReload) {
     btnReload.addEventListener('click', () => {
       chrome.tabs?.query({ active: true, currentWindow: true }, (tabs) => {

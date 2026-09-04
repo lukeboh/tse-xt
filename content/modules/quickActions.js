@@ -31,6 +31,15 @@ window.JEPessoasQuickActions = (function () {
           <span>Ir para Hoje</span>
         </button>
 
+        <button type="button" class="je-fab-item" id="je-fab-audit" title="Auditoria de Horas Perdidas (excedente sem pecúnia e sem banco)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Horas Perdidas</span>
+        </button>
+
         <button type="button" class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -85,6 +94,20 @@ window.JEPessoasQuickActions = (function () {
       window.print();
       fabContainer.classList.remove('active');
     });
+
+    const auditBtn = fabContainer.querySelector('#je-fab-audit');
+    if (auditBtn) {
+      auditBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.JEPessoasLostHours) {
+          window.JEPessoasLostHours.open();
+        } else {
+          alert('A Auditoria de Horas Perdidas só está disponível na tela do Espelho de Ponto Mensal.');
+        }
+        fabContainer.classList.remove('active');
+      });
+    }
   }
 
   function exportTableToCSV() {

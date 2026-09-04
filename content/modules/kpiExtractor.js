@@ -40,16 +40,31 @@ window.JEPessoasKPI = (function () {
     return `${d}/${m}/${y}`;
   }
 
-  function extractKPIs(dailyTargetHours = 7) {
+  function extractKPIs(dailyTargetHours = 7, opts) {
+    opts = opts || {};
+    const heAut = opts.heAutorizado || {};
+    const authWeekdaySatMin = Math.max(0, heAut.wkSatMin || 0);
+    const authSundayHolidayMin = Math.max(0, heAut.sunHolMin || 0);
+    const heAutorizadoSource = heAut.source || null;
+    // Sinaliza que a leitura do SAEX ainda está em andamento (1ª pintura do
+    // card, antes do fetch resolver) — domModernizer usa isso pra mostrar um
+    // spinner no lugar do denominador em vez de "sem autorizado".
+    const heAuthLoading = !!heAut.loading;
     const targetDailyMinutes = dailyTargetHours * 60;
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return null;
 
     // Mês homologado: o cabeçalho nativo "HORAS EXCED." passa a ser "HORAS AJUST."
-    // (vem com <br>, por isso o replace de whitespace antes do match).
+    // textContent, não innerText: innerText só reflete texto renderizado —
+    // fica em branco numa aba em 2º plano (o navegador pula o layout), o que
+    // faria o mês parecer "aberto" por engano. Mas textContent, diferente de
+    // innerText, NÃO insere espaço no lugar do <br> do cabeçalho nativo
+    // ("Horas<br>Ajust." vira "HorasAjust.", sem espaço) — por isso o match é
+    // só em "AJUST" (sem exigir "HORAS " antes), que continua presente dos
+    // dois jeitos e não aparece em nenhum outro cabeçalho da tabela.
     const isClosedMonth = Array.from(table.querySelectorAll('th')).some(th => {
-      const t = (th.innerText || '').toUpperCase().replace(/\s+/g, ' ');
-      return t.includes('HORAS AJUST') || t.includes('HORA AJUST');
+      const t = (th.textContent || '').toUpperCase();
+      return t.includes('AJUST');
     });
 
     const todayStr = getTodayString();
@@ -125,9 +140,11 @@ window.JEPessoasKPI = (function () {
 
           const isDispensed = isHolidayOrRecess || isLicense || isHybrid || isVacation || isTravel || (abonoMin >= targetDailyMinutes);
 
-          // Verifica se houve intervalo de almoço (2 entradas e 2 saídas preenchidas)
-          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
-          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : targetDailyMinutes; // 8h ou 7h
+          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em
+          // mês de recesso reduzido (turno único), senão 7h. Fonte: legalConfig.
+          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: yearNum, month: monthNum })
+            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : targetDailyMinutes);
 
           // Contabilização de dias úteis e meta esperada (exclui fins de semana e dispensas)
           const todayObj = new Date();
@@ -165,7 +182,8 @@ window.JEPessoasKPI = (function () {
               totalMin,
               exceedMin,
               pecuniaMin,
-              dayTargetMinutes
+              dayTargetMinutes,
+              projectFromTotal: isToday && !isClosedMonth
             });
 
             // Soma da PECÚNIA (horas que serão pagas) por tipo de dia — alimenta o card "Horas Extras".
@@ -197,10 +215,12 @@ window.JEPessoasKPI = (function () {
       }
     });
 
-    // Cálculo 1: Previsão de saída para completar expediente diário
+    // Cálculo 1: Previsão de saída para completar expediente diário.
+    // Usa a jornada real de hoje (7h/8h/5h) e não o valor fixo.
+    const todayTarget = (todayData && todayData.dayTargetMinutes) || targetDailyMinutes;
     let estimatedExit = '--:--';
     let estimatedExitMinutes = null;
-    let remainingMinutesToday = targetDailyMinutes;
+    let remainingMinutesToday = todayTarget;
     let workedMinutesToday = 0;
 
     if (todayData) {
@@ -211,24 +231,24 @@ window.JEPessoasKPI = (function () {
 
       // 1. Cenário: Entrou (E1) e não saiu ainda
       if (e1M !== null && s1M === null) {
-        estimatedExitMinutes = e1M + targetDailyMinutes;
+        estimatedExitMinutes = e1M + todayTarget;
         estimatedExit = formatMinutesToTime(estimatedExitMinutes % (24 * 60));
         const now = new Date();
         const curMinutes = now.getHours() * 60 + now.getMinutes();
         workedMinutesToday = Math.max(0, curMinutes - e1M);
-        remainingMinutesToday = Math.max(0, targetDailyMinutes - workedMinutesToday);
+        remainingMinutesToday = Math.max(0, todayTarget - workedMinutesToday);
       }
       // 2. Cenário: Fez 1º turno e está no 2º turno
       else if (e1M !== null && s1M !== null && e2M !== null && s2M === null) {
         const firstTurn = Math.max(0, s1M - e1M);
-        const needed = Math.max(0, targetDailyMinutes - firstTurn);
+        const needed = Math.max(0, todayTarget - firstTurn);
         estimatedExitMinutes = e2M + needed;
         estimatedExit = formatMinutesToTime(estimatedExitMinutes % (24 * 60));
         const now = new Date();
         const curMinutes = now.getHours() * 60 + now.getMinutes();
         const secondTurn = Math.max(0, curMinutes - e2M);
         workedMinutesToday = firstTurn + secondTurn;
-        remainingMinutesToday = Math.max(0, targetDailyMinutes - workedMinutesToday);
+        remainingMinutesToday = Math.max(0, todayTarget - workedMinutesToday);
       }
       // 3. Cenário: Concluído
       else if (todayData.totalDay && todayData.totalDay !== '00:00') {
@@ -240,6 +260,43 @@ window.JEPessoasKPI = (function () {
 
     const tableText = table.innerText.toUpperCase();
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
+
+    // R3 — mês com HE autorizado (Portaria 380/2026 art. 13): há autorização de
+    // serviço extraordinário vinculada a algum dia, ou pecúnia registrada, e o
+    // mês não é de regime híbrido. Nesse estado o consumo do banco é vedado,
+    // mas a aquisição (parcela homologada) continua.
+    const hasAuthIcon = !!table.querySelector('[onclick*="detalharAutorizacao"], a[href*="detalharAutorizacao"], img[title*="utoriza" i]');
+    const hasAuthorizedHEInMonth = !hasHybridWorkInMonth && (hasAuthIcon || (pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes) > 0);
+
+    // R4 — mês de recesso com jornada reduzida a 5h (janeiro; julho não eleitoral).
+    // Nesses meses a jornada em turno único é 5h e o acúmulo de banco só ocorre
+    // por decisão da DG (Portaria-TSE 885/2024). Detecta pelo mês/ano visualizado.
+    let viewYear = null, viewMonth = null;
+    const mSel = document.getElementById('mesSelecionado');
+    const aSel = document.getElementById('anoSelecionado');
+    if (mSel && mSel.value) viewMonth = parseInt(mSel.value, 10);
+    if (aSel && aSel.value) viewYear = parseInt(aSel.value, 10);
+    if (!viewMonth || !viewYear) {
+      const firstDate = table.querySelector('td.h01, .h01');
+      const md = firstDate && (firstDate.innerText || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (md) { viewMonth = parseInt(md[2], 10); viewYear = parseInt(md[3], 10); }
+    }
+    const isReducedRecessMonth = !!(window.JEPessoasLegal && window.JEPessoasLegal.isReducedRecessMonth
+      && viewYear && viewMonth && window.JEPessoasLegal.isReducedRecessMonth(viewYear, viewMonth));
+
+    // Prévia do crédito real no banco = parcela HOMOLOGADA com fator por tipo de dia
+    // (Úteis ×1 + Sáb ×1,5 + Dom/Feriado ×2). Vem do rodapé do espelho, não da
+    // coluna SALDO ACUM. (que ainda inclui excedente não homologado — ver R1/R3).
+    let homologPreviewMinutes = 0;
+    try {
+      const scan = window.JEPessoasAuthScan && window.JEPessoasAuthScan.analyzeEspelho(document, { targetDailyMinutes: targetDailyMinutes });
+      if (scan && scan.footer && scan.footer.homolog) {
+        const h = scan.footer.homolog;
+        const SF = (window.JEPessoasLegal && window.JEPessoasLegal.SATURDAY_FACTOR.valor) || 1.5;
+        const DF = (window.JEPessoasLegal && window.JEPessoasLegal.SUNDAY_HOLIDAY_FACTOR.valor) || 2.0;
+        homologPreviewMinutes = Math.round(h.uteis * 1 + h.sab * SF + h.domfer * DF);
+      }
+    } catch (e) { /* rodapé pode não existir em mês corrente */ }
 
     // Se houver trabalho híbrido no mês, não há acúmulo de banco de horas institucional nem de saldo acumulado.
     // (A pecúnia NÃO é zerada: é valor a pagar, independente do regime de banco de horas.)
@@ -254,10 +311,14 @@ window.JEPessoasKPI = (function () {
 
     // Cálculo 2: Previsão de saída para zerar saldo do mês
     let estimatedExitToZeroMonth = '--:--';
-    let zeroMonthSubtext = hasHybridWorkInMonth ? 'Regime Híbrido (sem banco de horas)' : 'Saldo do mês já zerado';
+    let zeroMonthSubtext = hasHybridWorkInMonth
+      ? 'Regime Híbrido (sem banco de horas)'
+      : (hasAuthorizedHEInMonth ? 'Consumo do banco vedado neste mês (art. 13)' : 'Saldo do mês já zerado');
     let zeroMonthStatus = 'neutral';
 
-    if (!hasHybridWorkInMonth && estimatedExitMinutes !== null) {
+    // R3 — no mês com HE autorizado a UTILIZAÇÃO do banco é vedada (Portaria
+    // 380/2026 art. 13): não faz sentido sugerir "sair mais cedo" abatendo saldo.
+    if (!hasHybridWorkInMonth && !hasAuthorizedHEInMonth && estimatedExitMinutes !== null) {
       const diffMinutes = totalExceedMinutesMonth;
       
       if (diffMinutes > 0) {
@@ -276,7 +337,7 @@ window.JEPessoasKPI = (function () {
         zeroMonthSubtext = `Igual ao expediente diário`;
         zeroMonthStatus = 'neutral';
       }
-    } else if (!hasHybridWorkInMonth && todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
+    } else if (!hasHybridWorkInMonth && !hasAuthorizedHEInMonth && todayData && todayData.totalDay && todayData.totalDay !== '00:00') {
       estimatedExitToZeroMonth = 'Expediente fechado';
       zeroMonthSubtext = `Saldo do mês: ${formatMinutesToTime(totalExceedMinutesMonth, true)}`;
     }
@@ -296,11 +357,55 @@ window.JEPessoasKPI = (function () {
     const exceededTimeFormatted = formatMinutesToTime(exceededMinutes);
     const barFillPercent = Math.min(100, progressPercent);
 
+    // --- Planejamento do mês (proposta docs/proposta-kpis-planejamento.md) ---
+    const regime = hasHybridWorkInMonth ? 'hibrido'
+      : (hasAuthorizedHEInMonth ? 'he'
+        : (isReducedRecessMonth ? 'recesso' : 'normal'));
+    const bancoBalanceMin = parseTimeToMinutes(accumulatedBankBalance);
+    const plan = deriveMonthPlan({
+      monthBalanceMin: totalExceedMinutesMonth,
+      bancoBalanceMin,
+      regime,
+      homologPreviewMinutes,
+      pecuniaWeekdaySatMinutes,
+      pecuniaSundayHolidayMinutes,
+      authWeekdaySatMin,
+      authSundayHolidayMin
+    });
+    const hasHEAutorizadoConfig = (authWeekdaySatMin + authSundayHolidayMin) > 0;
+
     return {
       todayStr,
       todayData,
       hasTodayRow: !!todayData,
       hasHybridWorkInMonth,
+      hasAuthorizedHEInMonth,
+      isReducedRecessMonth,
+      isClosedMonth,
+      regime,
+      homologPreviewMinutes,
+      homologPreviewFormatted: formatMinutesToTime(homologPreviewMinutes),
+
+      // Planejamento do mês
+      monthBalanceMin: totalExceedMinutesMonth,
+      monthBalanceFormatted: formatMinutesToTime(totalExceedMinutesMonth, true),
+      bancoBalanceMin,
+      ...plan,
+      bancoWillAddFormatted: formatMinutesToTime(plan.bancoWillAddMin),
+      bancoWillConsumeFormatted: formatMinutesToTime(plan.bancoWillConsumeMin),
+      bancoOverdraftFormatted: formatMinutesToTime(plan.bancoOverdraftMin),
+      pecuniaOpenWeekdaySatFormatted: formatMinutesToTime(plan.pecuniaOpenWeekdaySatMin),
+      pecuniaOpenSundayHolidayFormatted: formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin),
+      pecuniaLegalMonthlyRemainingFormatted: formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
+      hasHEAutorizadoConfig,
+      heAutorizadoSource,
+      heAuthLoading,
+      authWeekdaySatMin,
+      authSundayHolidayMin,
+      authWeekdaySatFormatted: formatMinutesToTime(authWeekdaySatMin),
+      authSundayHolidayFormatted: formatMinutesToTime(authSundayHolidayMin),
+      pecuniaWeekdaySatMinutes,
+      pecuniaSundayHolidayMinutes,
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,
@@ -319,6 +424,11 @@ window.JEPessoasKPI = (function () {
       pecuniaWeekdaySat: formatMinutesToTime(pecuniaWeekdaySatMinutes),
       pecuniaSundayHoliday: formatMinutesToTime(pecuniaSundayHolidayMinutes),
       pecuniaTotalMinutes: pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes,
+      pecuniaTotalFormatted: formatMinutesToTime(pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes),
+      authTotalMin: authWeekdaySatMin + authSundayHolidayMin,
+      // Arredondada em horas cheias (ex.: "40h") — o total agregado do card
+      // não precisa da precisão de minutos dos blocos individuais.
+      authTotalHoursFormatted: `${Math.round((authWeekdaySatMin + authSundayHolidayMin) / 60)}h`,
 
       // Metas do mês
       totalWorkedMinutesMonth,
@@ -341,8 +451,73 @@ window.JEPessoasKPI = (function () {
     };
   }
 
+  /**
+   * Deriva os números de planejamento do mês a partir de valores já extraídos.
+   * Função pura — testada em tests/kpiPlan.test.mjs.
+   *
+   * @param {Object} o
+   * @param {number} o.monthBalanceMin           saldo líquido do mês (+ credor / − devedor)
+   * @param {number} o.bancoBalanceMin           saldo atual do banco de horas
+   * @param {'normal'|'he'|'hibrido'|'recesso'} o.regime
+   * @param {number} o.homologPreviewMinutes     Úteis×1 + Sáb×1,5 + DomFer×2 do rodapé
+   * @param {number} o.pecuniaWeekdaySatMinutes  pecúnia já feita — semana + sábado (+50%)
+   * @param {number} o.pecuniaSundayHolidayMinutes pecúnia já feita — domingo + feriado (+100%)
+   * @param {number} [o.authWeekdaySatMin]       HE autorizada semana/sábado (F2 — input manual)
+   * @param {number} [o.authSundayHolidayMin]    HE autorizada domingo/feriado (F2 — input manual)
+   */
+  function deriveMonthPlan(o) {
+    o = o || {};
+    const bal = o.monthBalanceMin || 0;
+    const banco = Math.max(0, o.bancoBalanceMin || 0);
+    const regime = o.regime || 'normal';
+    const homologPreview = Math.max(0, o.homologPreviewMinutes || 0);
+    const pecWkSat = Math.max(0, o.pecuniaWeekdaySatMinutes || 0);
+    const pecSunHol = Math.max(0, o.pecuniaSundayHolidayMinutes || 0);
+    const authWkSat = Math.max(0, o.authWeekdaySatMin || 0);
+    const authSunHol = Math.max(0, o.authSundayHolidayMin || 0);
+
+    const MONTHLY_CAP = (window.JEPessoasLegal && window.JEPessoasLegal.MAX_HE_MES_MIN && window.JEPessoasLegal.MAX_HE_MES_MIN.valor) || 3600;
+
+    const balanceStatus = bal > 0 ? 'credor' : (bal < 0 ? 'devedor' : 'zero');
+
+    // O consumo automático do banco só acontece no regime Normal.
+    // Híbrido (Port. 490/2022 art. 22), HE autorizado (Port. 380/2026 art. 13) e
+    // recesso (Port. 885/2024) não consomem o saldo automaticamente.
+    const canConsumeBanco = regime === 'normal';
+
+    let bancoWillConsumeMin = 0;
+    let bancoOverdraftMin = 0;
+    let bancoWillAddMin = 0;
+
+    if (balanceStatus === 'devedor' && canConsumeBanco) {
+      const deficit = Math.abs(bal);
+      bancoWillConsumeMin = Math.min(deficit, banco);
+      bancoOverdraftMin = Math.max(0, deficit - banco);
+    } else if (balanceStatus === 'credor') {
+      // O que já está marcado como homologável vai para o banco (com fator).
+      bancoWillAddMin = regime === 'hibrido' ? 0 : homologPreview;
+    }
+
+    const pecuniaOpenWeekdaySatMin = Math.max(0, authWkSat - pecWkSat);
+    const pecuniaOpenSundayHolidayMin = Math.max(0, authSunHol - pecSunHol);
+    const pecuniaTotalDoneMin = pecWkSat + pecSunHol;
+    const pecuniaLegalMonthlyRemainingMin = Math.max(0, MONTHLY_CAP - pecuniaTotalDoneMin);
+
+    return {
+      balanceStatus,
+      bancoWillConsumeMin,
+      bancoOverdraftMin,
+      bancoWillAddMin,
+      pecuniaOpenWeekdaySatMin,
+      pecuniaOpenSundayHolidayMin,
+      pecuniaTotalDoneMin,
+      pecuniaLegalMonthlyRemainingMin
+    };
+  }
+
   return {
     extractKPIs,
+    deriveMonthPlan,
     parseTimeToMinutes,
     formatMinutesToTime
   };

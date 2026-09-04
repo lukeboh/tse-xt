@@ -297,16 +297,100 @@ window.JEPessoasModernizer = (function () {
 
     const dashboard = document.createElement('div');
     dashboard.className = 'je-kpi-dashboard';
+    dashboard.innerHTML = buildKpiCardsHTML(kpiData);
 
-    const isPositiveBank = !kpiData.accumulatedBankBalance.startsWith('-');
-    const isZeroMonthPositive = kpiData.zeroMonthStatus === 'positive';
-    const isZeroMonthNegative = kpiData.zeroMonthStatus === 'negative';
+    const appHeader = getAppHeaderContainer();
+    appHeader.appendChild(dashboard);
 
-    dashboard.innerHTML = `
-      <!-- Card 1: Previsão Saída p/ Completar Expediente -->
-      <div class="je-kpi-card" title="Horário estimado de saída para completar as ${kpiData.targetDailyHours}h de hoje">
+    // "planejar" do KPI 2 — mini-planejador do mês.
+    const plannerLink = dashboard.querySelector('.je-kpi-planner-link');
+    if (plannerLink && window.JEPessoasPlanner) {
+      plannerLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.JEPessoasPlanner.open(kpiData);
+      });
+    }
+
+  }
+
+  // Monta o HTML dos 5 KPIs a partir de `kpiData` (função pura de string — testável).
+  function buildKpiCardsHTML(kpiData) {
+    const isPositiveBank = !String(kpiData.accumulatedBankBalance || '').startsWith('-');
+
+    const URLS = (window.JEPessoasLegal && window.JEPessoasLegal.URLS) || {};
+    const linkNorm = (url, txt, title) =>
+      `<a href="${url}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''} style="color:inherit; text-decoration:underline; text-underline-offset:2px;">${txt}</a>`;
+
+    // --- Planejamento: cores e textos derivados ---
+    const bs = kpiData.balanceStatus || (kpiData.monthBalanceMin > 0 ? 'credor' : (kpiData.monthBalanceMin < 0 ? 'devedor' : 'zero'));
+    const balColor = bs === 'credor' ? '#059669' : (bs === 'devedor' ? '#a16207' : '#475569');
+    const balLabel = bs === 'credor' ? 'credor' : (bs === 'devedor' ? 'devedor' : 'zerado');
+
+    // Linha do KPI 3 (Banco) — para onde vão / de onde vêm as horas do mês
+    let bancoFlowLine;
+    if (kpiData.hasHybridWorkInMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>${linkNorm(URLS.prt490_2022 || '#', 'Sem acúmulo', 'Portaria-TSE 490/2022, art. 22')}</span>`;
+    } else if (kpiData.hasAuthorizedHEInMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`;
+    } else if (kpiData.isReducedRecessMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;">Recesso 5h</span><span>Acúmulo só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Port. 885/2024', 'Portaria-TSE 885/2024')})</span>`;
+    } else if (bs === 'credor' && kpiData.bancoWillAddMin > 0) {
+      bancoFlowLine = `<span class="je-badge-positive">+${kpiData.bancoWillAddFormatted} homologáveis</span><span>→ banco</span>`;
+    } else if (bs === 'devedor' && kpiData.bancoWillConsumeMin > 0) {
+      bancoFlowLine = `<span class="je-badge-negative">−${kpiData.bancoWillConsumeFormatted} do banco</span>${kpiData.bancoOverdraftMin > 0 ? `<span title="Excede o saldo do banco — vira débito / Resíduo de Horas">· vira débito ${kpiData.bancoOverdraftFormatted}</span>` : ''}`;
+    } else {
+      bancoFlowLine = `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`;
+    }
+
+    // Bloco de pecúnia por tipo de dia: feito/autorizado como fração à
+    // direita do rótulo + barra de progresso proporcional — uma barra por
+    // bloco, sempre, no mesmo estilo das outras barras de KPI (6px,
+    // rgba(0,102,204,0.08) de trilho, gradiente no preenchimento, transição
+    // de 0.8s). A única fonte do autorizado é o SAEX — sem autorização pra
+    // aquele bloco, a barra fica vazia (0%) e o texto mostra só o "feito".
+    // Enquanto a consulta ao SAEX ainda está em andamento (heAuthLoading),
+    // um spinner aparece no lugar do denominador em vez de nada.
+    const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
+    const heAuthLoading = !!kpiData.heAuthLoading;
+    const heauthSpinner = '<span class="je-kpi-heauth-spinner" title="Consultando o autorizado no SAEX…"></span>';
+    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color, gradient) {
+      const hasAuth = hasHEConfig && authMin > 0;
+      const over = hasAuth && doneMin > authMin;
+      const barPct = hasAuth ? Math.min(100, Math.round((doneMin / authMin) * 100)) : 0;
+      return `<div style="font-size:11px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9px; opacity:0.7;">${pct}</span></span>
+          <span>${hasAuth
+            ? `<strong style="color:${over ? '#db2777' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>`
+            : `<strong style="color:${color};">${doneFmt}</strong>${heAuthLoading ? heauthSpinner : ''}`}</span>
+        </div>
+        <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
+          <div style="width:${barPct}%; height:100%; background:${over ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : gradient}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+      </div>`;
+    }
+
+    // Linha "Executado" do KPI 4 (feito / autorizado total, teto 60h/mês) +
+    // barra proporcional. Sem autorizado do SAEX ainda lido, a barra usa o
+    // teto legal (60h) como referência, reconstruído a partir do que já resta
+    // (evita repetir a constante de 3600min aqui).
+    const pecTotalMin = kpiData.pecuniaTotalMinutes || 0;
+    const authTotalMin = kpiData.authTotalMin || 0;
+    const hasAuthTotal = hasHEConfig && authTotalMin > 0;
+    const pecCapMin = (kpiData.pecuniaLegalMonthlyRemainingMin || 0) + pecTotalMin;
+    const execTargetMin = hasAuthTotal ? authTotalMin : pecCapMin;
+    const execOver = hasAuthTotal && pecTotalMin > authTotalMin;
+    const execBarPct = execTargetMin > 0 ? Math.min(100, Math.round((pecTotalMin / execTargetMin) * 100)) : 0;
+    const execLine = hasAuthTotal
+      ? `Executado: <strong style="color:${execOver ? '#db2777' : '#0a2540'};">${kpiData.pecuniaTotalFormatted}</strong> / ${kpiData.authTotalHoursFormatted} Autorizadas <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês)</span>`
+      : `Executado: <strong style="color:#0a2540;">${kpiData.pecuniaTotalFormatted}</strong>${heAuthLoading ? heauthSpinner : ''} <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês: resta ${kpiData.pecuniaLegalMonthlyRemainingFormatted})</span>`;
+
+    return `
+      <!-- KPI 1: Saída de Hoje (jornada de hoje + zerar o mês) -->
+      <div class="je-kpi-card" title="Horário para completar a jornada de hoje (${kpiData.targetDailyHours}h) e, na 2ª linha, para zerar o saldo do mês.">
         <div class="je-kpi-header">
-          <span class="je-kpi-title">Saída Expediente</span>
+          <span class="je-kpi-title">Saída de Hoje</span>
           <div class="je-kpi-icon-wrapper">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -315,20 +399,44 @@ window.JEPessoasModernizer = (function () {
           </div>
         </div>
         <div class="je-kpi-value" style="color: #0077ff;">${kpiData.estimatedExit}</div>
-        <div class="je-kpi-subtext">
-          ${!kpiData.hasTodayRow
-            ? `<span style="opacity: 0.45;">—</span>`
+        <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 2px;">
+          <span>${!kpiData.hasTodayRow
+            ? `Jornada de ${kpiData.targetDailyHours}h`
             : (kpiData.remainingMinutesToday > 0
-              ? `<span>Faltam <strong>${kpiData.remainingTimeFormatted}</strong> hoje</span>`
-              : `<span>Jornada de hoje <strong>cumprida</strong></span>`)}
+              ? `Jornada ${kpiData.targetDailyHours}h · faltam <strong>${kpiData.remainingTimeFormatted}</strong>`
+              : `Jornada de hoje <strong>cumprida</strong>`)}</span>
+          <span style="font-size: 10.5px; color: #64748b;">Zerar mês: <strong>${kpiData.estimatedExitToZeroMonth}</strong>${/^\d/.test(kpiData.estimatedExitToZeroMonth || '') ? ` (${kpiData.zeroMonthSubtext.replace(/<[^>]+>/g, '')})` : ''}</span>
         </div>
       </div>
 
-      <!-- Card 2: Saldo Acumulado do Banco de Horas -->
-      <div class="je-kpi-card" title="Saldo homologado no banco de horas institucional">
+      <!-- KPI 2: Saldo do Mês (devedor / credor) -->
+      <div class="je-kpi-card" title="Saldo líquido do mês (excedente − pecúnia), já com a projeção de hoje e a compensação intra-mês. Positivo = credor, negativo = devedor.">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Saldo do Mês</span>
+          <div class="je-kpi-icon-wrapper" style="background: ${bs === 'credor' ? 'rgba(16, 185, 129, 0.12)' : (bs === 'devedor' ? 'rgba(250, 204, 21, 0.12)' : 'rgba(100, 116, 139, 0.1)')}; color: ${balColor};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="color: ${balColor};">${kpiData.monthBalanceFormatted}</div>
+        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
+          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+        <div class="je-kpi-subtext">
+          <span class="${bs === 'credor' ? 'je-badge-positive' : (bs === 'devedor' ? 'je-badge-negative' : '')}">${balLabel}</span>
+          <span>${kpiData.remainingWorkingDaysMonth > 0 ? `${kpiData.remainingWorkingDaysMonth} dias úteis rest.` : 'mês encerrado'}</span>
+          ${kpiData.isClosedMonth ? '' : '<button type="button" class="je-kpi-planner-link" title="Simular o fechamento do mês">planejar ›</button>'}
+        </div>
+      </div>
+
+      <!-- KPI 3: Banco de Horas (saldo + o que o mês adiciona/consome) -->
+      <div class="je-kpi-card" title="Saldo atual do banco de horas e o que este mês tende a adicionar (homologação) ou consumir.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Banco de Horas</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
+          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(236, 72, 153, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#db2777'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
               <path d="M12 12v8a2 2 0 0 0 4 0"></path>
@@ -336,20 +444,37 @@ window.JEPessoasModernizer = (function () {
             </svg>
           </div>
         </div>
-        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#dc2626'};">
-          ${kpiData.accumulatedBankBalance}
+        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#db2777'};">${kpiData.accumulatedBankBalance}</div>
+        <div class="je-kpi-subtext">${bancoFlowLine}</div>
+      </div>
+
+      <!-- KPI 4: Hora Extra (Pecúnia) — por tipo de dia -->
+      <div class="je-kpi-card" title="Horas extras que serão pagas em pecúnia, separadas por tipo de dia. Semana/Sábado = +50%; Domingo/Feriado = +100%.">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Hora Extra (Pecúnia)</span>
+          <div class="je-kpi-icon-wrapper je-kpi-heauth-icon" title="Autorizado lido automaticamente das autorizações do SAEX (ícone de relógio) — não há ajuste manual da meta.">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
         </div>
-        <div class="je-kpi-subtext">
-          ${kpiData.hasHybridWorkInMonth 
-            ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>Sem acúmulo de BH</span>`
-            : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`}
+        <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 6px; margin: 2px 0;">
+          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540', 'linear-gradient(90deg, #0a2540 0%, #0056b3 100%)')}
+          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed', 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)')}
+        </div>
+        <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 3px;">
+          <span style="font-size:10.5px; color:#64748b;">${execLine}</span>
+          <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
+            <div style="width:${execBarPct}%; height:100%; background:${execOver ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Card 3: Meta / Progresso do Mês (Fração Ordinária Feito/Esperado) -->
-      <div class="je-kpi-card" title="Progresso da meta de horas ordinárias trabalhadas no mês (Meta: ${kpiData.totalExpectedTimeFormatted})">
+      <!-- KPI 5: Meta do Mês (jornada ordinária) -->
+      <div class="je-kpi-card" title="Progresso da jornada ordinária do mês (7h/8h/5h por dia útil, sem hora extra). Meta: ${kpiData.totalExpectedTimeFormatted}.">
         <div class="je-kpi-header">
-          <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : (kpiData.isTargetExceeded ? 'Meta Superada' : 'Meta do Mês')} (${kpiData.progressPercent}%)</span>
+          <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : 'Meta do Mês'} (${kpiData.progressPercent}%)</span>
           <div class="je-kpi-icon-wrapper" style="background: ${kpiData.isTargetExceeded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 102, 204, 0.1)'}; color: ${kpiData.isTargetExceeded ? '#059669' : 'var(--je-primary)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -361,71 +486,23 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-value" style="display: flex; align-items: baseline; justify-content: space-between; gap: 4px;">
           <span>${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></span>
-          ${kpiData.isTargetExceeded 
-            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>` 
+          ${kpiData.isTargetExceeded
+            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>`
             : ''}
         </div>
-        
-        <!-- Barra de Progresso com Indicador de Meta e Extrapolação -->
         <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
           <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
         </div>
-
         <div class="je-kpi-subtext">
           ${kpiData.hasHybridWorkInMonth
             ? `<span>${kpiData.totalExpectedMinutesMonth === 0 ? 'Sem exigência presencial' : `Faltam <strong>${kpiData.remainingHoursFormatted}</strong> presencial`}</span>`
-            : (kpiData.isTargetExceeded 
+            : (kpiData.isTargetExceeded
               ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
-              : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias restantes</span>`)}
-        </div>
-      </div>
-
-      <!-- Card 4: Previsão Saída p/ Zerar Saldo do Mês -->
-      <div class="je-kpi-card" title="Horário de saída para zerar o saldo acumulado até hoje (para mais ou para menos)">
-        <div class="je-kpi-header">
-          <span class="je-kpi-title">Saída p/ Zerar Mês</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${isZeroMonthPositive ? 'rgba(14, 165, 233, 0.1)' : (isZeroMonthNegative ? 'rgba(245, 158, 11, 0.1)' : 'rgba(100, 116, 139, 0.1)')}; color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#64748b')};">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-          </div>
-        </div>
-        <div class="je-kpi-value" style="color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#1e293b')};">
-          ${kpiData.estimatedExitToZeroMonth}
-        </div>
-        <div class="je-kpi-subtext">
-          <span>${kpiData.zeroMonthSubtext}</span>
-        </div>
-      </div>
-
-      <!-- Card 5: Horas Extras — pecúnia a pagar por tipo de dia + saldo do mês -->
-      <div class="je-kpi-card" title="Horas de pecúnia (a pagar) acumuladas no mês, por tipo de dia. Rodapé: saldo excedente que foi para o banco de horas.">
-        <div class="je-kpi-header">
-          <span class="je-kpi-title">Horas Extras</span>
-          <div class="je-kpi-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-          </div>
-        </div>
-        <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 3px; margin: 2px 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Pecúnia úteis / Sáb:</span>
-            <strong style="color: #0a2540; font-size: 12.5px;">${kpiData.pecuniaWeekdaySat}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Pecúnia Dom / Feriados:</span>
-            <strong style="color: #7c3aed; font-size: 12.5px;">${kpiData.pecuniaSundayHoliday}</strong>
-          </div>
-        </div>
-        <div class="je-kpi-subtext">
-          <span>Saldo Mês: <strong>${kpiData.totalExceedTimeFormatted}</strong></span>
+              : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias</span>`)}
+          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024).">recesso 5h</span>` : ''}
         </div>
       </div>
     `;
-
-    const appHeader = getAppHeaderContainer();
-    appHeader.appendChild(dashboard);
   }
 
   function parseMinutes(str) {
@@ -473,7 +550,29 @@ window.JEPessoasModernizer = (function () {
 
     // Limpa injeções anteriores para garantir idempotência
     table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+
+    // Restaura a célula nativa "HORAS EXCED." do dia corrente (projeção do
+    // app) ao conteúdo original antes de reprocessar. Sem isso, uma 2ª
+    // passada leria de volta o texto JÁ sobrescrito (ex.: "+02:45TSE XT",
+    // sem separador) como se fosse o valor nativo — quebra o parse de
+    // HH:MM e, em cascata (runningBalance acumula linha a linha), corrompe
+    // o saldo acumulado do resto da tabela.
+    table.querySelectorAll('td.je-cell-app-calc').forEach((cell) => {
+      const nativeSpan = cell.querySelector(':scope > .je-app-calc-native');
+      if (nativeSpan) cell.innerHTML = nativeSpan.innerHTML;
+      cell.classList.remove('je-cell-app-calc');
+      cell.removeAttribute('title');
+    });
+
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
+    // Selo R5 injetado na coluna de ocorrência — removido antes de reprocessar,
+    // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
+    // re-execução. .je-occ-sem-autorizacao (R6) não é mais criado, mas segue
+    // no seletor pra limpar qualquer selo remanescente de uma versão anterior.
+    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach(el => el.remove());
+    table.querySelectorAll('td.h16 span.je-occurrence-badge').forEach((el) => {
+      if (!el.querySelector('a') && /art\.\s*4|sem autoriza|>\s*10h/i.test(el.textContent || '')) el.remove();
+    });
 
     // Se o TSE XT estiver desabilitado, interrompe a injeção de colunas customizadas
     const isXTEnabled = document.body.classList.contains('je-xt-enabled') || localStorage.getItem('je_xt_theme_enabled') !== 'false';
@@ -566,17 +665,28 @@ window.JEPessoasModernizer = (function () {
         const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
         const exceedDay = tr.querySelector('td.h10')?.innerText.trim() || '';
         const occCell = tr.querySelector('td.h16');
-        const occText = occCell ? occCell.innerText.trim().toUpperCase() : '';
+        // Ocorrência "real" — ignora selos R5/R6 que o próprio TSE XT injetou aqui,
+        // senão numa re-execução o texto deles é lido como ocorrência e duplicado.
+        let occText = '';
+        if (occCell) {
+          const occClone = occCell.cloneNode(true);
+          occClone.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach((n) => n.remove());
+          occText = occClone.innerText.trim().toUpperCase();
+        }
 
         // Verificação de Data Passada para Inconsistência de Batida
         const dateParts = dateText.split('/');
         let isPastOrToday = true;
         let isStrictlyPast = false;
         let dayOfWeek = null;
+        let dayMonth = null;
+        let dayYear = null;
         if (dateParts.length === 3) {
           const dayNum = parseInt(dateParts[0], 10);
           const monthNum = parseInt(dateParts[1], 10);
           const yearNum = parseInt(dateParts[2], 10);
+          dayMonth = monthNum;
+          dayYear = yearNum;
           const dObj = new Date(yearNum, monthNum - 1, dayNum, 23, 59, 59);
           const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           const dObjStart = new Date(yearNum, monthNum - 1, dayNum);
@@ -674,9 +784,11 @@ window.JEPessoasModernizer = (function () {
           const totalMin = parseMinutes(totalDay);
           const abonoMin = parseMinutes(abono);
 
-          // Jornada esperada do dia: 8h se houve intervalo de almoço (4 batidas), senão a meta padrão.
-          const hasLunchInterval = !!(e1 && s1 && e2 && s2);
-          const dayTargetMinutes = hasLunchInterval ? (8 * 60) : (targetHours * 60);
+          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em mês
+          // de recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
+          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: dayYear, month: dayMonth })
+            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : (targetHours * 60));
 
           // Detecção de dispensa da jornada ordinária (espelha a lógica do kpiExtractor).
           const occU = (occText + ' ' + rawText).toUpperCase();
@@ -686,7 +798,50 @@ window.JEPessoasModernizer = (function () {
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
           const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
 
+          // R5 — sinalização de excedente irregular em dias já encerrados.
+          //
+          // Havia também um selo R6 "sem autorização" aqui (excedente do dia
+          // sem autorização de SAEX vinculada). Removido: mesmo sem
+          // autorização prévia, o excedente pode virar banco de horas por
+          // homologação ativa da chefia (confirmado empiricamente — ver
+          // regras-calculo-frequencia.md §3.9/§5.3, ex.: 12/2015, 01/2016,
+          // 09/2025, 04/2026) — não é uma perda garantida, então marcar todo
+          // dia sem SAEX como "sem autorização" soava mais alarmante do que
+          // a regra realmente é. A Auditoria de Horas Perdidas continua
+          // sendo o lugar certo pra isso: ela olha retrospectivamente se o
+          // excedente virou pecúnia OU banco, em vez de presumir antes da
+          // homologação acontecer.
+          try {
+            const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6 || isHolidayOrRecess;
+            // Em mês fechado a coluna h10 é "HORAS AJUST." (jornada reconhecida),
+            // não excedente — nesse caso o excesso do dia útil vem de TOTAL - jornada.
+            const grossExcessMin = isWeekendOrHoliday
+              ? (totalMin > 0 ? totalMin : exceedMin)
+              : (isClosedMonthTable ? (totalMin - dayTargetMinutes) : exceedMin);
+            const canBadge = isStrictlyPast && !isDispensed && occCell
+              && !occCell.querySelector('.je-occurrence-ajuste-pendente');
+
+            // R5 — excedente acima do teto legal por jornada, mesmo autorizado:
+            // 2h em dia útil, 10h em sábado/domingo/feriado (Res. 22.901/2008 art. 4º).
+            // O que passa disso não é compensável.
+            const L = window.JEPessoasLegal;
+            const capMin = isWeekendOrHoliday
+              ? ((L && L.MAX_HE_FDS_MIN.valor) || 600)
+              : ((L && L.MAX_HE_DIA_UTIL_MIN.valor) || 120);
+            if (canBadge && grossExcessMin > capMin
+                && !occCell.querySelector('.je-occ-acima-teto')) {
+              const over = grossExcessMin - capMin;
+              const tag2 = document.createElement('span');
+              tag2.className = 'je-occ-acima-teto';
+              tag2.textContent = isWeekendOrHoliday ? '> 10h (art. 4º)' : '> 2h (art. 4º)';
+              tag2.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} — ${formatSigned(over).replace('+', '')} acima do teto de ${isWeekendOrHoliday ? '10h' : '2h'} por jornada (Res. 22.901/2008 art. 4º). O que passa do teto não é compensável.`;
+              occCell.appendChild(document.createTextNode(' '));
+              occCell.appendChild(tag2);
+            }
+          } catch (e) { /* não bloqueia a modernização */ }
+
           // Cálculo do saldo do dia pela fonte única (evita divergência com o card de KPI).
+          const isTodayRow = dateText === todayFormatted;
           const dayResult = window.JEPessoasBalance.computeDailyDelta({
             dayOfWeek,
             isClosedMonth: isClosedMonthTable,
@@ -695,9 +850,11 @@ window.JEPessoasModernizer = (function () {
             totalMin,
             exceedMin,
             pecuniaMin,
-            dayTargetMinutes
+            dayTargetMinutes,
+            projectFromTotal: isTodayRow && !isClosedMonthTable
           });
           const dailyDelta = dayResult.delta;
+          const isProjectedToday = !!dayResult.projected && isTodayRow;
           let multiplierBadge = '';
           let deltaTooltip = '';
 
@@ -769,6 +926,31 @@ window.JEPessoasModernizer = (function () {
           if (currentAnchor && currentAnchor.parentNode) {
             currentAnchor.parentNode.insertBefore(tdAccum, currentAnchor.nextSibling);
           }
+
+          // Dia corrente de mês aberto: a coluna nativa "HORAS EXCED." só é
+          // processada à noite. Enquanto isso o TSE XT projeta o saldo do dia a
+          // partir do TOTAL e destaca a célula como calculada pelo app.
+          //
+          // A célula é NATIVA (não é uma coluna sintética do TSE XT), então não
+          // dá pra só confiar em display:none no modo OFF como as outras. Em vez
+          // de sobrescrever o conteúdo original, guarda os dois lados (nativo e
+          // projeção) e deixa o CSS trocar qual aparece conforme
+          // body.je-xt-enabled/disabled — assim nada aparece no modo OFF (nem
+          // ao carregar desabilitado, nem ao desligar o interruptor sem recarregar
+          // a página) e o valor nativo nunca é perdido.
+          // try/catch isolado: se algo aqui falhar, não pode derrubar o resto do
+          // loop de linhas — senão as colunas sintéticas (.je-col-daily-exceed /
+          // .je-col-accumulated-balance) parariam de ser injetadas em TODAS as
+          // linhas seguintes, não só na de hoje.
+          try {
+            if (isProjectedToday && exceedCell) {
+              const nativeHTML = exceedCell.innerHTML;
+              exceedCell.classList.add('je-cell-app-calc');
+              exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
+              exceedCell.innerHTML = `<span class="je-app-calc-native">${nativeHTML}</span><span class="je-app-calc-override"><strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span></span>`;
+              tdAccum.classList.add('je-cell-app-calc');
+            }
+          } catch (e) { /* não bloqueia a modernização do restante das linhas */ }
         }
       }
 
@@ -1289,6 +1471,7 @@ window.JEPessoasModernizer = (function () {
     modernizeHeader,
     injectPageTitleHeader,
     injectKPICards,
+    buildKpiCardsHTML,
     modernizeTable,
     modernizeForm,
     modernizeCalendarIcons,
