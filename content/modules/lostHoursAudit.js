@@ -30,9 +30,13 @@ window.JEPessoasLostHours = (function () {
   let aborted = false;
   let overlay = null;
 
-  // Paleta categórica P1–P4 (validada pelo método dataviz; harmoniza com o azul
-  // institucional). Ordem fixa, nunca reciclada.
-  const CAT_COLOR = { p1: '#2a78d6', p2: '#eb6834', p3: '#1baf7a', p4: '#eda100' };
+  // Paleta P1–P4: os 4 tons institucionais do TSE XT (--je-primary-dark →
+  // --je-accent-cyan, do mais escuro/severo ao mais claro/brando), não mais
+  // uma paleta categórica genérica — a pedido, pra tudo na modal usar só as
+  // cores já definidas pro app, mesmo abrindo mão da distinção categórica
+  // maximizada (CVD) da paleta anterior (#2a78d6/#eb6834/#1baf7a/#eda100).
+  // Ordem fixa, nunca reciclada.
+  const CAT_COLOR = { p1: '#0a2540', p2: '#0056b3', p3: '#0077ff', p4: '#00c6ff' };
 
   function legalUrl(k) {
     const U = (window.JEPessoasLegal && window.JEPessoasLegal.URLS) || {};

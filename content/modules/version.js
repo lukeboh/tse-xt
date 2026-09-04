@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.21';
+  const CURRENT_VERSION = '0.5.22';
 
   const CHANGELOG = [
+    {
+      version: '0.5.22',
+      date: '2026-09-04',
+      title: 'Gráfico da Auditoria usa só as cores do TSE XT',
+      features: [
+        'Auditoria completa das cores da modal Auditoria de Horas Perdidas: cabeçalho, botões, número principal, ícone de aviso, badges "exato"/"estimativa" e header da tabela já seguiam os tokens atuais. A única exceção era o gráfico de barras (P1–P4), que usava uma paleta categórica própria (azul/laranja/verde/amarelo). Trocada pelos 4 tons institucionais do TSE XT — primary-dark → primary → primary-light → accent-cyan, do mais severo ao mais brando — pra tudo na modal usar só as cores já definidas pro app.'
+      ]
+    },
     {
       version: '0.5.21',
       date: '2026-09-04',
