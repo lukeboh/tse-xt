@@ -134,13 +134,6 @@ window.JEPessoasModernizer = (function () {
           <span class="je-toggle-label">✨ <strong>TSE XT</strong> Ativo</span>
           <div class="je-toggle-switch"></div>
         </div>
-
-        <button type="button" class="je-settings-btn" id="je-settings-btn" title="Preferências de aparência do painel de KPIs">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </button>
       </div>
     `;
 
@@ -166,16 +159,6 @@ window.JEPessoasModernizer = (function () {
         
         applyThemeState(nextState, true);
         chrome.storage?.local?.set({ xtThemeEnabled: nextState });
-      });
-    }
-
-    // Conecta o botão de Preferências (engrenagem) ao modal de aparência
-    const settingsBtn = topbar.querySelector('#je-settings-btn');
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.JEPessoasSettings) window.JEPessoasSettings.openModal();
       });
     }
 
@@ -391,7 +374,7 @@ window.JEPessoasModernizer = (function () {
     }
 
     // Bloco de pecúnia por tipo de dia. Com HE autorizada configurada mostra
-    // auth / feito / aberto + barra; sem configuração, só o "feito".
+    // aut / feito / aberto + barra; sem configuração, só o "feito".
     const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
     function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, openFmt, color) {
       if (hasHEConfig && authMin > 0) {
@@ -403,8 +386,8 @@ window.JEPessoasModernizer = (function () {
             <span style="color:#94a3b8;">feito <strong style="color:${color};">${doneFmt}</strong></span>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10px; color:#64748b; margin-top:1px;">
-            <span>auth ${authFmt}</span>
-            <span style="color:${over ? '#db2777' : '#0a2540'};">${over ? 'passou do auth.' : 'aberto <strong>' + openFmt + '</strong>'}</span>
+            <span>aut ${authFmt}</span>
+            <span style="color:${over ? '#db2777' : '#0a2540'};">${over ? 'passou do aut.' : 'aberto <strong>' + openFmt + '</strong>'}</span>
           </div>
           <div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden; margin-top:3px;">
             <div style="height:100%; width:${barPct}%; background:${over ? '#db2777' : color}; border-radius:999px;"></div>
