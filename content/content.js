@@ -149,10 +149,31 @@
   }
 
   // Observador para caso a tabela/formulário seja recarregado via Ajax/Struts sem refresh total
+  //
+  // Também cobre uma corrida rara: o TSE XT pode montar (criar a topbar e a
+  // barra de KPIs) ANTES de o portal terminar de preencher/reorganizar as
+  // linhas da tabela (ex.: tablesorter.js rodando por cima depois). Como
+  // .je-kpi-dashboard já existe nesse momento, a condição de re-tentativa
+  // de baixo nunca disparava de novo — a modernização ficava "travada"
+  // pela metade: cabeçalho sintético criado mas sem célula de dado em
+  // parte (ou todas) as linhas, o que também desalinha as colunas nativas
+  // seguintes (o botão de hora extra do h17 passa a cair visualmente em
+  // cima da coluna Ocorrência). dateCellCount vs. accumCellCount detecta
+  // esse descompasso (tolera até 2 de diferença — linhas h01 legitimamente
+  // em branco, ex. cabeçalho de totais); staleRetries limita as
+  // re-tentativas pra não virar loop se o mês realmente não tiver dias
+  // com data válida.
+  let staleRetries = 0;
+  const MAX_STALE_RETRIES = 5;
   const observer = new MutationObserver(() => {
     const tableMes = document.getElementById('tblEspelhoPontoMesCorrente');
     const hasTopBar = !!document.querySelector('.je-topbar');
-    if ((tableMes && !document.querySelector('.je-kpi-dashboard')) || !hasTopBar) {
+    const hasKpiDash = !!document.querySelector('.je-kpi-dashboard');
+    const dateCellCount = tableMes ? tableMes.querySelectorAll('td.h01').length : 0;
+    const accumCellCount = tableMes ? tableMes.querySelectorAll('td.je-col-accumulated-balance').length : 0;
+    const isStale = tableMes && dateCellCount > 0 && (dateCellCount - accumCellCount) > 2 && staleRetries < MAX_STALE_RETRIES;
+    if ((tableMes && !hasKpiDash) || !hasTopBar || isStale) {
+      if (isStale) staleRetries++;
       init();
     }
   });

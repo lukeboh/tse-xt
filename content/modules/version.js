@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.13';
+  const CURRENT_VERSION = '0.5.14';
 
   const CHANGELOG = [
+    {
+      version: '0.5.14',
+      date: '2026-09-04',
+      title: 'Correção: corrida rara deixava a tabela pela metade',
+      features: [
+        'Identificada e corrigida a causa real de "saldo acumulado sempre zerado" e "coluna HORAS EXCED. sumiu em meses fechados": em alguns carregamentos, o TSE XT terminava de montar (criar a topbar e os KPIs) antes de o portal acabar de preencher as linhas da tabela. O cabeçalho sintético "SALDO ACUM." chegava a ser criado, mas nenhuma célula de dado — e como a barra de KPIs já existia, a verificação que existia pra detectar tabela desatualizada nunca disparava de novo, deixando a modernização travada pela metade.',
+        'Esse mesmo travamento também podia deixar colunas nativas seguintes desalinhadas — o botão de hora extra (relógio), que é da coluna h17, passava a cair visualmente em cima da coluna Ocorrência.',
+        'O observador que já existia pra detectar tabela recarregada via Ajax agora também detecta esse descompasso (linhas com data sem célula de saldo correspondente) e refaz a modernização automaticamente, com um limite de tentativas pra nunca entrar em loop.',
+        'Verificado ao vivo: reproduzido o problema, aplicada a correção e confirmado — em carregamento normal, sem qualquer intervenção manual — que a coluna HORAS EXCED., o saldo acumulado (com valores reais, não mais zerados) e o botão de hora extra na coluna certa aparecem corretamente.'
+      ]
+    },
     {
       version: '0.5.13',
       date: '2026-09-04',
