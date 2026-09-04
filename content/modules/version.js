@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.4.9';
+  const CURRENT_VERSION = '0.5.0';
 
   const CHANGELOG = [
+    {
+      version: '0.5.0',
+      date: '2026-09-03',
+      title: 'Painel de KPIs reorganizado para planejamento (Fase 1)',
+      features: [
+        'Novo painel de 5 KPIs voltado ao planejamento do mês: (1) Saída de Hoje — jornada de hoje + horário para zerar o mês na 2ª linha; (2) Saldo do Mês — número único devedor/credor, líquido de pecúnia e com a projeção de hoje; (3) Banco de Horas — saldo atual + o que o mês tende a adicionar (homologáveis) ou consumir; (4) Hora Extra (Pecúnia) — separada em Semana/Sábado (+50%) e Domingo/Feriado (+100%), com o quanto resta do teto de 60h/mês; (5) Meta do Mês — jornada ordinária cumprida/esperada.',
+        'kpiExtractor.deriveMonthPlan(): função pura de planejamento (status do saldo, consumo/aquisição de banco, aberto de pecúnia por bloco), com testes unitários.',
+        'Base de testes: pasta tests/ com node:test cobrindo legalConfig, balanceCalc e o planejamento dos KPIs.'
+      ]
+    },
     {
       version: '0.4.9',
       date: '2026-09-03',

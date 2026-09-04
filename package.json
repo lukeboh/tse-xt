@@ -1,0 +1,8 @@
+{
+  "name": "tse-xt",
+  "private": true,
+  "description": "TSE XT — extensão de usabilidade para o Meu Espaço do TSE. Sem dependências de runtime; testes com node:test.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}
