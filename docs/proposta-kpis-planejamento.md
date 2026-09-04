@@ -111,22 +111,27 @@ Dois blocos, cada um com **Autorizado / Feito / Aberto** + mini-barra `feito / a
 | **F1** | Reestrutura os 5 cards (funde os 2 de "hoje"; cria "Saldo do Mês"; KPI 3 mostra homologável/consumo; KPI 4 com os 2 blocos mostrando **feito + teto legal**; KPI 5 rotula "jornada ordinária"). `kpiExtractor.deriveMonthPlan()` + `domModernizer.buildKpiCardsHTML()` puros e testados. | ✅ v0.5.0 |
 | **F2** | Campos manuais `authWeekdaySat` / `authSundayHoliday` (⚙ no KPI 4, módulo `heAuthEditor.js`), persistidos por matrícula+mês; KPI 4 passa a mostrar **autorizado / feito / aberto** + barra + alerta de estouro. | ✅ v0.5.1 |
 | **F3** | Mini-planejador no KPI 2 (`monthPlanner.js`): link "planejar ›" → quanto fazer/dia para zerar + fechamento projetado para um esforço diário informado. | ✅ v0.5.2 |
-| **F4** | Investigar leitura do autorizado numa tela SAEX; se inacessível, manter manual e documentar. | ✅ v0.5.3 (mantido manual) |
+| **F4** | Investigar leitura do autorizado numa tela SAEX. | ⚠️ conclusão revista pela F5 |
+| **F5** | Ler o autorizado direto do backend do ícone de relógio (`heAuthFetch.js`), classificar por bloco e alimentar o KPI 4. | ✅ v0.5.4 |
 
 Ao fim de cada fase: casos de teste (`tests/`, `npm test`), verificação ao vivo via CDP, commit. Ao fim de todas: pronto para teste real de uso.
 
 ---
 
-## 6. F4 — leitura automática do autorizado (SAEX): conclusão
+## 6. F5 — leitura automática do autorizado a partir do ícone de relógio
 
-**Não é viável pelo perfil comum do servidor.** Verificado via CDP:
+**É acessível pelo próprio servidor.** (A primeira tentativa da F4 falhou por sessão expirada, não por permissão.)
 
-- `AutorizacaoHoraExcedenteAction_execute?dataDia.asString=DD/MM/AAAA&servidor.matricula=NNN` (a função nativa `formEspelhoPontoMes_detalharAutorizacao`, chamada pelo ícone de relógio) **redireciona para `Login_verTelaInicialSemLogout`** — acesso restrito. Testadas as variantes `_execute.action`, `.action`, `!execute.action` — todas redirecionam.
-- As telas do menu "Serviço Extraordinário" (Gestão de SE, Relatório de Serviços Realizados, Solicitar Horas Extras, Homologar Relatório) são de fluxo do SAEX/chefia; não expõem um total mensal autorizado num endpoint simples e a maioria exige perfil de gestão.
+- Endpoint: `GET /portalservidor2/AutorizacaoHoraExcedenteAction_execute?dataDia.asString=DD/MM/AAAA&servidor.matricula=NNN` (a função nativa `formEspelhoPontoMes_detalharAutorizacao`, chamada pelo ícone).
+- Resposta — tabela **"Autorizações serviço extraordinário / Limites de horas autorizadas"**, uma linha por autorização que cobre o dia:
 
-**Decisão:** mantém o **input manual** (F2). O editor:
-- é pré-preenchido com o que já foi pago em pecúnia no mês (piso do autorizado);
-- salva por matrícula + mês em `chrome.storage.local`;
-- some quando zerado (volta ao modo "feito + teto de 60h").
+  | Núm. | Descrição | Horas Autorizadas | Validade | Tipo | Lim. Úteis | Lim. Sáb. | Lim. Dom. | Período |
+  | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+  | 180956 | AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX) | 008:54 | 29/02/2028 | Pecúnia | 002:00 | 010:00 | 000:00 | 01/08/2026 a 09/08/2026 |
+  | 179416 | " | 008:00 | 29/02/2028 | Pecúnia | 000:00 | 000:00 | 010:00 | 02/08/2026 a 09/08/2026 |
 
-Se no futuro o TSE liberar um endpoint de consulta do SAEX para o próprio servidor, é só trocar a fonte de `authWeekdaySatMin` / `authSundayHolidayMin` — o resto do painel não muda.
+- **Agregação** (`heAuthFetch.aggregate`): consulta todos os dias do mês com ícone, **deduplica por `Núm.`** (a mesma autorização aparece em vários dias) e soma `Horas Autorizadas`.
+- **Classificação** (`heAuthFetch.classifyAuth`): `Lim. Dom. > 0` **e** `Lim. Úteis = Lim. Sáb. = 0` → **Domingo/Feriado (+100%)**; caso contrário → **Semana/Sábado (+50%)**.
+- **Exemplo verificado — ago/2026:** Semana/Sábado autorizado **08:54** (auth 180956); Domingo/Feriado **32:00** (auths 179416 + 179430 + 179431 + 179367, 8h cada). Pecúnia feita no mês: Sáb 03:45 / Dom-Fer 24:00 → **aberto** 05:09 e 08:00.
+- **Cache** por matrícula+mês (`je_xt_he_saex_v1_<mat>`): mês fechado nunca revalida; mês aberto revalida a cada 6h. O KPI 4 mostra o selo **"via SAEX"**.
+- O **⚙** (F2) continua: pré-preenche com o valor do SAEX e permite ajuste manual, que passa a ter prioridade sobre o SAEX (some quando zerado).

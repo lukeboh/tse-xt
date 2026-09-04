@@ -72,12 +72,25 @@
             if (kpis) window.JEPessoasModernizer.injectKPICards(kpis);
           };
           renderKpis(null);
-          // Se houver hora extra autorizada configurada para este mês, re-renderiza com ela.
-          if (window.JEPessoasHEAuth) {
-            const mat = window.JEPessoasHEAuth.getMatricula();
-            const mk = window.JEPessoasHEAuth.getMonthKey();
-            window.JEPessoasHEAuth.getEntry(mat, mk, (heAut) => {
-              if (heAut && (heAut.wkSatMin || heAut.sunHolMin)) renderKpis(heAut);
+
+          // Hora extra autorizada do mês: SAEX (backend do ícone de relógio) como
+          // fonte primária; o valor manual do editor (⚙) tem prioridade quando existe.
+          const HE = window.JEPessoasHEAuth;
+          const HEF = window.JEPessoasHEAuthFetch;
+          if (HE) {
+            const mat = HE.getMatricula();
+            const mk = HE.getMonthKey();
+            HE.getEntry(mat, mk, (manual) => {
+              const hasManual = manual && (manual.wkSatMin || manual.sunHolMin);
+              if (hasManual) {
+                renderKpis({ wkSatMin: manual.wkSatMin, sunHolMin: manual.sunHolMin, source: 'manual' });
+              }
+              if (HEF) {
+                HEF.getForCurrentMonth(mat, mk, {}, (saex) => {
+                  if (hasManual || !saex || !(saex.wkSatMin || saex.sunHolMin)) return;
+                  renderKpis({ wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin, source: 'saex' });
+                });
+              }
             });
           }
         }
