@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.5';
+  const CURRENT_VERSION = '0.5.6';
 
   const CHANGELOG = [
+    {
+      version: '0.5.6',
+      date: '2026-09-03',
+      title: 'Identidade visual — alerta em amarelo, erro em rosa',
+      features: [
+        'Ajuste da paleta do TSE XT conforme a proposta de identidade visual: a cor de ALERTA deixa de ser âmbar e passa a amarelo (#facc15 / texto #a16207 / fundo rgba(250,204,21,0.12)); a cor de ERRO deixa de ser vermelho e passa a rosa (#ec4899 / texto #db2777 / fundo rgba(236,72,153,0.12)). Primária (#0056b3), primária clara (#0077ff), acento ciano (#00c6ff), sucesso e superfícies de vidro seguem iguais.',
+        'A troca foi propagada por toda a interface: selos de ocorrência (sem autorização, acima do teto), células de saldo devedor/negativo, KPI Saldo do Mês (estado devedor), KPI Banco de Horas (débito), avisos da Auditoria de Horas Perdidas, botões de logout/exclusão, FAB ativo, modais de ajuste de ponto e o ícone do aviso experimental.',
+        'Novos tokens --je-warning-accent / --je-danger-accent (tom vívido para ícones e barras) e --je-warning-glow / --je-danger-glow.'
+      ]
+    },
     {
       version: '0.5.5',
       date: '2026-09-03',
@@ -131,7 +141,7 @@ window.JEPessoasVersion = (function () {
     overlay.innerHTML = `
       <div class="je-modal-content" style="max-width: 460px; padding: 0;">
         <div style="padding: 16px 20px; border-bottom: 1px solid rgba(226, 232, 240, 0.8); display: flex; align-items: center; gap: 8px; background: rgba(248, 250, 252, 0.85);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>

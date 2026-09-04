@@ -35,10 +35,14 @@
   --je-success-bg: rgba(16, 185, 129, 0.12);
   --je-success-text: #059669;
   --je-success-glow: 0 0 12px rgba(16, 185, 129, 0.25);
-  --je-warning-bg: rgba(245, 158, 11, 0.12);
-  --je-warning-text: #d97706;
-  --je-danger-bg: rgba(239, 68, 68, 0.12);
-  --je-danger-text: #dc2626;
+  --je-warning-bg: rgba(250, 204, 21, 0.12);
+  --je-warning-text: #a16207;
+  --je-warning-accent: #facc15;
+  --je-warning-glow: 0 0 12px rgba(250, 204, 21, 0.3);
+  --je-danger-bg: rgba(236, 72, 153, 0.12);
+  --je-danger-text: #db2777;
+  --je-danger-accent: #ec4899;
+  --je-danger-glow: 0 0 12px rgba(236, 72, 153, 0.28);
 
   /* Tipografia e Raio */
   --je-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -898,7 +902,7 @@ body.je-xt-enabled textarea[name*="justificativa" i]:focus {
 }
 
 .je-char-counter-container strong.je-char-warning {
-  color: #ef4444 !important;
+  color: #ec4899 !important;
 }
 
 /* Botões da Moldura (Salvar / Cancelar / Voltar / Incluir / Limpar) sem Espaço Vazio */
@@ -1574,9 +1578,9 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 }
 
 .je-logout-btn {
-  background: rgba(239, 68, 68, 0.08) !important;
+  background: rgba(236, 72, 153, 0.08) !important;
   color: var(--je-danger-text) !important;
-  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border: 1px solid rgba(236, 72, 153, 0.2) !important;
   border-radius: var(--je-radius-full) !important;
   padding: 6px 14px !important;
   font-size: 12px !important;
@@ -1593,7 +1597,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-logout-btn:hover {
   background: var(--je-danger-text) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.35) !important;
 }
 
 /* ==========================================================================
@@ -1692,7 +1696,7 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 }
 
 .je-drawer-close-btn:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
+  background: rgba(236, 72, 153, 0.1) !important;
   color: var(--je-danger-text) !important;
 }
 
@@ -1886,8 +1890,8 @@ body.je-xt-enabled .je-topbar input.je-search-input:focus {
 .je-badge-restrito {
   font-size: 9.5px;
   font-weight: 700;
-  color: #d97706;
-  background: rgba(245, 158, 11, 0.12);
+  color: #a16207;
+  background: rgba(250, 204, 21, 0.12);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -2055,9 +2059,9 @@ body.je-xt-enabled .je-occurrence-feriado {
 /* R6 — excedente sem autorização de serviço extraordinário vinculada */
 body.je-xt-enabled .je-occ-sem-autorizacao {
   display: inline-block !important;
-  background: rgba(245, 158, 11, 0.16) !important;
-  color: #b45309 !important;
-  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  background: rgba(250, 204, 21, 0.16) !important;
+  color: #854d0e !important;
+  border: 1px solid rgba(250, 204, 21, 0.4) !important;
   border-radius: 999px !important;
   font-size: 10px !important;
   font-weight: 800 !important;
@@ -2074,9 +2078,9 @@ body.je-xt-disabled .je-occ-sem-autorizacao {
 /* R5 — excedente acima do teto legal por jornada */
 body.je-xt-enabled .je-occ-acima-teto {
   display: inline-block !important;
-  background: rgba(239, 68, 68, 0.14) !important;
-  color: #b91c1c !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  background: rgba(236, 72, 153, 0.14) !important;
+  color: #be185d !important;
+  border: 1px solid rgba(236, 72, 153, 0.4) !important;
   border-radius: 999px !important;
   font-size: 10px !important;
   font-weight: 800 !important;
@@ -2093,21 +2097,21 @@ body.je-xt-disabled .je-occ-acima-teto {
 /* Linhas com Pendência de Ajuste de Ponto (Batida Incompleta em Data Passada) */
 body.je-xt-enabled tr.je-row-ajuste-pendente td,
 body.je-xt-enabled tr.je-row-ajuste-pendente {
-  background: rgba(239, 68, 68, 0.18) !important;
-  color: #7f1d1d !important;
+  background: rgba(236, 72, 153, 0.18) !important;
+  color: #831843 !important;
 }
 
 body.je-xt-enabled tr.je-row-ajuste-pendente td:first-child {
-  border-left: 5px solid #b91c1c !important;
+  border-left: 5px solid #be185d !important;
 }
 
 /* Chip Vermelho Elegante para Ajuste de Ponto / Inconsistência (Alerta Não Clicável) */
 body.je-xt-enabled .je-occurrence-ajuste-pendente,
 body.je-xt-enabled a.je-occurrence-ajuste-pendente {
-  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%) !important;
-  color: #991b1b !important;
-  border: 1px solid rgba(239, 68, 68, 0.45) !important;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15) !important;
+  background: linear-gradient(135deg, #fce7f3 0%, #f9a8d4 100%) !important;
+  color: #9d174d !important;
+  border: 1px solid rgba(236, 72, 153, 0.45) !important;
+  box-shadow: 0 1px 3px rgba(236, 72, 153, 0.15) !important;
   font-weight: 800 !important;
   letter-spacing: 0.2px !important;
   cursor: default !important;
@@ -2116,10 +2120,10 @@ body.je-xt-enabled a.je-occurrence-ajuste-pendente {
 
 body.je-xt-enabled a.je-occurrence-ajuste-pendente:hover,
 body.je-xt-enabled .je-occurrence-ajuste-pendente:hover {
-  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%) !important;
-  color: #991b1b !important;
-  border-color: rgba(239, 68, 68, 0.45) !important;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15) !important;
+  background: linear-gradient(135deg, #fce7f3 0%, #f9a8d4 100%) !important;
+  color: #9d174d !important;
+  border-color: rgba(236, 72, 153, 0.45) !important;
+  box-shadow: 0 1px 3px rgba(236, 72, 153, 0.15) !important;
   transform: none !important;
   cursor: default !important;
   text-decoration: none !important;
@@ -2209,8 +2213,8 @@ body.je-xt-enabled table td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-saturday td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-sunday td.je-col-daily-exceed.je-balance-negative,
 body.je-xt-enabled table tr.je-row-feriado td.je-col-daily-exceed.je-balance-negative {
-  color: #b91c1c !important;
-  background: #fee2e2 !important;
+  color: #be185d !important;
+  background: #fce7f3 !important;
   border: 1px solid rgba(203, 213, 225, 0.9) !important;
 }
 
@@ -2265,9 +2269,9 @@ body.je-xt-enabled .je-multiplier-tag {
 }
 
 body.je-xt-enabled .je-multiplier-tag-sat {
-  background: #fef3c7 !important;
-  color: #b45309 !important;
-  border: 1px solid #fde68a !important;
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+  border: 1px solid #fde047 !important;
 }
 
 body.je-xt-enabled .je-multiplier-tag-sun {
@@ -2426,8 +2430,8 @@ body.je-xt-disabled .je-fab-container {
 
 .je-fab-container.active .je-fab-main {
   transform: rotate(45deg) !important;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35) !important;
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35) !important;
 }
 
 .je-fab-menu {
@@ -2677,17 +2681,17 @@ body.je-xt-enabled .je-overtime-clock-btn:active {
 }
 
 body.je-xt-enabled .je-btn-ajustar-pendente {
-  background: rgba(239, 68, 68, 0.12) !important;
-  color: #dc2626 !important;
-  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  background: rgba(236, 72, 153, 0.12) !important;
+  color: #db2777 !important;
+  border: 1px solid rgba(236, 72, 153, 0.35) !important;
   animation: jePulseWarning 2.2s infinite ease-in-out !important;
 }
 
 body.je-xt-enabled .je-btn-ajustar-pendente:hover {
-  background: #dc2626 !important;
+  background: #db2777 !important;
   color: #ffffff !important;
-  border-color: #dc2626 !important;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45) !important;
+  border-color: #db2777 !important;
+  box-shadow: 0 4px 14px rgba(219, 39, 119, 0.45) !important;
   transform: translateY(-1.5px) scale(1.1) !important;
 }
 
@@ -2958,7 +2962,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 }
 
 .je-card-char-rem strong.je-char-warning {
-  color: #dc2626 !important;
+  color: #db2777 !important;
 }
 
 .je-card-row-4 {
@@ -3052,15 +3056,15 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 }
 
 .je-modal-alert-warning {
-  background: rgba(254, 243, 199, 0.8);
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: rgba(254, 249, 195, 0.8);
+  border: 1px solid #fde047;
+  color: #854d0e;
 }
 
 .je-modal-alert-error {
-  background: rgba(254, 226, 226, 0.8);
-  border: 1px solid #fca5a5;
-  color: #b91c1c;
+  background: rgba(252, 231, 243, 0.8);
+  border: 1px solid #f9a8d4;
+  color: #be185d;
 }
 
 .je-modal-alert-success {
@@ -3133,18 +3137,18 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
   justify-content: center !important;
   width: 28px !important;
   height: 28px !important;
-  border: 1px solid #fca5a5 !important;
+  border: 1px solid #f9a8d4 !important;
   border-radius: 6px !important;
-  background: #fef2f2 !important;
-  color: #ef4444 !important;
+  background: #fdf2f8 !important;
+  color: #ec4899 !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
 }
 
 .je-btn-delete-mark:hover {
-  background: #ef4444 !important;
+  background: #ec4899 !important;
   color: #ffffff !important;
-  border-color: #dc2626 !important;
+  border-color: #db2777 !important;
   transform: scale(1.08) !important;
 }
 
@@ -3303,7 +3307,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 
 .je-audit-btn-ghost {
   border-color: transparent !important;
-  color: #dc2626 !important;
+  color: #db2777 !important;
 }
 
 .je-audit-progress {
@@ -3351,7 +3355,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 .je-audit-alert {
   background: var(--je-warning-bg) !important;
   color: var(--je-warning-text) !important;
-  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  border: 1px solid rgba(250, 204, 21, 0.35) !important;
   border-radius: 10px !important;
   padding: 10px 12px !important;
   font-size: 12.5px !important;
@@ -3512,8 +3516,8 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 }
 
 .je-audit-badge-rec {
-  background: rgba(245, 158, 11, 0.16) !important;
-  color: #b45309 !important;
+  background: rgba(250, 204, 21, 0.16) !important;
+  color: #854d0e !important;
 }
 
 .je-audit-foot {
@@ -3556,8 +3560,8 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 }
 
 .je-audit-tag-est {
-  background: rgba(245, 158, 11, 0.16) !important;
-  color: #b45309 !important;
+  background: rgba(250, 204, 21, 0.16) !important;
+  color: #854d0e !important;
 }
 
 .je-audit-explain {
