@@ -40,7 +40,11 @@ window.JEPessoasKPI = (function () {
     return `${d}/${m}/${y}`;
   }
 
-  function extractKPIs(dailyTargetHours = 7) {
+  function extractKPIs(dailyTargetHours = 7, opts) {
+    opts = opts || {};
+    const heAut = opts.heAutorizado || {};
+    const authWeekdaySatMin = Math.max(0, heAut.wkSatMin || 0);
+    const authSundayHolidayMin = Math.max(0, heAut.sunHolMin || 0);
     const targetDailyMinutes = dailyTargetHours * 60;
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return null;
@@ -353,9 +357,11 @@ window.JEPessoasKPI = (function () {
       regime,
       homologPreviewMinutes,
       pecuniaWeekdaySatMinutes,
-      pecuniaSundayHolidayMinutes
-      // authWeekdaySatMin / authSundayHolidayMin entram na F2
+      pecuniaSundayHolidayMinutes,
+      authWeekdaySatMin,
+      authSundayHolidayMin
     });
+    const hasHEAutorizadoConfig = (authWeekdaySatMin + authSundayHolidayMin) > 0;
 
     return {
       todayStr,
@@ -379,6 +385,13 @@ window.JEPessoasKPI = (function () {
       pecuniaOpenWeekdaySatFormatted: formatMinutesToTime(plan.pecuniaOpenWeekdaySatMin),
       pecuniaOpenSundayHolidayFormatted: formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin),
       pecuniaLegalMonthlyRemainingFormatted: formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
+      hasHEAutorizadoConfig,
+      authWeekdaySatMin,
+      authSundayHolidayMin,
+      authWeekdaySatFormatted: formatMinutesToTime(authWeekdaySatMin),
+      authSundayHolidayFormatted: formatMinutesToTime(authSundayHolidayMin),
+      pecuniaWeekdaySatMinutes,
+      pecuniaSundayHolidayMinutes,
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,

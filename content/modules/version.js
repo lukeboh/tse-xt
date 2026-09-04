@@ -5,17 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.0';
+  const CURRENT_VERSION = '0.5.1';
 
   const CHANGELOG = [
     {
-      version: '0.5.0',
+      version: '0.5.1',
       date: '2026-09-03',
-      title: 'Painel de KPIs reorganizado para planejamento (Fase 1)',
+      title: 'Painel de KPIs — planejamento (Fases 1 e 2)',
       features: [
-        'Novo painel de 5 KPIs voltado ao planejamento do mês: (1) Saída de Hoje — jornada de hoje + horário para zerar o mês na 2ª linha; (2) Saldo do Mês — número único devedor/credor, líquido de pecúnia e com a projeção de hoje; (3) Banco de Horas — saldo atual + o que o mês tende a adicionar (homologáveis) ou consumir; (4) Hora Extra (Pecúnia) — separada em Semana/Sábado (+50%) e Domingo/Feriado (+100%), com o quanto resta do teto de 60h/mês; (5) Meta do Mês — jornada ordinária cumprida/esperada.',
-        'kpiExtractor.deriveMonthPlan(): função pura de planejamento (status do saldo, consumo/aquisição de banco, aberto de pecúnia por bloco), com testes unitários.',
-        'Base de testes: pasta tests/ com node:test cobrindo legalConfig, balanceCalc e o planejamento dos KPIs.'
+        'Novo painel de 5 KPIs voltado ao planejamento do mês: (1) Saída de Hoje — jornada de hoje + horário para zerar o mês na 2ª linha; (2) Saldo do Mês — número único devedor/credor, líquido de pecúnia e com a projeção de hoje; (3) Banco de Horas — saldo atual + o que o mês tende a adicionar (homologáveis) ou consumir; (4) Hora Extra (Pecúnia) — separada em Semana/Sábado (+50%) e Domingo/Feriado (+100%); (5) Meta do Mês — jornada ordinária.',
+        'F2 — controle da hora extra autorizada: o ⚙ do card Hora Extra abre um editor com dois campos (semana/sábado e domingo/feriado), salvos neste navegador por matrícula e mês. Com os campos preenchidos, o card passa a mostrar autorizado / feito / aberto com barra de progresso e alerta quando o feito passa do autorizado.',
+        'kpiExtractor.deriveMonthPlan() e domModernizer.buildKpiCardsHTML(): funções puras de planejamento e montagem, cobertas por testes (tests/, `npm test`).'
       ]
     },
     {

@@ -1169,6 +1169,23 @@ body.je-xt-disabled .je-kpi-dashboard {
   text-overflow: ellipsis;
 }
 
+body.je-xt-enabled .je-kpi-heauth-gear {
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  padding: 2px !important;
+  line-height: 0 !important;
+  box-shadow: none !important;
+  height: auto !important;
+  flex: 0 0 auto !important;
+  transition: color 0.15s ease !important;
+}
+
+body.je-xt-enabled .je-kpi-heauth-gear:hover {
+  color: var(--je-primary) !important;
+}
+
 .je-kpi-icon-wrapper {
   width: 22px;
   height: 22px;
