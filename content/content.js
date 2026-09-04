@@ -14,6 +14,7 @@
       document.documentElement.classList.add('je-xt-disabled');
       document.documentElement.classList.remove('je-xt-enabled');
     }
+    if (window.JEPessoasSettings) window.JEPessoasSettings.apply();
   } catch (e) {}
 
   function init() {
@@ -28,6 +29,10 @@
       document.body.classList.add('je-xt-disabled');
       document.body.classList.remove('je-xt-enabled');
     }
+
+    // Reflete as preferências de aparência dos KPIs no <body> (o pré-paint só
+    // alcançou o <html>). Puro CSS a partir daqui.
+    if (window.JEPessoasSettings) window.JEPessoasSettings.apply();
 
     // Detecta as páginas suportadas pelo TSE XT (Espelho Mensal e Alteração de Ponto Diária)
     const isEspelhoMes = window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente');
