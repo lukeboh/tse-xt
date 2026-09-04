@@ -10,6 +10,10 @@
  * Este módulo consulta os dias com ícone no mês, deduplica as autorizações por
  * Núm., classifica cada uma como Semana/Sábado (+50%) ou Domingo/Feriado (+100%)
  * e soma as "Horas Autorizadas". Resultado cacheado por matrícula + mês.
+ *
+ * Única fonte da hora extra autorizada do KPI — não há ajuste manual da meta
+ * (o servidor não define a própria autorização; o que vale é o que o SAEX
+ * registrou). getMatricula()/getMonthKey() identificam a página exibida.
  */
 
 window.JEPessoasHEAuthFetch = (function () {
@@ -19,6 +23,37 @@ window.JEPessoasHEAuthFetch = (function () {
   const OPEN_MONTH_TTL_MS = 6 * 60 * 60 * 1000; // 6h para mês ainda aberto
 
   function storageKey(mat) { return STORAGE_PREFIX + (mat || 'self'); }
+
+  // --- Identificação da página (matrícula + mês exibido) ----------------------
+
+  function getMatricula() {
+    const sel = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
+    if (sel && sel.value && sel.value !== '0') return sel.value.replace(/\D/g, '');
+    const inp = document.querySelector('input[name="servidorSelecionado.matricula"]');
+    if (inp && inp.value && inp.value !== '0') return inp.value.replace(/\D/g, '');
+    const el = document.querySelector('.matricula strong, .matricula span, #divTopServidorMatricula, .matricula');
+    if (el) {
+      const d = (el.innerText || '').replace(/\D/g, '');
+      if (d.length >= 6) return d;
+    }
+    const m = window.location.search.match(/matricula=(\d+)/i);
+    if (m && m[1] !== '0') return m[1];
+    return '';
+  }
+
+  function getMonthKey() {
+    const mSel = document.getElementById('mesSelecionado');
+    const aSel = document.getElementById('anoSelecionado');
+    let mm = mSel && mSel.value ? parseInt(mSel.value, 10) : null;
+    let yy = aSel && aSel.value ? parseInt(aSel.value, 10) : null;
+    if (!mm || !yy) {
+      const dc = document.querySelector('#tblEspelhoPontoMesCorrente td.h01, .h01');
+      const md = dc && (dc.innerText || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (md) { mm = parseInt(md[2], 10); yy = parseInt(md[3], 10); }
+    }
+    if (!mm || !yy) return null;
+    return yy + '-' + String(mm).padStart(2, '0');
+  }
 
   function toMin(str) {
     const m = String(str || '').replace(/\s/g, '').match(/(\d{1,3}):(\d{2})/);
@@ -172,6 +207,8 @@ window.JEPessoasHEAuthFetch = (function () {
   }
 
   return {
+    getMatricula,
+    getMonthKey,
     parseAuthRows,
     classifyAuth,
     aggregate,

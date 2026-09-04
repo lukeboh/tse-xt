@@ -412,6 +412,11 @@ window.JEPessoasKPI = (function () {
       pecuniaWeekdaySat: formatMinutesToTime(pecuniaWeekdaySatMinutes),
       pecuniaSundayHoliday: formatMinutesToTime(pecuniaSundayHolidayMinutes),
       pecuniaTotalMinutes: pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes,
+      pecuniaTotalFormatted: formatMinutesToTime(pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes),
+      authTotalMin: authWeekdaySatMin + authSundayHolidayMin,
+      // Arredondada em horas cheias (ex.: "40h") — o total agregado do card
+      // não precisa da precisão de minutos dos blocos individuais.
+      authTotalHoursFormatted: `${Math.round((authWeekdaySatMin + authSundayHolidayMin) / 60)}h`,
 
       // Metas do mês
       totalWorkedMinutesMonth,

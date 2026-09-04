@@ -53,6 +53,7 @@ function makeKpi(over = {}) {
     authWeekdaySatMin: merged.authWeekdaySatMin || 0,
     authSundayHolidayMin: merged.authSundayHolidayMin || 0
   });
+  const authTotalMin = (merged.authWeekdaySatMin || 0) + (merged.authSundayHolidayMin || 0);
   return Object.assign(merged, plan, {
     regime,
     bancoWillAddFormatted: K.formatMinutesToTime(plan.bancoWillAddMin),
@@ -60,7 +61,10 @@ function makeKpi(over = {}) {
     bancoOverdraftFormatted: K.formatMinutesToTime(plan.bancoOverdraftMin),
     pecuniaLegalMonthlyRemainingFormatted: K.formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
     pecuniaOpenWeekdaySatFormatted: K.formatMinutesToTime(plan.pecuniaOpenWeekdaySatMin),
-    pecuniaOpenSundayHolidayFormatted: K.formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin)
+    pecuniaOpenSundayHolidayFormatted: K.formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin),
+    pecuniaTotalFormatted: K.formatMinutesToTime(merged.pecuniaWeekdaySatMinutes + merged.pecuniaSundayHolidayMinutes),
+    authTotalMin,
+    authTotalHoursFormatted: `${Math.round(authTotalMin / 60)}h`
   });
 }
 
@@ -120,36 +124,41 @@ test('recesso 5h — jornada 5 e aviso de acúmulo restrito', () => {
   assert.ok(html.includes('Jornada de 5h') || html.includes('Jornada 5h'));
 });
 
-test('KPI 4 — blocos +50% e +100% e resto do teto de 60h', () => {
+test('KPI 4 — blocos +50% e +100%, sem opção de ajuste manual (ícone de $ estático)', () => {
   const html = M.buildKpiCardsHTML(makeKpi());
   assert.ok(html.includes('Semana / Sábado'));
   assert.ok(html.includes('Domingo / Feriado'));
   assert.ok(html.includes('+50%') && html.includes('+100%'));
   assert.ok(html.includes('Teto 60h/mês'));
-  // 60h - 18:15 feito = 41:45
-  assert.ok(html.includes('41:45'));
-  assert.ok(html.includes('je-kpi-heauth-gear'), 'tem o ⚙ do editor');
+  assert.ok(html.includes('Executado:'));
+  // sem autorizado do SAEX, o "Executado" cai pro teto legal: 60h - 18:15 feito = 41:45
+  assert.ok(html.includes('resta 41:45'));
+  assert.ok(html.includes('je-kpi-heauth-icon'), 'tem o ícone estático de $ (sem opção de ajuste manual)');
+  assert.ok(!html.includes('je-kpi-heauth-gear'), 'a engrenagem de ajuste manual foi removida');
 });
 
-test('KPI 4 com HE autorizada configurada — mostra aut / feito / aberto', () => {
+test('KPI 4 com HE autorizada do SAEX — mostra fração feito/autorizado + barra', () => {
   const html = M.buildKpiCardsHTML(makeKpi({
     hasHEAutorizadoConfig: true,
     authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
     authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00'
   }));
   assertClean(html);
-  assert.ok(html.includes('aut 20:00'));
-  assert.ok(html.includes('aut 10:00'));
-  assert.ok(html.includes('aberto <strong>07:45</strong>'), 'aberto semana/sáb = 20:00 - 12:15');
-  assert.ok(html.includes('aberto <strong>04:00</strong>'), 'aberto dom/fer = 10:00 - 06:00');
+  assert.ok(html.includes('/20:00'), 'fração semana/sáb: feito/autorizado');
+  assert.ok(html.includes('/10:00'), 'fração dom/fer: feito/autorizado');
+  // pecuniaTotalMinutes (735+360=1095=18:15) / authTotalMin (1200+600=1800=30h)
+  assert.ok(html.includes('18:15'));
+  assert.ok(html.includes('30h Autorizadas'));
+  assert.ok(html.includes('(Teto 60h/mês)'));
 });
 
-test('KPI 4 — feito passou do autorizado', () => {
+test('KPI 4 — feito passou do autorizado (cor de alerta na fração e na barra)', () => {
   const html = M.buildKpiCardsHTML(makeKpi({
     hasHEAutorizadoConfig: true,
     pecuniaWeekdaySatMinutes: 900, pecuniaWeekdaySat: '15:00',
     authWeekdaySatMin: 600, authWeekdaySatFormatted: '10:00'
   }));
   assertClean(html);
-  assert.ok(html.includes('passou do aut.'));
+  assert.ok(html.includes('/10:00'));
+  assert.ok(html.includes('#db2777'), 'cor de alerta quando passa do autorizado');
 });

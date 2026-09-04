@@ -312,36 +312,6 @@ window.JEPessoasModernizer = (function () {
       });
     }
 
-    // ⚙ do KPI 4 — editor da hora extra autorizada do mês.
-    const gear = dashboard.querySelector('.je-kpi-heauth-gear');
-    if (gear && window.JEPessoasHEAuth) {
-      gear.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const mat = window.JEPessoasHEAuth.getMatricula();
-        const mk = window.JEPessoasHEAuth.getMonthKey();
-        const doneHint = {
-          wkSatMin: kpiData.pecuniaWeekdaySatMinutes || 0,
-          sunHolMin: kpiData.pecuniaSundayHolidayMinutes || 0
-        };
-        window.JEPessoasHEAuth.getEntry(mat, mk, (cur) => {
-          const hasManual = cur && (cur.wkSatMin || cur.sunHolMin);
-          const finish = (prefill) => window.JEPessoasHEAuth.openEditor(
-            mat, mk, prefill, () => window.location.reload(), doneHint
-          );
-          // Sem valor manual, pré-preenche com o SAEX (do cache) se houver.
-          if (!hasManual && window.JEPessoasHEAuthFetch) {
-            window.JEPessoasHEAuthFetch.getForCurrentMonth(mat, mk, {}, (saex) => {
-              finish(saex && (saex.wkSatMin || saex.sunHolMin)
-                ? { wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin }
-                : cur);
-            });
-          } else {
-            finish(cur);
-          }
-        });
-      });
-    }
   }
 
   // Monta o HTML dos 5 KPIs a partir de `kpiData` (função pura de string — testável).
@@ -373,32 +343,41 @@ window.JEPessoasModernizer = (function () {
       bancoFlowLine = `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`;
     }
 
-    // Bloco de pecúnia por tipo de dia. Com HE autorizada configurada mostra
-    // aut / feito / aberto + barra; sem configuração, só o "feito".
+    // Bloco de pecúnia por tipo de dia: feito/autorizado como fração à
+    // direita do rótulo + barra de progresso proporcional. A única fonte do
+    // autorizado é o SAEX — sem configuração/leitura, mostra só o "feito".
     const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
-    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, openFmt, color) {
-      if (hasHEConfig && authMin > 0) {
-        const barPct = Math.min(100, Math.round((doneMin / authMin) * 100));
-        const over = doneMin > authMin;
-        return `<div style="font-size:11px;">
-          <div style="display:flex; justify-content:space-between; align-items:baseline;">
-            <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9px; opacity:0.7;">${pct}</span></span>
-            <span style="color:#94a3b8;">feito <strong style="color:${color};">${doneFmt}</strong></span>
-          </div>
-          <div style="display:flex; justify-content:space-between; font-size:10px; color:#64748b; margin-top:1px;">
-            <span>aut ${authFmt}</span>
-            <span style="color:${over ? '#db2777' : '#0a2540'};">${over ? 'passou do aut.' : 'aberto <strong>' + openFmt + '</strong>'}</span>
-          </div>
-          <div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden; margin-top:3px;">
-            <div style="height:100%; width:${barPct}%; background:${over ? '#db2777' : color}; border-radius:999px;"></div>
-          </div>
-        </div>`;
-      }
-      return `<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-        <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9.5px; opacity:0.7;">${pct}</span></span>
-        <strong style="color:${color}; font-size:13px;">${doneFmt}</strong>
+    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color) {
+      const hasAuth = hasHEConfig && authMin > 0;
+      const over = hasAuth && doneMin > authMin;
+      const barPct = hasAuth ? Math.min(100, Math.round((doneMin / authMin) * 100)) : 0;
+      return `<div style="font-size:11px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9px; opacity:0.7;">${pct}</span></span>
+          <span>${hasAuth
+            ? `<strong style="color:${over ? '#db2777' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>`
+            : `<strong style="color:${color};">${doneFmt}</strong>`}</span>
+        </div>
+        ${hasAuth ? `<div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
+          <div style="height:100%; width:${barPct}%; background:${over ? '#db2777' : color}; border-radius:999px;"></div>
+        </div>` : ''}
       </div>`;
     }
+
+    // Linha "Executado" do KPI 4 (feito / autorizado total, teto 60h/mês) +
+    // barra proporcional. Sem autorizado do SAEX ainda lido, a barra usa o
+    // teto legal (60h) como referência, reconstruído a partir do que já resta
+    // (evita repetir a constante de 3600min aqui).
+    const pecTotalMin = kpiData.pecuniaTotalMinutes || 0;
+    const authTotalMin = kpiData.authTotalMin || 0;
+    const hasAuthTotal = hasHEConfig && authTotalMin > 0;
+    const pecCapMin = (kpiData.pecuniaLegalMonthlyRemainingMin || 0) + pecTotalMin;
+    const execTargetMin = hasAuthTotal ? authTotalMin : pecCapMin;
+    const execOver = hasAuthTotal && pecTotalMin > authTotalMin;
+    const execBarPct = execTargetMin > 0 ? Math.min(100, Math.round((pecTotalMin / execTargetMin) * 100)) : 0;
+    const execLine = hasAuthTotal
+      ? `Executado: <strong style="color:${execOver ? '#db2777' : '#0a2540'};">${kpiData.pecuniaTotalFormatted}</strong> / ${kpiData.authTotalHoursFormatted} Autorizadas <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês)</span>`
+      : `Executado: <strong style="color:#0a2540;">${kpiData.pecuniaTotalFormatted}</strong> <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês: resta ${kpiData.pecuniaLegalMonthlyRemainingFormatted})</span>`;
 
     return `
       <!-- KPI 1: Saída de Hoje (jornada de hoje + zerar o mês) -->
@@ -466,24 +445,22 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Horas extras que serão pagas em pecúnia, separadas por tipo de dia. Semana/Sábado = +50%; Domingo/Feriado = +100%.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Hora Extra (Pecúnia)</span>
-          <button type="button" class="je-kpi-heauth-gear" title="Ajustar a hora extra autorizada deste mês">
+          <div class="je-kpi-heauth-icon" title="Autorizado lido automaticamente das autorizações do SAEX (ícone de relógio) — não há ajuste manual da meta.">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
-          </button>
+          </div>
         </div>
         <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 6px; margin: 2px 0;">
-          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, kpiData.pecuniaOpenWeekdaySatFormatted, '#0a2540')}
-          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, kpiData.pecuniaOpenSundayHolidayFormatted, '#7c3aed')}
+          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540')}
+          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed')}
         </div>
-        <div class="je-kpi-subtext">
-          ${hasHEConfig && kpiData.heAutorizadoSource === 'saex'
-            ? '<span class="je-badge-positive" title="Autorizado lido das autorizações do SAEX (backend do ícone de relógio).">via SAEX</span>'
-            : (hasHEConfig && kpiData.heAutorizadoSource === 'manual'
-              ? '<span class="je-badge-positive" style="background:rgba(100,116,139,0.14); color:#64748b;" title="Autorizado informado manualmente no ⚙.">manual</span>'
-              : '')}
-          <span title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">Teto 60h/mês: resta <strong>${kpiData.pecuniaLegalMonthlyRemainingFormatted}</strong></span>
+        <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 3px;">
+          <span style="font-size:10.5px; color:#64748b;">${execLine}</span>
+          <div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
+            <div style="height:100%; width:${execBarPct}%; background:${execOver ? '#db2777' : '#0a2540'}; border-radius:999px;"></div>
+          </div>
         </div>
       </div>
 

@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.15';
+  const CURRENT_VERSION = '0.5.16';
 
   const CHANGELOG = [
+    {
+      version: '0.5.16',
+      date: '2026-09-04',
+      title: 'Hora Extra: autorizado só do SAEX, sem ajuste manual',
+      features: [
+        'Removida a engrenagem do card "Hora Extra (Pecúnia)" que permitia digitar a hora extra autorizada — não existe essa opção para o servidor definir a própria meta; o que o SAEX registrar é o que vale. No lugar, um ícone de $ estático (com dica explicando a fonte).',
+        'Cada bloco (Semana/Sábado, Domingo/Feriado) agora mostra feito/autorizado como fração — ex. "07:59/07:59" — com uma barra de progresso proporcional logo abaixo, em vez das linhas separadas de autorizado/aberto.',
+        'Rodapé do card reescrito: "Executado: HH:MM / Xh Autorizadas (Teto 60h/mês)" com sua própria barra proporcional; sem autorizado do SAEX, cai para "Executado: HH:MM (Teto 60h/mês: resta HH:MM)".',
+        'O módulo heAuthEditor.js (editor manual) foi removido; heAuthFetch.js (leitura do SAEX) passa a ser a única fonte da hora extra autorizada do KPI.'
+      ]
+    },
     {
       version: '0.5.15',
       date: '2026-09-04',
