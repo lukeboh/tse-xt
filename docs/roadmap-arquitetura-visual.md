@@ -1,19 +1,19 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.0.0
+**Versão do documento:** 1.1.0
 **Data:** 04/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
 
-| ID | Fase | Risco | Depende de |
-| :--- | :--- | :--: | :--- |
-| F1 | Abrir injeção e criar registro de páginas suportadas | 🔴 | — |
-| F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 |
-| F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 |
-| F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 |
-| F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 |
-| F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 |
-| F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 |
+| ID | Fase | Risco | Depende de | Status |
+| :--- | :--- | :--: | :--- | :--- |
+| F1 | Abrir injeção e criar registro de páginas suportadas | 🔴 | — | ✅ v0.6.1 |
+| F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 | ✅ v0.6.2 |
+| F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ⏳ |
+| F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ⏳ |
+| F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ⏳ |
+| F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ⏳ |
+| F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ⏳ |
 
 ---
 
@@ -35,20 +35,18 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 
 ---
 
-## F1 — 🔴 Abrir injeção e criar registro de páginas suportadas
+## F1 — ✅ Abrir injeção e criar registro de páginas suportadas (v0.6.1)
 
-- **Hoje:** `manifest.json` restringe `content_scripts.matches` a `EspelhoPontoMesAction_*`/`EspelhoPontoDiaAction_*`; `content.js` decide "página suportada" com um único booleano (`isSupportedPage`).
-- **Ação:**
-  1. Ampliar `matches` para todo o domínio de páginas autenticadas do Meu Espaço (`*://meuespaco.tse.jus.br/portalservidor2/*` e equivalente `*.tse.jus.br`), preservando `host_permissions` já existente.
-  2. Substituir o booleano por um **registro de perfis de página** — cada perfil identifica a página (por URL e/ou elemento nativo) e declara o que sabe modernizar (`chrome` sempre; `title`, `table`, `form` por página).
-  3. Páginas sem perfil específico recebem só a **casca genérica** (topbar, drawer, busca, toggle, modais) — nunca travam nem exibem tela quebrada.
-- **Critério de pronto:** abrir qualquer tela do menu não gera erro no console nem regressão visual; Espelho e Alteração de Ponto continuam idênticos a hoje.
+- **Era:** `manifest.json` restringia `content_scripts.matches` a `EspelhoPontoMesAction_*`/`EspelhoPontoDiaAction_*`; `content.js` decidia "página suportada" com um único booleano (`isSupportedPage`).
+- **Implementado:** `matches` ampliado para `*://meuespaco.tse.jus.br/portalservidor2/*` (e equivalente `*.tse.jus.br`), com `exclude_matches` para `Login*`/`Logout*`; `content.js` ganhou `PAGE_PROFILES`/`resolveProfileId()` no lugar do booleano — a casca genérica (topbar, drawer, busca, FAB, toggle) monta em qualquer tela com `#container`, enquanto formulário/tabela seguem restritos aos perfis conhecidos.
+- **Validado ao vivo (CDP):** Espelho de Ponto idêntico; Extrato do Banco de Horas ganhou topbar/menu/busca sem título nem KPIs indevidos.
 
-## F2 — 🟡 Título de página genérico
+## F2 — ✅ Título de página genérico (v0.6.2)
 
-- **Hoje:** título/breadcrumb/pill de referência são texto fixo por `if/else` (Espelho-Mês vs Espelho-Dia).
-- **Ação:** extrair o título do `<h2>` nativo (`#container > h2`) antes de escondê-lo; breadcrumb com fallback genérico (`Meu Espaço / <categoria do menu, se detectável> / <título>`); a pill de referência (mês/ano) só aparece se os selects `mesSelecionado`/`anoSelecionado` existirem na página.
-- **Critério de pronto:** Espelho/Alteração de Ponto mantêm breadcrumb e pill atuais (via perfil específico); qualquer outra página ganha banner de título coerente sem código novo por página.
+- **Era:** título/breadcrumb/pill de referência eram texto fixo por `if/else` (Espelho-Mês vs Espelho-Dia).
+- **Implementado:** `injectPageTitleHeader(profileId)` usa um mapa `KNOWN_PAGE_TITLES` para os dois perfis já portados (texto idêntico a antes) e, para qualquer outra página, extrai o título do `<h2>` nativo (`extractNativePageTitle()` — primeiro `<h2>` fora do `#menu-lateral` e fora de qualquer contêiner injetado pelo próprio TSE XT) e infere a categoria do breadcrumb reaproveitando `navDrawer.extractMenuData()` (`findBreadcrumbCategory()` — casa o texto do `<h2>` com o nome de algum link do menu). A pill de referência só renderiza se `#mesSelecionado`/`#anoSelecionado` existirem.
+- **Cuidado registrado:** a exclusão de UI injetada não pode usar `.closest('[class*="je-"]')` — `<body class="je-xt-enabled">` sempre bate com esse seletor e faz a extração falhar para todo mundo (caiu num bug assim na implementação; corrigido checando só `id` com prefixo `je-`, parando a subida em `document.body`).
+- **Validado ao vivo (CDP):** Espelho de Ponto idêntico; Contracheque → "Meu Espaço / Financeiro / Contracheque e Rendimentos"; Extrato do Banco de Horas → "Meu Espaço / Banco de Horas / Extrato do banco de horas".
 
 ## F3 — 🔴 Modernizador de tabela genérico
 

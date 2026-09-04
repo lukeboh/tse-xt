@@ -387,6 +387,7 @@ window.JEPessoasNavDrawer = (function () {
     init: createDrawerDOM,
     open,
     close,
-    toggle
+    toggle,
+    extractMenuData
   };
 })();

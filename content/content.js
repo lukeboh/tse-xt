@@ -114,18 +114,16 @@
           if (window.JEPessoasModernizer) {
             window.JEPessoasModernizer.applyThemeState(isEnabled, false);
 
-            // Casca genérica: topbar/menu de serviços — já é agnóstica de
-            // página (lê .servidor/.matricula/etc. com fallback), roda em
-            // qualquer tela do portal.
+            // Casca genérica: topbar/menu de serviços e banner de título já
+            // são agnósticos de página (lêem o DOM nativo com fallback),
+            // rodam em qualquer tela do portal (roadmap F1/F2).
             window.JEPessoasModernizer.modernizeHeader();
+            window.JEPessoasModernizer.injectPageTitleHeader(profileId);
 
-            // Modernização específica de página: título, formulário e tabela
-            // ainda são hardcoded para o Espelho de Ponto — só rodam quando a
+            // Modernização específica de página: formulário e tabela ainda
+            // são hardcoded para o Espelho de Ponto — só rodam quando a
             // página bate com um perfil conhecido (ver PAGE_PROFILES acima).
-            // Sem isso, injectPageTitleHeader() mostraria "Espelho de Ponto"
-            // em qualquer outra tela do menu.
             if (profileId) {
-              window.JEPessoasModernizer.injectPageTitleHeader();
               window.JEPessoasModernizer.modernizeForm();
               window.JEPessoasModernizer.modernizeTable(targetHours);
             }
