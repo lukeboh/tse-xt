@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.17';
+  const CURRENT_VERSION = '0.5.18';
 
   const CHANGELOG = [
+    {
+      version: '0.5.18',
+      date: '2026-09-04',
+      title: 'Correção: autorizado do SAEX não aparecia (cache contaminado)',
+      features: [
+        'Achada a causa real de o denominador (autorizado) nunca aparecer no card Hora Extra: a leitura dos dias com autorização usava innerText, que volta em branco numa aba em 2º plano — se essa leitura acontecesse nesse instante, o mês era gravado em cache como "sem nenhuma autorização" e, sendo um mês fechado, esse cache nunca mais era revalidado (ficava errado pra sempre).',
+        'authDaysFromEspelho() e isClosedEspelho() passam a usar textContent, imune a aba oculta. E um cache "fechado" sem nenhuma autorização registrada deixa de ser tratado como definitivo — se ainda estiver zerado por engano, a próxima leitura (com a aba visível) revalida e corrige sozinho, sem precisar limpar nada manualmente.',
+        'Confirmado ao vivo: o card agora mostra "07:59/08:54" e "24:00/32:00" com as barras preenchidas nas proporções corretas, puxando os valores reais das autorizações do SAEX.'
+      ]
+    },
     {
       version: '0.5.17',
       date: '2026-09-04',
