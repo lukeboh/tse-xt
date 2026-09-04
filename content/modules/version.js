@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.11';
+  const CURRENT_VERSION = '0.5.12';
 
   const CHANGELOG = [
+    {
+      version: '0.5.12',
+      date: '2026-09-04',
+      title: 'Glow animado em todo componente com foco ou seleção',
+      features: [
+        'A mesma respiração do "Glow azul" dos KPIs agora aparece em qualquer componente que ganha destaque por interação: campos e selects em foco (formulário de pesquisa, pesquisar no topo, drawer de serviços, motivo do ajuste de ponto, campos dos modais), botões com foco de teclado (Consultar, FAB, "Salvar"/"Concluir" dos modais), item ativo na navegação por setas da paleta de comandos, dia selecionado/atual do calendário, e a linha selecionada por teclado na Auditoria de Horas Perdidas.',
+        'Só entra em ação em foco de teclado/seleção — passar o mouse continua com a resposta instantânea de sempre, sem animação, pra não ficar "piscando" ao rolar o cursor pela tela.',
+        'Respeita prefers-reduced-motion: quem pede menos movimento no sistema operacional vê um brilho estático em vez de pulsar.'
+      ]
+    },
     {
       version: '0.5.11',
       date: '2026-09-04',
