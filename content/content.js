@@ -120,12 +120,17 @@
             window.JEPessoasModernizer.modernizeHeader();
             window.JEPessoasModernizer.injectPageTitleHeader(profileId);
 
-            // Modernização específica de página: formulário e tabela ainda
-            // são hardcoded para o Espelho de Ponto — só rodam quando a
-            // página bate com um perfil conhecido (ver PAGE_PROFILES acima).
+            // Modernização específica de página: formulário e tabela do
+            // Espelho/Alteração de Ponto ainda são hardcoded (exigem as
+            // classes de coluna h01-h17, que só essas duas telas têm) — só
+            // rodam quando a página bate com um perfil conhecido. Qualquer
+            // outra tela cai no modernizador de tabela genérico (roadmap
+            // F3), que decora por texto de cabeçalho em vez de classe nativa.
             if (profileId) {
               window.JEPessoasModernizer.modernizeForm();
               window.JEPessoasModernizer.modernizeTable(targetHours);
+            } else if (window.JEPessoasTableModernizer) {
+              window.JEPessoasTableModernizer.modernizeGenericTables();
             }
           }
 
