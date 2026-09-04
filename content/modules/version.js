@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.19';
+  const CURRENT_VERSION = '0.5.20';
 
   const CHANGELOG = [
+    {
+      version: '0.5.20',
+      date: '2026-09-04',
+      title: 'Sem botão "planejar" em mês já encerrado',
+      features: [
+        'O KPI "Saldo do Mês" não mostra mais o link "planejar ›" quando o mês exibido já está encerrado/homologado (coluna nativa "HORAS AJUST.") — não faz sentido simular o fechamento de um mês que já fechou. Continua aparecendo normalmente em meses abertos, mesmo sem dias úteis restantes.',
+        'kpiExtractor.js passa a expor isClosedMonth (já calculado internamente) e, de quebra, essa detecção também trocou innerText por textContent — mesma robustez a abas em 2º plano das correções anteriores.'
+      ]
+    },
     {
       version: '0.5.19',
       date: '2026-09-04',

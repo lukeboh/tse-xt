@@ -55,10 +55,16 @@ window.JEPessoasKPI = (function () {
     if (!table) return null;
 
     // Mês homologado: o cabeçalho nativo "HORAS EXCED." passa a ser "HORAS AJUST."
-    // (vem com <br>, por isso o replace de whitespace antes do match).
+    // textContent, não innerText: innerText só reflete texto renderizado —
+    // fica em branco numa aba em 2º plano (o navegador pula o layout), o que
+    // faria o mês parecer "aberto" por engano. Mas textContent, diferente de
+    // innerText, NÃO insere espaço no lugar do <br> do cabeçalho nativo
+    // ("Horas<br>Ajust." vira "HorasAjust.", sem espaço) — por isso o match é
+    // só em "AJUST" (sem exigir "HORAS " antes), que continua presente dos
+    // dois jeitos e não aparece em nenhum outro cabeçalho da tabela.
     const isClosedMonth = Array.from(table.querySelectorAll('th')).some(th => {
-      const t = (th.innerText || '').toUpperCase().replace(/\s+/g, ' ');
-      return t.includes('HORAS AJUST') || t.includes('HORA AJUST');
+      const t = (th.textContent || '').toUpperCase();
+      return t.includes('AJUST');
     });
 
     const todayStr = getTodayString();
@@ -375,6 +381,7 @@ window.JEPessoasKPI = (function () {
       hasHybridWorkInMonth,
       hasAuthorizedHEInMonth,
       isReducedRecessMonth,
+      isClosedMonth,
       regime,
       homologPreviewMinutes,
       homologPreviewFormatted: formatMinutesToTime(homologPreviewMinutes),

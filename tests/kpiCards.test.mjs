@@ -82,6 +82,19 @@ test('5 cards, sem lixo, títulos esperados', () => {
   assert.ok(html.includes('je-kpi-planner-link'), 'KPI 2 tem o link do planejador');
 });
 
+test('mês encerrado (homologado) — KPI 2 não mostra o botão "planejar"', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({ isClosedMonth: true }));
+  assertClean(html);
+  assert.ok(!html.includes('je-kpi-planner-link'), 'não faz sentido planejar um mês que já fechou');
+});
+
+test('mês aberto — KPI 2 continua mostrando "planejar" mesmo sem dias úteis restantes', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({ isClosedMonth: false, remainingWorkingDaysMonth: 0 }));
+  assertClean(html);
+  assert.ok(html.includes('mês encerrado')); // texto do "sem dias restantes" é independente
+  assert.ok(html.includes('je-kpi-planner-link'), 'mês só fecha de verdade quando homologado (isClosedMonth)');
+});
+
 test('mês devedor Normal — mostra consumo do banco e "devedor"', () => {
   const html = M.buildKpiCardsHTML(makeKpi({ monthBalanceMin: -165, bancoBalanceMin: 735 }));
   assertClean(html);
