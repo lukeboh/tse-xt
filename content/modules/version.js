@@ -5,11 +5,11 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.4';
+  const CURRENT_VERSION = '0.5.5';
 
   const CHANGELOG = [
     {
-      version: '0.5.4',
+      version: '0.5.5',
       date: '2026-09-03',
       title: 'Painel de KPIs — planejamento (Fases 1 a 5)',
       features: [
