@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.20';
+  const CURRENT_VERSION = '0.5.21';
 
   const CHANGELOG = [
+    {
+      version: '0.5.21',
+      date: '2026-09-04',
+      title: 'Removido o selo "sem autorização" da tabela',
+      features: [
+        'O selo diário "sem autorização" (dias com excedente sem SAEX vinculado) foi removido. Mesmo sem autorização prévia, o excedente ainda pode virar banco de horas por homologação ativa da chefia — não é uma perda garantida, então marcar todo dia assim soava mais alarmante do que a regra realmente é. Quem responde com precisão "isso virou banco, pecúnia ou se perdeu de verdade" continua sendo a Auditoria de Horas Perdidas, que olha o resultado real do mês em vez de presumir antes da homologação acontecer. O selo de teto legal ("> 2h" / "> 10h art. 4º") continua — essa regra não depende de homologação.'
+      ]
+    },
     {
       version: '0.5.20',
       date: '2026-09-04',

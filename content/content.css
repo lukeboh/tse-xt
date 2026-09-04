@@ -2235,25 +2235,6 @@ body.je-xt-enabled .je-occurrence-feriado {
   font-weight: 800 !important;
 }
 
-/* R6 — excedente sem autorização de serviço extraordinário vinculada */
-body.je-xt-enabled .je-occ-sem-autorizacao {
-  display: inline-block !important;
-  background: rgba(250, 204, 21, 0.16) !important;
-  color: #854d0e !important;
-  border: 1px solid rgba(250, 204, 21, 0.4) !important;
-  border-radius: 999px !important;
-  font-size: 10px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.2px !important;
-  padding: 1px 7px !important;
-  white-space: nowrap !important;
-  cursor: help !important;
-}
-
-body.je-xt-disabled .je-occ-sem-autorizacao {
-  display: none !important;
-}
-
 /* R5 — excedente acima do teto legal por jornada */
 body.je-xt-enabled .je-occ-acima-teto {
   display: inline-block !important;
