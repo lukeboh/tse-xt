@@ -81,7 +81,7 @@ window.JEPessoasPlanner = (function () {
         <div style="padding: 16px 18px; display:flex; flex-direction:column; gap:12px; font-size:12.5px; color:#334155;">
           <div style="display:flex; justify-content:space-between;">
             <span>Saldo agora</span>
-            <strong style="color:${balMin > 0 ? '#059669' : (balMin < 0 ? '#d97706' : '#475569')};">${fmt(balMin, true)}</strong>
+            <strong style="color:${balMin > 0 ? '#059669' : (balMin < 0 ? '#a16207' : '#475569')};">${fmt(balMin, true)}</strong>
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span>Dias úteis restantes</span><strong>${days}</strong>
@@ -114,7 +114,7 @@ window.JEPessoasPlanner = (function () {
       const perDay = toMin(input.value);
       const projected = simulate(balMin, days, perDay).projected;
       out.textContent = fmt(projected, true);
-      out.style.color = projected > 0 ? '#059669' : (projected < 0 ? '#d97706' : '#475569');
+      out.style.color = projected > 0 ? '#059669' : (projected < 0 ? '#a16207' : '#475569');
     };
     input.addEventListener('input', () => {
       // máscara leve: mantém sinal, formata HH:MM

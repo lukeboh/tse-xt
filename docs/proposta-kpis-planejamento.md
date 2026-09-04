@@ -44,7 +44,7 @@
 ### KPI 2 — Saldo do Mês  ⟵ **pergunta 1**
 - **Valor grande:** `+HH:MM` credor / `−HH:MM` devedor / `00:00` — líquido de pecúnia, já com a projeção do dia de hoje e a **compensação intra-mês** (§3.11: o excedente de um dia paga o dia curto de outro).
 - **Linha:** mini-barra de progresso + "N dias úteis restantes" ou "meta batida".
-- **Cor:** verde credor · âmbar devedor · cinza zero.
+- **Cor:** verde credor · amarelo devedor · cinza zero.
 
 ### KPI 3 — Banco de Horas  ⟵ **pergunta 2**
 - **Valor:** saldo atual do banco (coluna nativa do rodapé).

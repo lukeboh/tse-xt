@@ -354,7 +354,7 @@ window.JEPessoasModernizer = (function () {
 
     // --- Planejamento: cores e textos derivados ---
     const bs = kpiData.balanceStatus || (kpiData.monthBalanceMin > 0 ? 'credor' : (kpiData.monthBalanceMin < 0 ? 'devedor' : 'zero'));
-    const balColor = bs === 'credor' ? '#059669' : (bs === 'devedor' ? '#d97706' : '#475569');
+    const balColor = bs === 'credor' ? '#059669' : (bs === 'devedor' ? '#a16207' : '#475569');
     const balLabel = bs === 'credor' ? 'credor' : (bs === 'devedor' ? 'devedor' : 'zerado');
 
     // Linha do KPI 3 (Banco) — para onde vão / de onde vêm as horas do mês
@@ -364,7 +364,7 @@ window.JEPessoasModernizer = (function () {
     } else if (kpiData.hasAuthorizedHEInMonth) {
       bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`;
     } else if (kpiData.isReducedRecessMonth) {
-      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">Recesso 5h</span><span>Acúmulo só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Port. 885/2024', 'Portaria-TSE 885/2024')})</span>`;
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;">Recesso 5h</span><span>Acúmulo só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Port. 885/2024', 'Portaria-TSE 885/2024')})</span>`;
     } else if (bs === 'credor' && kpiData.bancoWillAddMin > 0) {
       bancoFlowLine = `<span class="je-badge-positive">+${kpiData.bancoWillAddFormatted} homologáveis</span><span>→ banco</span>`;
     } else if (bs === 'devedor' && kpiData.bancoWillConsumeMin > 0) {
@@ -387,10 +387,10 @@ window.JEPessoasModernizer = (function () {
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10px; color:#64748b; margin-top:1px;">
             <span>auth ${authFmt}</span>
-            <span style="color:${over ? '#dc2626' : '#0a2540'};">${over ? 'passou do auth.' : 'aberto <strong>' + openFmt + '</strong>'}</span>
+            <span style="color:${over ? '#db2777' : '#0a2540'};">${over ? 'passou do auth.' : 'aberto <strong>' + openFmt + '</strong>'}</span>
           </div>
           <div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden; margin-top:3px;">
-            <div style="height:100%; width:${barPct}%; background:${over ? '#dc2626' : color}; border-radius:999px;"></div>
+            <div style="height:100%; width:${barPct}%; background:${over ? '#db2777' : color}; border-radius:999px;"></div>
           </div>
         </div>`;
       }
@@ -427,7 +427,7 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Saldo líquido do mês (excedente − pecúnia), já com a projeção de hoje e a compensação intra-mês. Positivo = credor, negativo = devedor.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Saldo do Mês</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${bs === 'credor' ? 'rgba(16, 185, 129, 0.12)' : (bs === 'devedor' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.1)')}; color: ${balColor};">
+          <div class="je-kpi-icon-wrapper" style="background: ${bs === 'credor' ? 'rgba(16, 185, 129, 0.12)' : (bs === 'devedor' ? 'rgba(250, 204, 21, 0.12)' : 'rgba(100, 116, 139, 0.1)')}; color: ${balColor};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="20" x2="12" y2="10"></line>
               <line x1="18" y1="20" x2="18" y2="4"></line>
@@ -450,7 +450,7 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Saldo atual do banco de horas e o que este mês tende a adicionar (homologação) ou consumir.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Banco de Horas</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
+          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(236, 72, 153, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#db2777'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
               <path d="M12 12v8a2 2 0 0 0 4 0"></path>
@@ -458,7 +458,7 @@ window.JEPessoasModernizer = (function () {
             </svg>
           </div>
         </div>
-        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#dc2626'};">${kpiData.accumulatedBankBalance}</div>
+        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#db2777'};">${kpiData.accumulatedBankBalance}</div>
         <div class="je-kpi-subtext">${bancoFlowLine}</div>
       </div>
 
@@ -515,7 +515,7 @@ window.JEPessoasModernizer = (function () {
             : (kpiData.isTargetExceeded
               ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
               : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias</span>`)}
-          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024).">recesso 5h</span>` : ''}
+          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024).">recesso 5h</span>` : ''}
         </div>
       </div>
     `;
