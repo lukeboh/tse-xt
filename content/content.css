@@ -1191,23 +1191,69 @@ body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-title {
   color: #47597a;
 }
 
-/* Destaque com glow azul mais profundo, sempre visível */
+/* Destaque com glow azul mais profundo. O halo animado vive num ::after
+   dedicado (não no box-shadow do próprio card) para não competir com a
+   transição de hover do card — animation sempre vence transition na mesma
+   propriedade, então separar os dois evita que um "trave" o outro. */
 body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card {
   border-color: rgba(0, 140, 255, 0.38) !important;
   box-shadow:
     var(--je-shadow-tactile),
-    0 0 0 1px rgba(0, 119, 255, 0.22),
-    0 10px 30px -8px rgba(0, 86, 179, 0.5),
-    0 0 22px -2px rgba(0, 170, 255, 0.35) !important;
+    0 10px 30px -8px rgba(0, 86, 179, 0.5) !important;
 }
 
 body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover {
   border-color: rgba(0, 140, 255, 0.5) !important;
   box-shadow:
     var(--je-shadow-md),
-    0 0 0 1px rgba(0, 140, 255, 0.4),
-    0 14px 38px -8px rgba(0, 86, 179, 0.6),
-    0 0 30px 0 rgba(0, 170, 255, 0.45) !important;
+    0 14px 38px -8px rgba(0, 86, 179, 0.6) !important;
+}
+
+.je-kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 0 1px rgba(0, 119, 255, 0.22), 0 0 14px -2px rgba(0, 170, 255, 0.28);
+  transition: opacity 0.3s ease;
+}
+
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card::after {
+  opacity: 1;
+  animation: jeKpiGlowPulse 3.2s ease-in-out infinite;
+}
+
+/* Delay crescente por card: os 5 KPIs pulsam em leve cascata, não em uníssono
+   mecânico — lê mais "vivo" que um pisca-pisca sincronizado. */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(2)::after { animation-delay: 0.4s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(3)::after { animation-delay: 0.8s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(4)::after { animation-delay: 1.2s; }
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:nth-child(5)::after { animation-delay: 1.6s; }
+
+/* Hover acelera e intensifica a respiração do halo — reforça que o card
+   está reagindo ao cursor, além do transform/box-shadow do card em si. */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover::after {
+  animation-duration: 1.6s;
+}
+
+@keyframes jeKpiGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(0, 119, 255, 0.22), 0 0 14px -2px rgba(0, 170, 255, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(0, 140, 255, 0.45), 0 0 28px 1px rgba(0, 170, 255, 0.5);
+  }
+}
+
+/* Quem pede menos movimento na SO não deve ver esse halo respirar — fica
+   estático, no ponto médio do range acima. */
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card::after {
+    animation: none;
+    box-shadow: 0 0 0 1px rgba(0, 140, 255, 0.35), 0 0 20px 0 rgba(0, 170, 255, 0.4);
+  }
 }
 
 .je-kpi-header {

@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.9';
+  const CURRENT_VERSION = '0.5.10';
 
   const CHANGELOG = [
+    {
+      version: '0.5.10',
+      date: '2026-09-04',
+      title: 'Glow azul animado nos KPIs em destaque',
+      features: [
+        'A opção "Glow azul" (janela da extensão → Destaque dos cards) agora respira: um halo animado pulsa suavemente em torno do card, num ciclo de ~3,2s, em vez de um brilho estático.',
+        'Os 5 cards pulsam em leve cascata (delay crescente entre eles) em vez de todos juntos — evita o efeito "pisca-pisca" sincronizado.',
+        'Passar o mouse acelera e intensifica a respiração do card, reforçando a resposta ao cursor. O halo é um elemento separado do box-shadow tátil do card, então a transição do hover continua suave.',
+        'Respeita "menos movimento" do sistema operacional (prefers-reduced-motion): quando ativo, o halo fica estático em vez de pulsar.'
+      ]
+    },
     {
       version: '0.5.9',
       date: '2026-09-04',
