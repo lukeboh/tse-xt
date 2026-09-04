@@ -110,8 +110,12 @@ window.JEPessoasHEAuth = (function () {
     });
   }
 
-  function openEditor(mat, monthKey, current, onSaved) {
+  function openEditor(mat, monthKey, current, onSaved, doneHint) {
     current = current || { wkSatMin: 0, sunHolMin: 0 };
+    doneHint = doneHint || { wkSatMin: 0, sunHolMin: 0 };
+    // Sem valor salvo, começa do que já foi feito (pecúnia paga) — o autorizado é >= isso.
+    const initWk = current.wkSatMin > 0 ? current.wkSatMin : (doneHint.wkSatMin || 0);
+    const initSh = current.sunHolMin > 0 ? current.sunHolMin : (doneHint.sunHolMin || 0);
     let overlay = document.getElementById('je-heauth-modal');
     if (overlay) overlay.remove();
 
@@ -122,19 +126,20 @@ window.JEPessoasHEAuth = (function () {
       <div class="je-modal-content" style="max-width: 420px; padding: 0;">
         <div style="padding: 14px 18px; border-bottom: 1px solid rgba(226,232,240,0.85); background: rgba(248,250,252,0.85);">
           <h3 style="margin:0; font-size:14px; font-weight:800; color:#0a2540;">Hora extra autorizada — ${monthKey || 'mês'}</h3>
-          <p style="margin:4px 0 0; font-size:11px; color:#64748b;">Informe o quantitativo autorizado no SAEX. Fica salvo neste navegador, por mês.</p>
+          <p style="margin:4px 0 0; font-size:11px; color:#64748b;">O quantitativo autorizado no SAEX não é acessível pelo perfil comum — informe manualmente. Fica salvo neste navegador, por mês.</p>
         </div>
         <div style="padding: 16px 18px; display:flex; flex-direction:column; gap:12px;">
           <label style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; color:#334155;">
             Semana / Sábado (+50%)
-            <input id="je-heauth-wk" type="text" value="${fmt(current.wkSatMin)}" placeholder="HH:MM"
+            <input id="je-heauth-wk" type="text" value="${fmt(initWk)}" placeholder="HH:MM"
               style="width:88px; text-align:center; font-size:13px; padding:5px 8px; border:1px solid rgba(10,37,64,0.18); border-radius:8px;">
           </label>
           <label style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; color:#334155;">
             Domingo / Feriado (+100%)
-            <input id="je-heauth-sh" type="text" value="${fmt(current.sunHolMin)}" placeholder="HH:MM"
+            <input id="je-heauth-sh" type="text" value="${fmt(initSh)}" placeholder="HH:MM"
               style="width:88px; text-align:center; font-size:13px; padding:5px 8px; border:1px solid rgba(10,37,64,0.18); border-radius:8px;">
           </label>
+          <p style="margin:0; font-size:10.5px; color:#94a3b8;">Já pago em pecúnia neste mês: Semana/Sáb <strong>${fmt(doneHint.wkSatMin)}</strong> · Dom/Fer <strong>${fmt(doneHint.sunHolMin)}</strong> (o autorizado é pelo menos isso).</p>
         </div>
         <div style="padding: 12px 18px 16px; display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" id="je-heauth-cancel" style="font-size:12px; font-weight:700; padding:7px 14px; border-radius:8px; border:1px solid rgba(10,37,64,0.14); background:#fff; color:#475569; cursor:pointer; box-shadow:none; height:auto;">Cancelar</button>

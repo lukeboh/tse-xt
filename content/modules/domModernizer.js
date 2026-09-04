@@ -321,7 +321,10 @@ window.JEPessoasModernizer = (function () {
         const mat = window.JEPessoasHEAuth.getMatricula();
         const mk = window.JEPessoasHEAuth.getMonthKey();
         window.JEPessoasHEAuth.getEntry(mat, mk, (cur) => {
-          window.JEPessoasHEAuth.openEditor(mat, mk, cur, () => window.location.reload());
+          window.JEPessoasHEAuth.openEditor(mat, mk, cur, () => window.location.reload(), {
+            wkSatMin: kpiData.pecuniaWeekdaySatMinutes || 0,
+            sunHolMin: kpiData.pecuniaSundayHolidayMinutes || 0
+          });
         });
       });
     }

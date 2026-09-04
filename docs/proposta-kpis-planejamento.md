@@ -111,6 +111,22 @@ Dois blocos, cada um com **Autorizado / Feito / Aberto** + mini-barra `feito / a
 | **F1** | Reestrutura os 5 cards (funde os 2 de "hoje"; cria "Saldo do Mês"; KPI 3 mostra homologável/consumo; KPI 4 com os 2 blocos mostrando **feito + teto legal**; KPI 5 rotula "jornada ordinária"). `kpiExtractor.deriveMonthPlan()` + `domModernizer.buildKpiCardsHTML()` puros e testados. | ✅ v0.5.0 |
 | **F2** | Campos manuais `authWeekdaySat` / `authSundayHoliday` (⚙ no KPI 4, módulo `heAuthEditor.js`), persistidos por matrícula+mês; KPI 4 passa a mostrar **autorizado / feito / aberto** + barra + alerta de estouro. | ✅ v0.5.1 |
 | **F3** | Mini-planejador no KPI 2 (`monthPlanner.js`): link "planejar ›" → quanto fazer/dia para zerar + fechamento projetado para um esforço diário informado. | ✅ v0.5.2 |
-| **F4** | Investigar leitura do autorizado numa tela SAEX; se inacessível, manter manual e documentar. | ⏳ |
+| **F4** | Investigar leitura do autorizado numa tela SAEX; se inacessível, manter manual e documentar. | ✅ v0.5.3 (mantido manual) |
 
 Ao fim de cada fase: casos de teste (`tests/`, `npm test`), verificação ao vivo via CDP, commit. Ao fim de todas: pronto para teste real de uso.
+
+---
+
+## 6. F4 — leitura automática do autorizado (SAEX): conclusão
+
+**Não é viável pelo perfil comum do servidor.** Verificado via CDP:
+
+- `AutorizacaoHoraExcedenteAction_execute?dataDia.asString=DD/MM/AAAA&servidor.matricula=NNN` (a função nativa `formEspelhoPontoMes_detalharAutorizacao`, chamada pelo ícone de relógio) **redireciona para `Login_verTelaInicialSemLogout`** — acesso restrito. Testadas as variantes `_execute.action`, `.action`, `!execute.action` — todas redirecionam.
+- As telas do menu "Serviço Extraordinário" (Gestão de SE, Relatório de Serviços Realizados, Solicitar Horas Extras, Homologar Relatório) são de fluxo do SAEX/chefia; não expõem um total mensal autorizado num endpoint simples e a maioria exige perfil de gestão.
+
+**Decisão:** mantém o **input manual** (F2). O editor:
+- é pré-preenchido com o que já foi pago em pecúnia no mês (piso do autorizado);
+- salva por matrícula + mês em `chrome.storage.local`;
+- some quando zerado (volta ao modo "feito + teto de 60h").
+
+Se no futuro o TSE liberar um endpoint de consulta do SAEX para o próprio servidor, é só trocar a fonte de `authWeekdaySatMin` / `authSundayHolidayMin` — o resto do painel não muda.
