@@ -49,14 +49,18 @@ function makeKpi(over = {}) {
     regime,
     homologPreviewMinutes: merged.homologPreviewMinutes,
     pecuniaWeekdaySatMinutes: merged.pecuniaWeekdaySatMinutes,
-    pecuniaSundayHolidayMinutes: merged.pecuniaSundayHolidayMinutes
+    pecuniaSundayHolidayMinutes: merged.pecuniaSundayHolidayMinutes,
+    authWeekdaySatMin: merged.authWeekdaySatMin || 0,
+    authSundayHolidayMin: merged.authSundayHolidayMin || 0
   });
   return Object.assign(merged, plan, {
     regime,
     bancoWillAddFormatted: K.formatMinutesToTime(plan.bancoWillAddMin),
     bancoWillConsumeFormatted: K.formatMinutesToTime(plan.bancoWillConsumeMin),
     bancoOverdraftFormatted: K.formatMinutesToTime(plan.bancoOverdraftMin),
-    pecuniaLegalMonthlyRemainingFormatted: K.formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin)
+    pecuniaLegalMonthlyRemainingFormatted: K.formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
+    pecuniaOpenWeekdaySatFormatted: K.formatMinutesToTime(plan.pecuniaOpenWeekdaySatMin),
+    pecuniaOpenSundayHolidayFormatted: K.formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin)
   });
 }
 
@@ -123,4 +127,28 @@ test('KPI 4 — blocos +50% e +100% e resto do teto de 60h', () => {
   assert.ok(html.includes('Teto 60h/mês'));
   // 60h - 18:15 feito = 41:45
   assert.ok(html.includes('41:45'));
+  assert.ok(html.includes('je-kpi-heauth-gear'), 'tem o ⚙ do editor');
+});
+
+test('KPI 4 com HE autorizada configurada — mostra auth / feito / aberto', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
+    authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00'
+  }));
+  assertClean(html);
+  assert.ok(html.includes('auth 20:00'));
+  assert.ok(html.includes('auth 10:00'));
+  assert.ok(html.includes('aberto <strong>07:45</strong>'), 'aberto semana/sáb = 20:00 - 12:15');
+  assert.ok(html.includes('aberto <strong>04:00</strong>'), 'aberto dom/fer = 10:00 - 06:00');
+});
+
+test('KPI 4 — feito passou do autorizado', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    pecuniaWeekdaySatMinutes: 900, pecuniaWeekdaySat: '15:00',
+    authWeekdaySatMin: 600, authWeekdaySatFormatted: '10:00'
+  }));
+  assertClean(html);
+  assert.ok(html.includes('passou do auth.'));
 });

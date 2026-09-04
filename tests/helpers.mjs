@@ -23,13 +23,17 @@ export function loadModule(fileName, deps = {}) {
     getElementById: () => null,
     querySelector: () => null,
     querySelectorAll: () => [],
+    addEventListener() {},
     head: noopEl,
     documentElement: noopEl,
     body: Object.assign({}, noopEl)
   }, deps.document || {});
+  const chrome = deps.chrome || { storage: { local: { get: (d, cb) => cb({}), set: (o, cb) => cb && cb() } } };
+  const localStorage = deps.localStorage || { getItem: () => null, setItem() {}, removeItem() {} };
   // eslint-disable-next-line no-new-func
-  const run = new Function('window', 'document', 'globalThis', `${src}\n;return window;`);
-  return run(window, document, window);
+  const run = new Function('window', 'document', 'globalThis', 'chrome', 'localStorage',
+    `${src}\n;return window;`);
+  return run(window, document, window, chrome, localStorage);
 }
 
 // Carrega toda a cadeia normalmente usada pelo kpiExtractor / domModernizer.

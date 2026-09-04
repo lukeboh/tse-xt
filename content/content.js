@@ -67,9 +67,18 @@
 
         // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
         if (isEspelhoMes && window.JEPessoasKPI && window.JEPessoasModernizer) {
-          const kpis = window.JEPessoasKPI.extractKPIs(targetHours);
-          if (kpis) {
-            window.JEPessoasModernizer.injectKPICards(kpis);
+          const renderKpis = (heAut) => {
+            const kpis = window.JEPessoasKPI.extractKPIs(targetHours, { heAutorizado: heAut });
+            if (kpis) window.JEPessoasModernizer.injectKPICards(kpis);
+          };
+          renderKpis(null);
+          // Se houver hora extra autorizada configurada para este mês, re-renderiza com ela.
+          if (window.JEPessoasHEAuth) {
+            const mat = window.JEPessoasHEAuth.getMatricula();
+            const mk = window.JEPessoasHEAuth.getMonthKey();
+            window.JEPessoasHEAuth.getEntry(mat, mk, (heAut) => {
+              if (heAut && (heAut.wkSatMin || heAut.sunHolMin)) renderKpis(heAut);
+            });
           }
         }
 
