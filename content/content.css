@@ -1347,15 +1347,10 @@ body.je-xt-enabled button:focus-visible {
   text-overflow: ellipsis;
 }
 
-/* Ícone estático (não é botão — não há ajuste manual, só leitura do SAEX) */
+/* Ícone de $ do card Hora Extra: mesma caixa dos demais ícones de KPI
+   (.je-kpi-icon-wrapper) — só ganha cursor de ajuda, porque não é um botão
+   (não há ajuste manual, só leitura do SAEX). */
 body.je-xt-enabled .je-kpi-heauth-icon {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #94a3b8 !important;
-  padding: 2px !important;
-  line-height: 0 !important;
-  flex: 0 0 auto !important;
   cursor: help !important;
 }
 

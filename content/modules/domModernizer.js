@@ -344,10 +344,13 @@ window.JEPessoasModernizer = (function () {
     }
 
     // Bloco de pecúnia por tipo de dia: feito/autorizado como fração à
-    // direita do rótulo + barra de progresso proporcional. A única fonte do
-    // autorizado é o SAEX — sem configuração/leitura, mostra só o "feito".
+    // direita do rótulo + barra de progresso proporcional — uma barra por
+    // bloco, sempre, no mesmo estilo das outras barras de KPI (6px,
+    // rgba(0,102,204,0.08) de trilho, gradiente no preenchimento, transição
+    // de 0.8s). A única fonte do autorizado é o SAEX — sem autorização pra
+    // aquele bloco, a barra fica vazia (0%) e o texto mostra só o "feito".
     const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
-    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color) {
+    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color, gradient) {
       const hasAuth = hasHEConfig && authMin > 0;
       const over = hasAuth && doneMin > authMin;
       const barPct = hasAuth ? Math.min(100, Math.round((doneMin / authMin) * 100)) : 0;
@@ -358,9 +361,9 @@ window.JEPessoasModernizer = (function () {
             ? `<strong style="color:${over ? '#db2777' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>`
             : `<strong style="color:${color};">${doneFmt}</strong>`}</span>
         </div>
-        ${hasAuth ? `<div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
-          <div style="height:100%; width:${barPct}%; background:${over ? '#db2777' : color}; border-radius:999px;"></div>
-        </div>` : ''}
+        <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
+          <div style="width:${barPct}%; height:100%; background:${over ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : gradient}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
       </div>`;
     }
 
@@ -445,21 +448,21 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Horas extras que serão pagas em pecúnia, separadas por tipo de dia. Semana/Sábado = +50%; Domingo/Feriado = +100%.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Hora Extra (Pecúnia)</span>
-          <div class="je-kpi-heauth-icon" title="Autorizado lido automaticamente das autorizações do SAEX (ícone de relógio) — não há ajuste manual da meta.">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div class="je-kpi-icon-wrapper je-kpi-heauth-icon" title="Autorizado lido automaticamente das autorizações do SAEX (ícone de relógio) — não há ajuste manual da meta.">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="1" x2="12" y2="23"></line>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
         </div>
         <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 6px; margin: 2px 0;">
-          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540')}
-          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed')}
+          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540', 'linear-gradient(90deg, #0a2540 0%, #0056b3 100%)')}
+          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed', 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)')}
         </div>
         <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 3px;">
           <span style="font-size:10.5px; color:#64748b;">${execLine}</span>
-          <div style="height:4px; border-radius:999px; background:rgba(10,37,64,0.1); overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
-            <div style="height:100%; width:${execBarPct}%; background:${execOver ? '#db2777' : '#0a2540'}; border-radius:999px;"></div>
+          <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
+            <div style="width:${execBarPct}%; height:100%; background:${execOver ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
           </div>
         </div>
       </div>
