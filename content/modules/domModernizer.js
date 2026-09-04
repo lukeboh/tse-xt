@@ -302,6 +302,16 @@ window.JEPessoasModernizer = (function () {
     const appHeader = getAppHeaderContainer();
     appHeader.appendChild(dashboard);
 
+    // "planejar" do KPI 2 — mini-planejador do mês.
+    const plannerLink = dashboard.querySelector('.je-kpi-planner-link');
+    if (plannerLink && window.JEPessoasPlanner) {
+      plannerLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.JEPessoasPlanner.open(kpiData);
+      });
+    }
+
     // ⚙ do KPI 4 — editor da hora extra autorizada do mês.
     const gear = dashboard.querySelector('.je-kpi-heauth-gear');
     if (gear && window.JEPessoasHEAuth) {
@@ -414,7 +424,8 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-subtext">
           <span class="${bs === 'credor' ? 'je-badge-positive' : (bs === 'devedor' ? 'je-badge-negative' : '')}">${balLabel}</span>
-          <span>${kpiData.remainingWorkingDaysMonth > 0 ? `${kpiData.remainingWorkingDaysMonth} dias úteis restantes` : 'mês encerrado'}</span>
+          <span>${kpiData.remainingWorkingDaysMonth > 0 ? `${kpiData.remainingWorkingDaysMonth} dias úteis rest.` : 'mês encerrado'}</span>
+          <button type="button" class="je-kpi-planner-link" title="Simular o fechamento do mês">planejar ›</button>
         </div>
       </div>
 

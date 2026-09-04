@@ -75,6 +75,7 @@ test('5 cards, sem lixo, títulos esperados', () => {
   for (const t of ['Saída de Hoje', 'Saldo do Mês', 'Banco de Horas', 'Hora Extra (Pecúnia)', 'Meta do Mês']) {
     assert.ok(html.includes(t), 'contém ' + t);
   }
+  assert.ok(html.includes('je-kpi-planner-link'), 'KPI 2 tem o link do planejador');
 });
 
 test('mês devedor Normal — mostra consumo do banco e "devedor"', () => {

@@ -110,7 +110,7 @@ Dois blocos, cada um com **Autorizado / Feito / Aberto** + mini-barra `feito / a
 | :--- | :--- | :--- |
 | **F1** | Reestrutura os 5 cards (funde os 2 de "hoje"; cria "Saldo do Mês"; KPI 3 mostra homologável/consumo; KPI 4 com os 2 blocos mostrando **feito + teto legal**; KPI 5 rotula "jornada ordinária"). `kpiExtractor.deriveMonthPlan()` + `domModernizer.buildKpiCardsHTML()` puros e testados. | ✅ v0.5.0 |
 | **F2** | Campos manuais `authWeekdaySat` / `authSundayHoliday` (⚙ no KPI 4, módulo `heAuthEditor.js`), persistidos por matrícula+mês; KPI 4 passa a mostrar **autorizado / feito / aberto** + barra + alerta de estouro. | ✅ v0.5.1 |
-| **F3** | Mini-planejador no KPI 2: "se eu fizer +Xh hoje/amanhã, o mês fecha em +Y". | ⏳ |
+| **F3** | Mini-planejador no KPI 2 (`monthPlanner.js`): link "planejar ›" → quanto fazer/dia para zerar + fechamento projetado para um esforço diário informado. | ✅ v0.5.2 |
 | **F4** | Investigar leitura do autorizado numa tela SAEX; se inacessível, manter manual e documentar. | ⏳ |
 
 Ao fim de cada fase: casos de teste (`tests/`, `npm test`), verificação ao vivo via CDP, commit. Ao fim de todas: pronto para teste real de uso.
