@@ -52,3 +52,56 @@ test('aggregate — vazio', () => {
   const r = F.aggregate({});
   assert.deepEqual({ wk: r.wkSatMin, sh: r.sunHolMin, n: r.auths.length }, { wk: 0, sh: 0, n: 0 });
 });
+
+// chrome.storage.local em memória, pré-semeado (o mock padrão de helpers.mjs
+// sempre devolve {} do get, então não dá pra testar leitura de cache com ele).
+function mkChrome(seed = {}) {
+  const store = { ...seed };
+  return {
+    _store: store,
+    storage: {
+      local: {
+        get: (defaults, cb) => {
+          const out = {};
+          Object.keys(defaults || {}).forEach((k) => { out[k] = (k in store) ? store[k] : defaults[k]; });
+          cb(out);
+        },
+        set: (obj, cb) => { Object.assign(store, obj); if (cb) cb(); }
+      }
+    }
+  };
+}
+
+test('getForCurrentMonth — cache "fechado" zerado e sem autorizações nunca é definitivo', () => {
+  // Simula o rastro de uma leitura antiga feita com a aba oculta: o mês foi
+  // marcado como fechado, mas authDaysFromEspelho() não achou nenhum dia
+  // (innerText em branco) — sem a correção, isFresh() trataria isso como
+  // definitivo pra sempre (mês fechado nunca revalida) e o card nunca mais
+  // mostraria o autorizado real.
+  const mat = '30901018';
+  const monthKey = '2026-08';
+  const key = 'je_xt_he_saex_v1_' + mat;
+  const chrome = mkChrome({
+    [key]: { [monthKey]: { wkSatMin: 0, sunHolMin: 0, auths: [], closed: true, fetchedAt: 1 } }
+  });
+  const { JEPessoasHEAuthFetch: F2 } = loadModule('heAuthFetch.js', { chrome });
+
+  let result;
+  F2.getForCurrentMonth(mat, monthKey, {}, (r) => { result = r; });
+  assert.equal(result.fromCache, false, 'não aceita o cache zerado como definitivo — revalida em vez de devolver fromCache:true');
+});
+
+test('getForCurrentMonth — cache "fechado" COM autorizações continua definitivo (não revalida à toa)', () => {
+  const mat = '30901018';
+  const monthKey = '2026-08';
+  const key = 'je_xt_he_saex_v1_' + mat;
+  const chrome = mkChrome({
+    [key]: { [monthKey]: { wkSatMin: 534, sunHolMin: 1920, auths: [{ num: '180956' }], closed: true, fetchedAt: 1 } }
+  });
+  const { JEPessoasHEAuthFetch: F2 } = loadModule('heAuthFetch.js', { chrome });
+
+  let result;
+  F2.getForCurrentMonth(mat, monthKey, {}, (r) => { result = r; });
+  assert.equal(result.fromCache, true);
+  assert.equal(result.wkSatMin, 534);
+});

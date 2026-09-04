@@ -101,14 +101,18 @@ window.JEPessoasHEAuthFetch = (function () {
 
   // --- Rede + cache --------------------------------------------------------
 
+  // textContent, não innerText: innerText só reflete texto RENDERIZADO — numa
+  // aba em 2º plano o navegador pula o layout e ele volta em branco pra todo
+  // mundo, fazendo esta função achar "nenhum dia com autorização" mesmo
+  // quando há. textContent não depende de layout, então é imune a isso.
   function authDaysFromEspelho() {
     const tbl = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!tbl) return [];
     const days = [];
     Array.prototype.slice.call(tbl.querySelectorAll('tr')).forEach((tr) => {
       const dc = tr.querySelector('td.h01');
-      if (!dc || !/^\d{2}\/\d{2}\/\d{4}$/.test(dc.innerText.trim())) return;
-      if (/detalharAutorizacao/.test(tr.innerHTML)) days.push(dc.innerText.trim());
+      if (!dc || !/^\d{2}\/\d{2}\/\d{4}$/.test(dc.textContent.trim())) return;
+      if (/detalharAutorizacao/.test(tr.innerHTML)) days.push(dc.textContent.trim());
     });
     return days;
   }
@@ -116,8 +120,9 @@ window.JEPessoasHEAuthFetch = (function () {
   function isClosedEspelho() {
     const tbl = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!tbl) return false;
+    // textContent (não innerText) pelo mesmo motivo do authDaysFromEspelho.
     return /M[eê]s fechado|fechado pelo sistema|AJUSTAD/i.test(
-      Array.prototype.map.call(tbl.querySelectorAll('th'), (th) => (th.getAttribute('title') || '') + th.textContent).join(' ') + ' ' + tbl.innerText
+      Array.prototype.map.call(tbl.querySelectorAll('th'), (th) => (th.getAttribute('title') || '') + th.textContent).join(' ') + ' ' + tbl.textContent
     );
   }
 
@@ -155,6 +160,13 @@ window.JEPessoasHEAuthFetch = (function () {
 
   function isFresh(entry) {
     if (!entry) return false;
+    // Autocura de cache contaminado por leitura antiga com a aba oculta
+    // (antes da correção acima): uma entrada "fechado" sem NENHUMA
+    // autorização é sempre suspeita — tanto pode ser um mês legitimamente
+    // sem HE autorizada quanto o resultado de uma raspagem que achou tudo em
+    // branco. Não trata como definitiva pra sempre nesse caso; revalida (o
+    // custo é baixo — só refaz a raspagem se ainda houver ícones de relógio).
+    if (entry.closed && !(entry.auths && entry.auths.length)) return false;
     if (entry.closed) return true;
     return (Date.now() - (entry.fetchedAt || 0)) < OPEN_MONTH_TTL_MS;
   }
@@ -174,8 +186,17 @@ window.JEPessoasHEAuthFetch = (function () {
 
       const days = authDaysFromEspelho();
       if (!days.length) {
-        // Sem ícones: grava um cache vazio para não reprocessar.
-        const empty = { wkSatMin: 0, sunHolMin: 0, auths: [], closed: isClosedEspelho(), fetchedAt: Date.now() };
+        // Sem ícones: grava um cache vazio para não reprocessar — MAS só se a
+        // leitura for confiável. Com a aba oculta (document.hidden) o
+        // navegador não computa nada renderizado, e mesmo lendo por
+        // textContent um resultado "zero dias" nesse instante não é uma
+        // confirmação real de que não há autorização. Gravar isso pra um mês
+        // fechado (cache nunca revalida — ver isFresh) prenderia o card
+        // permanentemente sem denominador. Sem gravar, a próxima tentativa
+        // com a aba visível tenta de novo do zero.
+        const reliable = typeof document === 'undefined' || document.hidden !== true;
+        const empty = { wkSatMin: 0, sunHolMin: 0, auths: [], closed: reliable && isClosedEspelho(), fetchedAt: Date.now() };
+        if (!reliable) return cb(Object.assign({ fromCache: false }, empty));
         writeCache(mat, monthKey, empty, () => cb(Object.assign({ fromCache: false }, empty)));
         return;
       }
