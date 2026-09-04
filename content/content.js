@@ -5,16 +5,35 @@
 (function () {
   'use strict';
 
-  // Injeção síncrona ultra-rápida de estado no <html> ao nível de document_start (antes do DOM carregar)
+  // Anti-FOUC: revela a página (remove je-xt-boot) uma única vez. Chamada ao
+  // fim da montagem estrutural e por uma válvula de segurança abaixo, para
+  // nunca deixar a tela escondida caso algo falhe.
+  let revealed = false;
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    document.documentElement.classList.remove('je-xt-boot');
+  }
+
+  // Injeção síncrona ultra-rápida de estado no <html> ao nível de document_start
+  // (antes do DOM carregar). Com o tema ativo, também esconde a página inteira
+  // (je-xt-boot, ver content.css) até a montagem terminar — o usuário nunca
+  // chega a ver o layout nativo do portal por um instante antes da
+  // transformação do TSE XT (topbar, KPIs, tabela modernizada).
   try {
     if (localStorage.getItem('je_xt_theme_enabled') !== 'false') {
-      document.documentElement.classList.add('je-xt-enabled');
+      document.documentElement.classList.add('je-xt-enabled', 'je-xt-boot');
       document.documentElement.classList.remove('je-xt-disabled');
     } else {
       document.documentElement.classList.add('je-xt-disabled');
       document.documentElement.classList.remove('je-xt-enabled');
     }
   } catch (e) {}
+
+  // Válvula de segurança: nunca deixa a página escondida por mais de ~1.2s,
+  // mesmo se a montagem falhar ou a URL não for uma página suportada.
+  // Melhor um flash raro do que travar a tela do usuário.
+  setTimeout(reveal, 1200);
 
   function init() {
     if (!document.body) return;
@@ -39,6 +58,7 @@
     const isSupportedPage = isEspelhoMes || isEspelhoDia;
 
     if (!isSupportedPage) {
+      reveal();
       return;
     }
 
@@ -61,42 +81,51 @@
       setTimeout(mountOnce, 400);
 
       function mountXT() {
-        if (window.JEPessoasModernizer) {
-          window.JEPessoasModernizer.applyThemeState(isEnabled, false);
-          window.JEPessoasModernizer.modernizeHeader();
-          window.JEPessoasModernizer.injectPageTitleHeader();
-          window.JEPessoasModernizer.modernizeForm();
-          window.JEPessoasModernizer.modernizeTable(targetHours);
-        }
-
-        // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
-        if (isEspelhoMes && window.JEPessoasKPI && window.JEPessoasModernizer) {
-          const renderKpis = (heAut) => {
-            const kpis = window.JEPessoasKPI.extractKPIs(targetHours, { heAutorizado: heAut });
-            if (kpis) window.JEPessoasModernizer.injectKPICards(kpis);
-          };
-          renderKpis(null);
-
-          // Hora extra autorizada do mês: SAEX (backend do ícone de relógio) como
-          // fonte primária; o valor manual do editor (⚙) tem prioridade quando existe.
-          const HE = window.JEPessoasHEAuth;
-          const HEF = window.JEPessoasHEAuthFetch;
-          if (HE) {
-            const mat = HE.getMatricula();
-            const mk = HE.getMonthKey();
-            HE.getEntry(mat, mk, (manual) => {
-              const hasManual = manual && (manual.wkSatMin || manual.sunHolMin);
-              if (hasManual) {
-                renderKpis({ wkSatMin: manual.wkSatMin, sunHolMin: manual.sunHolMin, source: 'manual' });
-              }
-              if (HEF) {
-                HEF.getForCurrentMonth(mat, mk, {}, (saex) => {
-                  if (hasManual || !saex || !(saex.wkSatMin || saex.sunHolMin)) return;
-                  renderKpis({ wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin, source: 'saex' });
-                });
-              }
-            });
+        // Montagem estrutural (topbar, formulário, tabela, KPIs) num
+        // try/finally: reveal() tem que rodar mesmo se algo aqui lançar,
+        // senão a página fica escondida até a válvula de segurança.
+        try {
+          if (window.JEPessoasModernizer) {
+            window.JEPessoasModernizer.applyThemeState(isEnabled, false);
+            window.JEPessoasModernizer.modernizeHeader();
+            window.JEPessoasModernizer.injectPageTitleHeader();
+            window.JEPessoasModernizer.modernizeForm();
+            window.JEPessoasModernizer.modernizeTable(targetHours);
           }
+
+          // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
+          if (isEspelhoMes && window.JEPessoasKPI && window.JEPessoasModernizer) {
+            const renderKpis = (heAut) => {
+              const kpis = window.JEPessoasKPI.extractKPIs(targetHours, { heAutorizado: heAut });
+              if (kpis) window.JEPessoasModernizer.injectKPICards(kpis);
+            };
+            renderKpis(null);
+
+            // Hora extra autorizada do mês: SAEX (backend do ícone de relógio) como
+            // fonte primária; o valor manual do editor (⚙) tem prioridade quando existe.
+            // Roda em segundo plano (após a revelação) — é um refinamento do card,
+            // não faz parte da montagem estrutural que precisa ficar escondida.
+            const HE = window.JEPessoasHEAuth;
+            const HEF = window.JEPessoasHEAuthFetch;
+            if (HE) {
+              const mat = HE.getMatricula();
+              const mk = HE.getMonthKey();
+              HE.getEntry(mat, mk, (manual) => {
+                const hasManual = manual && (manual.wkSatMin || manual.sunHolMin);
+                if (hasManual) {
+                  renderKpis({ wkSatMin: manual.wkSatMin, sunHolMin: manual.sunHolMin, source: 'manual' });
+                }
+                if (HEF) {
+                  HEF.getForCurrentMonth(mat, mk, {}, (saex) => {
+                    if (hasManual || !saex || !(saex.wkSatMin || saex.sunHolMin)) return;
+                    renderKpis({ wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin, source: 'saex' });
+                  });
+                }
+              });
+            }
+          }
+        } finally {
+          reveal();
         }
 
         // Inicializa modais e atalhos
