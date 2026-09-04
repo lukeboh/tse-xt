@@ -428,7 +428,7 @@ window.JEPessoasModernizer = (function () {
         <div class="je-kpi-subtext">
           <span class="${bs === 'credor' ? 'je-badge-positive' : (bs === 'devedor' ? 'je-badge-negative' : '')}">${balLabel}</span>
           <span>${kpiData.remainingWorkingDaysMonth > 0 ? `${kpiData.remainingWorkingDaysMonth} dias úteis rest.` : 'mês encerrado'}</span>
-          <button type="button" class="je-kpi-planner-link" title="Simular o fechamento do mês">planejar ›</button>
+          ${kpiData.isClosedMonth ? '' : '<button type="button" class="je-kpi-planner-link" title="Simular o fechamento do mês">planejar ›</button>'}
         </div>
       </div>
 
