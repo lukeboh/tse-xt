@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.10';
+  const CURRENT_VERSION = '0.5.11';
 
   const CHANGELOG = [
+    {
+      version: '0.5.11',
+      date: '2026-09-04',
+      title: 'Correção: tag "TSE XT" na célula de HORAS EXCED. do dia',
+      features: [
+        'Alinhamento vertical: a tag "TSE XT" ao lado do valor projetado (célula do dia corrente, antes de a coluna oficial rodar à noite) agora usa flexbox para centralizar de verdade — antes dependia de vertical-align, que desalinhava por causa da diferença de tamanho entre o valor e o selo.',
+        'Correção mais importante: essa célula é nativa do portal (não uma coluna criada pelo TSE XT), e seu conteúdo estava sendo sobrescrito incondicionalmente — a projeção e a tag apareciam mesmo com o TSE XT desligado (ao carregar a página já desabilitado, ou ao desligar o interruptor sem recarregar). Agora a célula guarda os dois conteúdos (o nativo e a projeção) e só o CSS troca qual aparece, conforme o tema está ativo — igual ao resto do app.'
+      ]
+    },
     {
       version: '0.5.10',
       date: '2026-09-04',

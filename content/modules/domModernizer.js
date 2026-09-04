@@ -931,10 +931,19 @@ window.JEPessoasModernizer = (function () {
           // Dia corrente de mês aberto: a coluna nativa "HORAS EXCED." só é
           // processada à noite. Enquanto isso o TSE XT projeta o saldo do dia a
           // partir do TOTAL e destaca a célula como calculada pelo app.
+          //
+          // A célula é NATIVA (não é uma coluna sintética do TSE XT), então não
+          // dá pra só confiar em display:none no modo OFF como as outras. Em vez
+          // de sobrescrever o conteúdo original, guarda os dois lados (nativo e
+          // projeção) e deixa o CSS trocar qual aparece conforme
+          // body.je-xt-enabled/disabled — assim nada aparece no modo OFF (nem
+          // ao carregar desabilitado, nem ao desligar o interruptor sem recarregar
+          // a página) e o valor nativo nunca é perdido.
           if (isProjectedToday && exceedCell) {
+            const nativeHTML = exceedCell.innerHTML;
             exceedCell.classList.add('je-cell-app-calc');
             exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
-            exceedCell.innerHTML = `<strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span>`;
+            exceedCell.innerHTML = `<span class="je-app-calc-native">${nativeHTML}</span><span class="je-app-calc-override"><strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span></span>`;
             tdAccum.classList.add('je-cell-app-calc');
           }
         }

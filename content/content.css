@@ -3277,7 +3277,26 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
   white-space: nowrap !important;
 }
 
-/* Dia corrente: saldo projetado pelo TSE XT enquanto a coluna oficial (noturna) não roda */
+/* Dia corrente: saldo projetado pelo TSE XT enquanto a coluna oficial
+   (noturna) não roda. A célula (nativa — não é uma coluna sintética do TSE
+   XT) guarda os dois lados: o conteúdo original (.je-app-calc-native) e a
+   projeção (.je-app-calc-override). Por padrão — inclusive no modo OFF, ou
+   se o interruptor for desligado sem recarregar a página — só o nativo
+   aparece; o CSS só troca para a projeção com o tema ativo. */
+.je-app-calc-override {
+  display: none;
+}
+
+body.je-xt-enabled .je-app-calc-native {
+  display: none;
+}
+
+body.je-xt-enabled .je-app-calc-override {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
 body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-cell-app-calc,
 body.je-xt-enabled td.je-cell-app-calc,
 body.je-xt-enabled .je-cell-app-calc {
@@ -3289,19 +3308,24 @@ body.je-xt-enabled .je-cell-app-calc {
 
 body.je-xt-enabled td.je-cell-app-calc strong {
   color: var(--je-primary) !important;
+  line-height: 1 !important;
 }
 
+/* inline-flex + line-height:1 em vez de vertical-align:middle: o pill (8.5px)
+   e o valor em negrito (bem maior) têm métricas de linha muito diferentes —
+   vertical-align fica sujeito a arredondamento e desalinha; flex centraliza
+   de verdade, não importa a diferença de tamanho de fonte. */
 body.je-xt-enabled .je-app-calc-tag {
-  display: inline-block !important;
-  margin-left: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
   font-size: 8.5px !important;
   font-weight: 800 !important;
   letter-spacing: 0.3px !important;
   color: #ffffff !important;
   background: var(--je-primary) !important;
   border-radius: 999px !important;
-  padding: 0 6px !important;
-  vertical-align: middle !important;
+  padding: 2px 6px !important;
 }
 
 body.je-xt-disabled .je-btn-ajustar-ponto,
