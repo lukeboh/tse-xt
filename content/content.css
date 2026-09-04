@@ -196,11 +196,15 @@ body.je-xt-disabled #menu-lateral {
   pointer-events: auto !important;
 }
 
-/* Contêiner Atômico Unificado do Topo (#je-app-header) */
+/* Contêiner Atômico Unificado do Topo (#je-app-header): topbar, banner de
+   título e barra de KPIs são filhos flex diretos. Um único gap: 16px cuida
+   do espaçamento entre os três — e da mesma distância até o conteúdo, via o
+   margin-bottom abaixo (mesmo valor). Não duplicar com margin-bottom nos
+   filhos (.je-topbar / .je-page-title-banner) — o gap já resolve. */
 .je-app-header {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0 !important;
+  gap: 16px !important;
   width: 100% !important;
   margin-bottom: 16px !important;
 }
@@ -224,7 +228,7 @@ body:not(.je-theme-transitioning) .je-kpi-card {
   position: sticky;
   top: 12px;
   z-index: 1000;
-  margin-bottom: 16px;
+  /* espaçamento pro próximo irmão vem do gap do .je-app-header (16px) */
   background: var(--je-glass-header);
   backdrop-filter: var(--je-backdrop-blur);
   -webkit-backdrop-filter: var(--je-backdrop-blur);
@@ -413,7 +417,7 @@ body.je-xt-disabled .je-topbar {
   border: 1px solid var(--je-glass-border);
   border-radius: var(--je-radius-md);
   padding: 12px 20px;
-  margin-bottom: 16px;
+  /* espaçamento pros irmãos vem do gap do .je-app-header (16px) */
   box-shadow: var(--je-shadow-tactile);
   display: flex;
   align-items: center;
@@ -565,6 +569,9 @@ body.je-xt-enabled #opcoes-consulta {
   border: 1px solid var(--je-glass-border) !important;
   border-radius: var(--je-radius-md) !important;
   padding: 14px 18px !important;
+  /* margin-top: 0 — a distância até a barra de KPIs vem só do margin-bottom
+     do .je-app-header (16px), pra não somar com uma margem nativa e desalinhar. */
+  margin-top: 0 !important;
   margin-bottom: 16px !important;
   box-shadow: var(--je-shadow-tactile) !important;
   transition: var(--je-transition-smooth);
@@ -1140,28 +1147,10 @@ body.je-xt-disabled .je-kpi-dashboard {
   transition: var(--je-transition-spring) !important;
 }
 
-/* Faixa de acento no topo: um overlay do tamanho do card, recortado pelo
-   mesmo border-radius, com o gradiente pintado só nos 3px superiores. Assim a
-   faixa acompanha as quinas arredondadas e nunca escapa do card. */
-.je-kpi-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--je-primary-light), var(--je-accent-cyan)) center top / 100% 3px no-repeat;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
 .je-kpi-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--je-shadow-md), var(--je-glow-blue-soft);
   border-color: rgba(0, 140, 255, 0.3);
-}
-
-.je-kpi-card:hover::before {
-  opacity: 1;
 }
 
 /* ==========================================================================
@@ -1181,10 +1170,6 @@ body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card {
       rgba(0, 198, 255, 0.12) 78%,
       rgba(0, 102, 179, 0.17) 100%) !important;
   border-color: rgba(0, 140, 255, 0.24) !important;
-}
-
-body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card::before {
-  opacity: 1;
 }
 
 body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-title {
@@ -2329,14 +2314,16 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente th.je-col-daily-exceed,
 body.je-xt-enabled #tblEspelhoPontoMesCorrente thead th.je-col-daily-exceed,
 body.je-xt-enabled table th.je-col-accumulated-balance,
 body.je-xt-enabled table th.je-col-daily-exceed {
-  background: linear-gradient(180deg, #002b5c 0%, #004080 100%) !important;
+  /* mesmo degradê do .je-btn-consultar, pra header e botão lerem como a
+     mesma família visual */
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 10px !important;
   line-height: 1.15 !important;
   letter-spacing: 0.3px !important;
-  border: 1px solid #002b5c !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid #0056b3 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
   white-space: nowrap !important;
   width: 1% !important;
   min-width: 88px !important;

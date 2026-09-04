@@ -45,7 +45,7 @@ function load(seed) {
 
 test('defaults() e DEFS', () => {
   const { S } = load();
-  assert.deepEqual(S.defaults(), { kpiCardStyle: 'flat', kpiCardEmphasis: 'soft' });
+  assert.deepEqual(S.defaults(), { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' });
   assert.equal(S.DEFS.kpiCardStyle.attr, 'data-je-kpi-style');
   assert.equal(S.DEFS.kpiCardEmphasis.attr, 'data-je-kpi-emphasis');
 });
@@ -54,17 +54,17 @@ test('normalize — válido passa, inválido cai no padrão, chave desconhecida 
   const { S } = load();
   assert.equal(S.normalize('kpiCardStyle', 'gradient'), 'gradient');
   assert.equal(S.normalize('kpiCardStyle', 'neon'), 'flat');
-  assert.equal(S.normalize('kpiCardEmphasis', null), 'soft');
+  assert.equal(S.normalize('kpiCardEmphasis', null), 'glow');
   assert.equal(S.normalize('xpto', 'abc'), 'abc');
 });
 
 test('load — storage vazio aplica os padrões no documento', () => {
   const { S, body, html } = load();
   S.load((norm) => {
-    assert.deepEqual(norm, { kpiCardStyle: 'flat', kpiCardEmphasis: 'soft' });
+    assert.deepEqual(norm, { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' });
   });
   assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
-  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow');
   assert.equal(html.getAttribute('data-je-kpi-style'), 'flat');
 });
 
@@ -72,7 +72,7 @@ test('load — lê valores salvos e normaliza os inválidos', () => {
   const { S, body } = load({ kpiCardStyle: 'gradient', kpiCardEmphasis: 'zzz' });
   S.load();
   assert.equal(body.getAttribute('data-je-kpi-style'), 'gradient');
-  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow');
 });
 
 test('set — grava no storage, normaliza e reflete no documento', () => {
@@ -111,5 +111,5 @@ test('onChanged — mudança feita pelo popup sincroniza a página aberta', () =
   assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
   chrome._emit({ kpiCardStyle: { oldValue: 'flat', newValue: 'gradient' } });
   assert.equal(body.getAttribute('data-je-kpi-style'), 'gradient');
-  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft'); // não foi mexido
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow'); // não foi mexido
 });

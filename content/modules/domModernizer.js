@@ -566,6 +566,20 @@ window.JEPessoasModernizer = (function () {
 
     // Limpa injeções anteriores para garantir idempotência
     table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+
+    // Restaura a célula nativa "HORAS EXCED." do dia corrente (projeção do
+    // app) ao conteúdo original antes de reprocessar. Sem isso, uma 2ª
+    // passada leria de volta o texto JÁ sobrescrito (ex.: "+02:45TSE XT",
+    // sem separador) como se fosse o valor nativo — quebra o parse de
+    // HH:MM e, em cascata (runningBalance acumula linha a linha), corrompe
+    // o saldo acumulado do resto da tabela.
+    table.querySelectorAll('td.je-cell-app-calc').forEach((cell) => {
+      const nativeSpan = cell.querySelector(':scope > .je-app-calc-native');
+      if (nativeSpan) cell.innerHTML = nativeSpan.innerHTML;
+      cell.classList.remove('je-cell-app-calc');
+      cell.removeAttribute('title');
+    });
+
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
     // Selos R5/R6 injetados na coluna de ocorrência — removidos antes de reprocessar,
     // senão o texto deles é relido como "ocorrência" e vira um 2º badge na re-execução.
@@ -939,13 +953,19 @@ window.JEPessoasModernizer = (function () {
           // body.je-xt-enabled/disabled — assim nada aparece no modo OFF (nem
           // ao carregar desabilitado, nem ao desligar o interruptor sem recarregar
           // a página) e o valor nativo nunca é perdido.
-          if (isProjectedToday && exceedCell) {
-            const nativeHTML = exceedCell.innerHTML;
-            exceedCell.classList.add('je-cell-app-calc');
-            exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
-            exceedCell.innerHTML = `<span class="je-app-calc-native">${nativeHTML}</span><span class="je-app-calc-override"><strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span></span>`;
-            tdAccum.classList.add('je-cell-app-calc');
-          }
+          // try/catch isolado: se algo aqui falhar, não pode derrubar o resto do
+          // loop de linhas — senão as colunas sintéticas (.je-col-daily-exceed /
+          // .je-col-accumulated-balance) parariam de ser injetadas em TODAS as
+          // linhas seguintes, não só na de hoje.
+          try {
+            if (isProjectedToday && exceedCell) {
+              const nativeHTML = exceedCell.innerHTML;
+              exceedCell.classList.add('je-cell-app-calc');
+              exceedCell.title = `Calculado pelo TSE XT: ${totalDay || '00:00'} trabalhadas − ${Math.floor(dayTargetMinutes / 60)}h${dayTargetMinutes % 60 ? String(dayTargetMinutes % 60).padStart(2, '0') : ''} de jornada = ${formatSigned(dailyDelta)}. A coluna oficial "HORAS EXCED." é processada à noite.`;
+              exceedCell.innerHTML = `<span class="je-app-calc-native">${nativeHTML}</span><span class="je-app-calc-override"><strong>${formatSigned(dailyDelta)}</strong><span class="je-app-calc-tag">TSE XT</span></span>`;
+              tdAccum.classList.add('je-cell-app-calc');
+            }
+          } catch (e) { /* não bloqueia a modernização do restante das linhas */ }
         }
       }
 

@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.12';
+  const CURRENT_VERSION = '0.5.13';
 
   const CHANGELOG = [
+    {
+      version: '0.5.13',
+      date: '2026-09-04',
+      title: 'Ajustes finos de aparência + correção importante no saldo do dia',
+      features: [
+        'Correção importante: a projeção de "HORAS EXCED." do dia corrente não era mais restaurada ao valor nativo antes de cada remontagem da tabela. Numa 2ª passagem (reabertura da Auditoria, atualização via Ajax etc.), o texto já sobrescrito era relido como se fosse o valor original, quebrava o cálculo de HH:MM e corrompia (em cascata) o saldo acumulado do resto do mês. Agora a célula é sempre restaurada ao nativo antes de reprocessar — a montagem volta a ser idempotente, como as demais.',
+        'Removida a faixa colorida no topo dos cards de KPI — não estava agregando.',
+        'Padrão do painel de KPIs: Glow azul ligado, preenchimento em gradiente desligado (continua ajustável na janela da extensão).',
+        'Espaçamento consistente de 16px entre a topbar, o banner de título, a barra de KPIs e o conteúdo — um único gap no contêiner do cabeçalho, em vez de margens repetidas em cada peça.',
+        'Os cabeçalhos de coluna em destaque (SALDO ACUM., HORAS EXCED. do TSE XT) passam a usar o mesmo degradê azul do botão Consultar, em vez do azul-marinho anterior.'
+      ]
+    },
     {
       version: '0.5.12',
       date: '2026-09-04',
