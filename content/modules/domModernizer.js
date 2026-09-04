@@ -565,8 +565,10 @@ window.JEPessoasModernizer = (function () {
     });
 
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
-    // Selos R5/R6 injetados na coluna de ocorrência — removidos antes de reprocessar,
-    // senão o texto deles é relido como "ocorrência" e vira um 2º badge na re-execução.
+    // Selo R5 injetado na coluna de ocorrência — removido antes de reprocessar,
+    // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
+    // re-execução. .je-occ-sem-autorizacao (R6) não é mais criado, mas segue
+    // no seletor pra limpar qualquer selo remanescente de uma versão anterior.
     table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach(el => el.remove());
     table.querySelectorAll('td.h16 span.je-occurrence-badge').forEach((el) => {
       if (!el.querySelector('a') && /art\.\s*4|sem autoriza|>\s*10h/i.test(el.textContent || '')) el.remove();
@@ -796,7 +798,19 @@ window.JEPessoasModernizer = (function () {
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
           const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
 
-          // R6 / R5 — sinalização de excedente irregular em dias já encerrados.
+          // R5 — sinalização de excedente irregular em dias já encerrados.
+          //
+          // Havia também um selo R6 "sem autorização" aqui (excedente do dia
+          // sem autorização de SAEX vinculada). Removido: mesmo sem
+          // autorização prévia, o excedente pode virar banco de horas por
+          // homologação ativa da chefia (confirmado empiricamente — ver
+          // regras-calculo-frequencia.md §3.9/§5.3, ex.: 12/2015, 01/2016,
+          // 09/2025, 04/2026) — não é uma perda garantida, então marcar todo
+          // dia sem SAEX como "sem autorização" soava mais alarmante do que
+          // a regra realmente é. A Auditoria de Horas Perdidas continua
+          // sendo o lugar certo pra isso: ela olha retrospectivamente se o
+          // excedente virou pecúnia OU banco, em vez de presumir antes da
+          // homologação acontecer.
           try {
             const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6 || isHolidayOrRecess;
             // Em mês fechado a coluna h10 é "HORAS AJUST." (jornada reconhecida),
@@ -804,21 +818,8 @@ window.JEPessoasModernizer = (function () {
             const grossExcessMin = isWeekendOrHoliday
               ? (totalMin > 0 ? totalMin : exceedMin)
               : (isClosedMonthTable ? (totalMin - dayTargetMinutes) : exceedMin);
-            const hasAuth = window.JEPessoasAuthScan && window.JEPessoasAuthScan.rowHasAuthorization(tr);
             const canBadge = isStrictlyPast && !isDispensed && occCell
               && !occCell.querySelector('.je-occurrence-ajuste-pendente');
-
-            // R6 — excedente sem autorização de serviço extraordinário vinculada
-            // e sem pecúnia: não gera pagamento nem compensação automática (art. 3º).
-            if (canBadge && pecuniaMin === 0 && !hasAuth && grossExcessMin >= 30
-                && !occCell.querySelector('.je-occ-sem-autorizacao')) {
-              const tag = document.createElement('span');
-              tag.className = 'je-occ-sem-autorizacao';
-              tag.textContent = 'sem autorização';
-              tag.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} sem autorização de serviço extraordinário vinculada — não gera pecúnia nem compensação automática (Portaria 380/2026 art. 3º).`;
-              occCell.appendChild(document.createTextNode(' '));
-              occCell.appendChild(tag);
-            }
 
             // R5 — excedente acima do teto legal por jornada, mesmo autorizado:
             // 2h em dia útil, 10h em sábado/domingo/feriado (Res. 22.901/2008 art. 4º).
