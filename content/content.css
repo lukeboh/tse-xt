@@ -1154,6 +1154,77 @@ body.je-xt-disabled .je-kpi-dashboard {
   opacity: 1;
 }
 
+/* ==========================================================================
+   Preferências de aparência dos KPIs (modal da engrenagem)
+   Atributos setados por settings.js em <html>/<body>:
+     data-je-kpi-style    = flat (padrão) | gradient
+     data-je-kpi-emphasis = soft (padrão) | glow
+   O default não tem regra própria — usa o .je-kpi-card base.
+   ========================================================================== */
+
+/* Preenchimento com gradiente (proposta de identidade visual) */
+body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card {
+  background:
+    linear-gradient(152deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.86) 40%,
+      rgba(0, 198, 255, 0.12) 78%,
+      rgba(0, 102, 179, 0.17) 100%) !important;
+  border-color: rgba(0, 140, 255, 0.24) !important;
+}
+
+body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card::before {
+  opacity: 0.9;
+}
+
+body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-title {
+  color: #47597a;
+}
+
+/* Destaque com glow azul mais profundo, sempre visível */
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card {
+  border-color: rgba(0, 140, 255, 0.38) !important;
+  box-shadow:
+    var(--je-shadow-tactile),
+    0 0 0 1px rgba(0, 119, 255, 0.22),
+    0 10px 30px -8px rgba(0, 86, 179, 0.5),
+    0 0 22px -2px rgba(0, 170, 255, 0.35) !important;
+}
+
+body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover {
+  border-color: rgba(0, 140, 255, 0.5) !important;
+  box-shadow:
+    var(--je-shadow-md),
+    0 0 0 1px rgba(0, 140, 255, 0.4),
+    0 14px 38px -8px rgba(0, 86, 179, 0.6),
+    0 0 30px 0 rgba(0, 170, 255, 0.45) !important;
+}
+
+/* Botão de engrenagem na topbar */
+body.je-xt-enabled .je-settings-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 auto !important;
+  padding: 0 !important;
+  border-radius: var(--je-radius-full) !important;
+  border: 1px solid rgba(0, 102, 204, 0.15) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: #475569 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease, background 0.2s ease, border-color 0.2s ease !important;
+}
+
+body.je-xt-enabled .je-settings-btn:hover {
+  color: var(--je-primary) !important;
+  background: #ffffff !important;
+  border-color: rgba(0, 140, 255, 0.4) !important;
+  transform: rotate(45deg) !important;
+}
+
 .je-kpi-header {
   display: flex;
   justify-content: space-between;

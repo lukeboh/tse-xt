@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.6';
+  const CURRENT_VERSION = '0.5.7';
 
   const CHANGELOG = [
+    {
+      version: '0.5.7',
+      date: '2026-09-03',
+      title: 'Preferências de aparência do painel de KPIs',
+      features: [
+        'Nova engrenagem na barra superior abre "Aparência do painel de KPIs" com duas opções, aplicadas na hora e válidas em todas as telas do TSE XT.',
+        'Preenchimento dos cards: "Clássico" (vidro translúcido, como antes) ou "Gradiente" (degradê azul → ciano da proposta de identidade visual).',
+        'Destaque dos cards: "Suave" (sombra tátil atual) ou "Glow azul" (brilho azul mais profundo, sempre visível). As duas opções são independentes.',
+        'As preferências ficam só neste navegador (localStorage je_xt_kpi_style / je_xt_kpi_emphasis) e são aplicadas antes da pintura, sem "flash". Módulo settings.js com testes (tests/settings.test.mjs).'
+      ]
+    },
     {
       version: '0.5.6',
       date: '2026-09-03',

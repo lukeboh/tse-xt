@@ -113,6 +113,7 @@ Dois blocos, cada um com **Autorizado / Feito / Aberto** + mini-barra `feito / a
 | **F3** | Mini-planejador no KPI 2 (`monthPlanner.js`): link "planejar ›" → quanto fazer/dia para zerar + fechamento projetado para um esforço diário informado. | ✅ v0.5.2 |
 | **F4** | Investigar leitura do autorizado numa tela SAEX. | ⚠️ conclusão revista pela F5 |
 | **F5** | Ler o autorizado direto do backend do ícone de relógio (`heAuthFetch.js`), classificar por bloco e alimentar o KPI 4. | ✅ v0.5.4 |
+| **F6** | Preferências de aparência (`settings.js` + engrenagem na topbar): preenchimento **Clássico / Gradiente** e destaque **Suave / Glow azul**, independentes, em `localStorage` (`je_xt_kpi_style` / `je_xt_kpi_emphasis`), aplicadas por atributo no `<body>` e puro CSS. | ✅ v0.5.7 |
 
 Ao fim de cada fase: casos de teste (`tests/`, `npm test`), verificação ao vivo via CDP, commit. Ao fim de todas: pronto para teste real de uso.
 
