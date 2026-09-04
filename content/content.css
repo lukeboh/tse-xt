@@ -1354,6 +1354,21 @@ body.je-xt-enabled .je-kpi-heauth-icon {
   cursor: help !important;
 }
 
+/* Spinner minúsculo no lugar do denominador (feito/AUTORIZADO) enquanto a
+   consulta ao SAEX ainda está em andamento — mesma animação (jeSpin) do
+   .je-spinner grande da Auditoria, só que na escala do texto do card. */
+.je-kpi-heauth-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 4px;
+  vertical-align: middle;
+  border: 1.5px solid rgba(0, 119, 255, 0.2);
+  border-top-color: var(--je-primary-light);
+  border-radius: 50%;
+  animation: jeSpin 0.7s linear infinite;
+}
+
 body.je-xt-enabled .je-kpi-planner-link {
   background: transparent !important;
   border: none !important;

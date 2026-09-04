@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.18';
+  const CURRENT_VERSION = '0.5.19';
 
   const CHANGELOG = [
+    {
+      version: '0.5.19',
+      date: '2026-09-04',
+      title: 'Spinner no denominador enquanto o SAEX ainda está carregando',
+      features: [
+        'A consulta ao SAEX é assíncrona e pode levar um instante — agora, enquanto ela não termina, um spinner pequeno aparece no lugar do denominador (feito/⟳) em cada bloco (Semana/Sábado e Domingo/Feriado) e no rodapé "Executado", em vez de o card simplesmente não mostrar nada. Assim que a leitura termina, os valores reais entram no lugar do spinner.'
+      ]
+    },
     {
       version: '0.5.18',
       date: '2026-09-04',

@@ -99,20 +99,26 @@
               const kpis = window.JEPessoasKPI.extractKPIs(targetHours, { heAutorizado: heAut });
               if (kpis) window.JEPessoasModernizer.injectKPICards(kpis);
             };
-            renderKpis(null);
 
             // Hora extra autorizada do mês: única fonte é o SAEX (backend do ícone
             // de relógio) — não existe opção pro servidor definir a própria meta.
+            // A consulta ao SAEX é assíncrona e pode levar um instante (raspa um
+            // dia por autorização) — a 1ª pintura já avisa "carregando" pro card
+            // mostrar um spinner no lugar do denominador em vez de sumir com ele.
             // Roda em segundo plano (após a revelação) — é um refinamento do card,
             // não faz parte da montagem estrutural que precisa ficar escondida.
             const HEF = window.JEPessoasHEAuthFetch;
             if (HEF) {
+              renderKpis({ loading: true });
               const mat = HEF.getMatricula();
               const mk = HEF.getMonthKey();
               HEF.getForCurrentMonth(mat, mk, {}, (saex) => {
-                if (!saex || !(saex.wkSatMin || saex.sunHolMin)) return;
-                renderKpis({ wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin, source: 'saex' });
+                renderKpis(saex && (saex.wkSatMin || saex.sunHolMin)
+                  ? { wkSatMin: saex.wkSatMin, sunHolMin: saex.sunHolMin, source: 'saex' }
+                  : null);
               });
+            } else {
+              renderKpis(null);
             }
           }
         } finally {

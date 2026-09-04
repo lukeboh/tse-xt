@@ -135,6 +135,28 @@ test('KPI 4 — blocos +50% e +100%, sem opção de ajuste manual (ícone de $ e
   assert.ok(html.includes('resta 41:45'));
   assert.ok(html.includes('je-kpi-heauth-icon'), 'tem o ícone estático de $ (sem opção de ajuste manual)');
   assert.ok(!html.includes('je-kpi-heauth-gear'), 'a engrenagem de ajuste manual foi removida');
+  assert.ok(!html.includes('je-kpi-heauth-spinner'), 'sem heAuthLoading, não mostra spinner nenhum');
+});
+
+test('KPI 4 — SAEX ainda carregando: spinner no lugar do denominador (nos 2 blocos e no rodapé)', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({ heAuthLoading: true }));
+  assertClean(html);
+  const spinners = (html.match(/je-kpi-heauth-spinner/g) || []).length;
+  assert.equal(spinners, 3, 'um spinner por bloco (2) + um no rodapé "Executado" (1)');
+  // sem fração ainda (não virou hasHEAutorizadoConfig) — só o "feito" + spinner
+  assert.ok(!html.includes('/07:59') && !html.includes('/12:15'));
+});
+
+test('KPI 4 — autorizado do SAEX já carregado não mostra spinner', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    heAuthLoading: true, // se por algum motivo os dois vierem juntos, o dado real manda
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
+    authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00'
+  }));
+  assertClean(html);
+  assert.ok(!html.includes('je-kpi-heauth-spinner'), 'com autorizado real disponível, o spinner não aparece');
+  assert.ok(html.includes('/20:00') && html.includes('/10:00'));
 });
 
 test('KPI 4 com HE autorizada do SAEX — mostra fração feito/autorizado + barra', () => {
