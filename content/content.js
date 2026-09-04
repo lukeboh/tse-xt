@@ -5,6 +5,30 @@
 (function () {
   'use strict';
 
+  // Registro de perfis de página (roadmap F1 — docs/roadmap-arquitetura-visual.md).
+  // Cada perfil sabe modernizar título/formulário/tabela de UMA tela específica.
+  // Páginas sem perfil correspondente ainda recebem a casca genérica (topbar,
+  // drawer, busca, ações rápidas, toggle) montada mais abaixo — só não passam
+  // pelos modernizadores de título/formulário/tabela, que hoje são hardcoded
+  // para o Espelho de Ponto (ver injectPageTitleHeader/modernizeTable em
+  // domModernizer.js). Novas telas ganham um perfil aqui à medida que forem
+  // portadas (F5-F7).
+  const PAGE_PROFILES = [
+    {
+      id: 'espelhoMes',
+      isMatch: () => window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente'),
+    },
+    {
+      id: 'espelhoDia',
+      isMatch: () => window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia'),
+    },
+  ];
+
+  function resolveProfileId() {
+    const profile = PAGE_PROFILES.find((p) => p.isMatch());
+    return profile ? profile.id : null;
+  }
+
   // Anti-FOUC: revela a página (remove je-xt-boot) uma única vez. Chamada ao
   // fim da montagem estrutural e por uma válvula de segurança abaixo, para
   // nunca deixar a tela escondida caso algo falhe.
@@ -52,15 +76,17 @@
     // no <html>/<body>). Assíncrono, mas os cards só são injetados depois.
     if (window.JEPessoasSettings) window.JEPessoasSettings.load();
 
-    // Detecta as páginas suportadas pelo TSE XT (Espelho Mensal e Alteração de Ponto Diária)
-    const isEspelhoMes = window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente');
-    const isEspelhoDia = window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia');
-    const isSupportedPage = isEspelhoMes || isEspelhoDia;
-
-    if (!isSupportedPage) {
+    // Só monta em páginas autenticadas do Meu Espaço com o shell padrão do
+    // portal (div#container) — o manifest já exclui Login/Logout, isto é só
+    // uma rede de segurança extra para telas fora do layout conhecido.
+    if (!document.getElementById('container')) {
       reveal();
       return;
     }
+
+    const profileId = resolveProfileId();
+    const isEspelhoMes = profileId === 'espelhoMes';
+    const isEspelhoDia = profileId === 'espelhoDia';
 
     // Carrega preferências salvas ou padrão (7h para JE/TSE, XT Ativo)
     chrome.storage?.local?.get({ targetHours: 7, xtThemeEnabled: true }, (items) => {
@@ -87,10 +113,22 @@
         try {
           if (window.JEPessoasModernizer) {
             window.JEPessoasModernizer.applyThemeState(isEnabled, false);
+
+            // Casca genérica: topbar/menu de serviços — já é agnóstica de
+            // página (lê .servidor/.matricula/etc. com fallback), roda em
+            // qualquer tela do portal.
             window.JEPessoasModernizer.modernizeHeader();
-            window.JEPessoasModernizer.injectPageTitleHeader();
-            window.JEPessoasModernizer.modernizeForm();
-            window.JEPessoasModernizer.modernizeTable(targetHours);
+
+            // Modernização específica de página: título, formulário e tabela
+            // ainda são hardcoded para o Espelho de Ponto — só rodam quando a
+            // página bate com um perfil conhecido (ver PAGE_PROFILES acima).
+            // Sem isso, injectPageTitleHeader() mostraria "Espelho de Ponto"
+            // em qualquer outra tela do menu.
+            if (profileId) {
+              window.JEPessoasModernizer.injectPageTitleHeader();
+              window.JEPessoasModernizer.modernizeForm();
+              window.JEPessoasModernizer.modernizeTable(targetHours);
+            }
           }
 
           // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
