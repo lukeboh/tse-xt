@@ -2,70 +2,114 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadModule } from './helpers.mjs';
 
-function mkLS(seed = {}) {
-  const m = new Map(Object.entries(seed));
+function mkEl() {
+  const attrs = {};
+  return { attrs, setAttribute: (k, v) => { attrs[k] = String(v); }, getAttribute: (k) => (k in attrs ? attrs[k] : null) };
+}
+
+function mkChrome(seed = {}) {
+  const store = { ...seed };
+  const listeners = [];
   return {
-    _m: m,
-    getItem: (k) => (m.has(k) ? m.get(k) : null),
-    setItem: (k, v) => m.set(k, String(v)),
-    removeItem: (k) => m.delete(k)
+    _emit: (changes) => listeners.forEach((l) => l(changes, 'local')),
+    storage: {
+      local: {
+        get: (defaults, cb) => {
+          const out = {};
+          Object.keys(defaults || {}).forEach((k) => { out[k] = (k in store) ? store[k] : defaults[k]; });
+          cb(out);
+        },
+        set: (obj, cb) => {
+          const changes = {};
+          Object.keys(obj).forEach((k) => { changes[k] = { oldValue: store[k], newValue: obj[k] }; store[k] = obj[k]; });
+          if (cb) cb();
+          listeners.forEach((l) => l(changes, 'local'));
+        }
+      },
+      onChanged: { addListener: (fn) => listeners.push(fn) }
+    },
+    _store: store
   };
 }
 
-function mkDoc() {
-  const attrs = {};
-  const el = { setAttribute: (k, v) => { attrs[k] = v; }, getAttribute: (k) => attrs[k] };
-  return { doc: { documentElement: el, body: el }, attrs };
-}
-
 function load(seed) {
-  const { doc } = mkDoc();
-  return loadModule('settings.js', { localStorage: mkLS(seed), document: doc }).JEPessoasSettings;
+  const html = mkEl();
+  const body = mkEl();
+  const chrome = mkChrome(seed);
+  const S = loadModule('settings.js', {
+    chrome,
+    document: { documentElement: html, body }
+  }).JEPessoasSettings;
+  return { S, html, body, chrome };
 }
 
-test('padrões quando nada foi salvo', () => {
-  const S = load();
-  assert.equal(S.get('je_xt_kpi_style'), 'flat');
-  assert.equal(S.get('je_xt_kpi_emphasis'), 'soft');
-  assert.deepEqual(S.getAll(), { je_xt_kpi_style: 'flat', je_xt_kpi_emphasis: 'soft' });
+test('defaults() e DEFS', () => {
+  const { S } = load();
+  assert.deepEqual(S.defaults(), { kpiCardStyle: 'flat', kpiCardEmphasis: 'soft' });
+  assert.equal(S.DEFS.kpiCardStyle.attr, 'data-je-kpi-style');
+  assert.equal(S.DEFS.kpiCardEmphasis.attr, 'data-je-kpi-emphasis');
 });
 
-test('lê valor salvo válido', () => {
-  const S = load({ je_xt_kpi_style: 'gradient', je_xt_kpi_emphasis: 'glow' });
-  assert.equal(S.get('je_xt_kpi_style'), 'gradient');
-  assert.equal(S.get('je_xt_kpi_emphasis'), 'glow');
+test('normalize — válido passa, inválido cai no padrão, chave desconhecida devolve cru', () => {
+  const { S } = load();
+  assert.equal(S.normalize('kpiCardStyle', 'gradient'), 'gradient');
+  assert.equal(S.normalize('kpiCardStyle', 'neon'), 'flat');
+  assert.equal(S.normalize('kpiCardEmphasis', null), 'soft');
+  assert.equal(S.normalize('xpto', 'abc'), 'abc');
 });
 
-test('valor inválido cai no padrão', () => {
-  const S = load({ je_xt_kpi_style: 'neon', je_xt_kpi_emphasis: '' });
-  assert.equal(S.get('je_xt_kpi_style'), 'flat');
-  assert.equal(S.get('je_xt_kpi_emphasis'), 'soft');
+test('load — storage vazio aplica os padrões no documento', () => {
+  const { S, body, html } = load();
+  S.load((norm) => {
+    assert.deepEqual(norm, { kpiCardStyle: 'flat', kpiCardEmphasis: 'soft' });
+  });
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft');
+  assert.equal(html.getAttribute('data-je-kpi-style'), 'flat');
 });
 
-test('set persiste e normaliza', () => {
-  const S = load();
-  S.set('je_xt_kpi_style', 'gradient');
-  assert.equal(S.get('je_xt_kpi_style'), 'gradient');
-  S.set('je_xt_kpi_style', 'xxx');           // inválido → padrão
-  assert.equal(S.get('je_xt_kpi_style'), 'flat');
-  S.set('chave_desconhecida', 'x');          // chave fora do schema é ignorada (não grava)
-  assert.equal(S.get('chave_desconhecida'), null);
+test('load — lê valores salvos e normaliza os inválidos', () => {
+  const { S, body } = load({ kpiCardStyle: 'gradient', kpiCardEmphasis: 'zzz' });
+  S.load();
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'gradient');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft');
 });
 
-test('apply reflete atributos no documento', () => {
-  const { doc, attrs } = mkDoc();
-  const S = loadModule('settings.js', {
-    localStorage: mkLS({ je_xt_kpi_style: 'gradient' }),
-    document: doc
-  }).JEPessoasSettings;
-  S.apply();
-  assert.equal(attrs['data-je-kpi-style'], 'gradient');
-  assert.equal(attrs['data-je-kpi-emphasis'], 'soft');
+test('set — grava no storage, normaliza e reflete no documento', () => {
+  const { S, body, chrome } = load();
+  let done = false;
+  S.set('kpiCardEmphasis', 'glow', () => { done = true; });
+  assert.equal(done, true);
+  assert.equal(chrome._store.kpiCardEmphasis, 'glow');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow');
+
+  S.set('kpiCardStyle', 'neon');
+  assert.equal(chrome._store.kpiCardStyle, 'flat');
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
 });
 
-test('normalize é pura e defensiva', () => {
-  const S = load();
-  assert.equal(S.normalize('je_xt_kpi_emphasis', 'glow'), 'glow');
-  assert.equal(S.normalize('je_xt_kpi_emphasis', null), 'soft');
-  assert.equal(S.normalize('inexistente', 'abc'), 'abc');
+test('set — chave fora do schema é no-op mas chama o callback', () => {
+  const { S, chrome } = load();
+  let done = false;
+  S.set('qualquer', 'x', () => { done = true; });
+  assert.equal(done, true);
+  assert.equal('qualquer' in chrome._store, false);
+});
+
+test('applyFrom — patch parcial só mexe na chave presente', () => {
+  const { S, body } = load();
+  body.setAttribute('data-je-kpi-style', 'gradient');
+  body.setAttribute('data-je-kpi-emphasis', 'glow');
+  S.applyFrom({ kpiCardStyle: 'flat' });
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow'); // intocado
+});
+
+test('onChanged — mudança feita pelo popup sincroniza a página aberta', () => {
+  const { S, body, chrome } = load();
+  S.load();
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
+  chrome._emit({ kpiCardStyle: { oldValue: 'flat', newValue: 'gradient' } });
+  assert.equal(body.getAttribute('data-je-kpi-style'), 'gradient');
+  assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'soft'); // não foi mexido
 });

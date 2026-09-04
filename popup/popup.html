@@ -15,64 +15,29 @@
         </svg>
         <span>TSE XT</span>
       </div>
-      <span class="version-tag" id="popupVersion">v0.2.3.1</span>
+      <span class="version-tag" id="popupVersion">v0.0.0</span>
     </div>
 
     <div class="popup-section">
-      <label class="section-label" for="targetHours">Jornada Diária Padrão (TSE)</label>
-      <div class="segmented-control">
-        <button type="button" class="segment-btn active" data-hours="7">7 Horas (TSE)</button>
-        <button type="button" class="segment-btn" data-hours="8">8 Horas</button>
+      <label class="section-label">Preenchimento dos cards de KPI</label>
+      <div class="segmented-control" data-setting="kpiCardStyle">
+        <button type="button" class="segment-btn" data-value="flat">Clássico</button>
+        <button type="button" class="segment-btn" data-value="gradient">Gradiente</button>
       </div>
+      <p class="section-hint">Vidro translúcido, como hoje, ou degradê azul&nbsp;→&nbsp;ciano da identidade visual.</p>
     </div>
 
     <div class="popup-section">
-      <div class="feature-item">
-        <div>
-          <strong>Extensão TSE XT</strong>
-          <p>Multi-sistemas internos do TSE</p>
-        </div>
-        <span class="badge-active">Novo</span>
+      <label class="section-label">Destaque dos cards de KPI</label>
+      <div class="segmented-control" data-setting="kpiCardEmphasis">
+        <button type="button" class="segment-btn" data-value="soft">Suave</button>
+        <button type="button" class="segment-btn" data-value="glow">Glow azul</button>
       </div>
-      <div class="feature-item">
-        <div>
-          <strong>Isolamento de Estilos OFF</strong>
-          <p>100% legado ao desligar o XT</p>
-        </div>
-        <span class="badge-active">Ativo</span>
-      </div>
-      <div class="feature-item">
-        <div>
-          <strong>5 KPIs com Largura Uniforme</strong>
-          <p>Previsão Zerar Mês e Horas Extras</p>
-        </div>
-        <span class="badge-active">Ativo</span>
-      </div>
-      <div class="feature-item">
-        <div>
-          <strong>Ícone de Hora Extra</strong>
-          <p>Badge SVG com micro-interação</p>
-        </div>
-        <span class="badge-active">Ativo</span>
-      </div>
-      <div class="feature-item">
-        <div>
-          <strong>Auto-Consulta nos Filtros</strong>
-          <p>Disparo automático ao alterar campo</p>
-        </div>
-        <span class="badge-active">Ativo</span>
-      </div>
-      <div class="feature-item">
-        <div>
-          <strong>Drawer de Serviços</strong>
-          <p>Menu lateral tátil sem sobreposição</p>
-        </div>
-        <span class="badge-active">Ativo</span>
-      </div>
+      <p class="section-hint">Sombra tátil discreta ou brilho azul mais profundo, sempre visível.</p>
     </div>
 
     <div class="popup-footer">
-      <button id="btnReload" class="btn-primary">Atualizar Página do Portal</button>
+      <button id="btnReload" class="btn-primary">Atualizar página do portal</button>
     </div>
   </div>
   <script src="popup.js"></script>

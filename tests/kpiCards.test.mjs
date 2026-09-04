@@ -131,15 +131,15 @@ test('KPI 4 — blocos +50% e +100% e resto do teto de 60h', () => {
   assert.ok(html.includes('je-kpi-heauth-gear'), 'tem o ⚙ do editor');
 });
 
-test('KPI 4 com HE autorizada configurada — mostra auth / feito / aberto', () => {
+test('KPI 4 com HE autorizada configurada — mostra aut / feito / aberto', () => {
   const html = M.buildKpiCardsHTML(makeKpi({
     hasHEAutorizadoConfig: true,
     authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
     authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00'
   }));
   assertClean(html);
-  assert.ok(html.includes('auth 20:00'));
-  assert.ok(html.includes('auth 10:00'));
+  assert.ok(html.includes('aut 20:00'));
+  assert.ok(html.includes('aut 10:00'));
   assert.ok(html.includes('aberto <strong>07:45</strong>'), 'aberto semana/sáb = 20:00 - 12:15');
   assert.ok(html.includes('aberto <strong>04:00</strong>'), 'aberto dom/fer = 10:00 - 06:00');
 });
@@ -151,5 +151,5 @@ test('KPI 4 — feito passou do autorizado', () => {
     authWeekdaySatMin: 600, authWeekdaySatFormatted: '10:00'
   }));
   assertClean(html);
-  assert.ok(html.includes('passou do auth.'));
+  assert.ok(html.includes('passou do aut.'));
 });

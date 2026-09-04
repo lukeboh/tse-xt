@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.7';
+  const CURRENT_VERSION = '0.5.8';
 
   const CHANGELOG = [
+    {
+      version: '0.5.8',
+      date: '2026-09-04',
+      title: 'Acabamento dos cards e preferências na janela da extensão',
+      features: [
+        'A faixa de acento no topo do card de KPI agora acompanha as quinas arredondadas — antes as pontas escapavam do card.',
+        'As preferências de aparência (preenchimento Clássico/Gradiente e destaque Suave/Glow azul) saíram do ícone de engrenagem e passaram para a janela da extensão (popup), guardadas em chrome.storage e aplicadas na hora, mesmo com a página aberta.',
+        'Janela da extensão enxuta: saiu a escolha de jornada 7h/8h (a detecção é automática por dia) e a lista de recursos que não era configuração. Ficaram as duas opções de aparência e o botão de atualizar a página.',
+        'Card "Hora Extra (Pecúnia)": o rótulo "auth" virou "aut" (autorizado).'
+      ]
+    },
     {
       version: '0.5.7',
       date: '2026-09-03',
