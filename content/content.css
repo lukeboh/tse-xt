@@ -227,6 +227,13 @@ body:not(.je-theme-transitioning) .je-kpi-card {
 .je-topbar {
   position: sticky;
   top: 12px;
+  /* margin-top igual ao "top" do sticky acima: sem isso, a topbar nasce
+     deslocada 12px do próprio lugar no fluxo (sticky se comporta como
+     relative até "grudar"), e esses 12px "comiam" o gap de 16px do
+     .je-app-header até o próximo irmão (sobrava só ~4px visual). Com o
+     mesmo valor aqui, a posição estática já nasce onde o sticky ia
+     empurrar — nenhum deslocamento sobra pra roubar do gap. */
+  margin-top: 12px;
   z-index: 1000;
   /* espaçamento pro próximo irmão vem do gap do .je-app-header (16px) */
   background: var(--je-glass-header);
