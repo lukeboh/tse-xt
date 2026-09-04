@@ -3,6 +3,16 @@
    v0.1.15 - Isolamento Rigoroso de Estilos XT (Nada Modernizado no Modo OFF)
    ========================================================================== */
 
+/* Anti-FOUC: content.js marca <html class="je-xt-boot"> de forma síncrona em
+   document_start (antes do primeiro paint) quando o TSE XT está ativo, e só
+   remove a classe depois que a topbar, o formulário e a tabela já foram
+   modernizados — assim o usuário nunca chega a ver o layout nativo por um
+   instante antes da transformação. Uma válvula de segurança em content.js
+   garante a revelação mesmo se a montagem falhar. */
+html.je-xt-boot {
+  visibility: hidden !important;
+}
+
 :root {
   /* Paleta Institucional TSE Aprimorada */
   --je-primary-dark: #0a2540;

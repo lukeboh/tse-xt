@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.8';
+  const CURRENT_VERSION = '0.5.9';
 
   const CHANGELOG = [
+    {
+      version: '0.5.9',
+      date: '2026-09-04',
+      title: 'Carregamento sem flash do layout nativo',
+      features: [
+        'Com o TSE XT ativo, a página inteira fica escondida (mas já sendo montada) desde antes do primeiro paint e só é revelada quando a topbar, o formulário e a tabela já estão totalmente modernizados — o usuário não chega mais a ver, nem por um instante, o layout nativo do portal antes da transformação.',
+        'Válvula de segurança: se algo impedir a montagem (erro, página não suportada), a página é revelada em até ~1,2s, para nunca travar a tela do usuário numa tela em branco.',
+        'Com o TSE XT desligado a página carrega normalmente, sem qualquer espera — a mudança só existe quando há uma transformação visual a esconder.'
+      ]
+    },
     {
       version: '0.5.8',
       date: '2026-09-04',
