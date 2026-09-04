@@ -349,7 +349,11 @@ window.JEPessoasModernizer = (function () {
     // rgba(0,102,204,0.08) de trilho, gradiente no preenchimento, transição
     // de 0.8s). A única fonte do autorizado é o SAEX — sem autorização pra
     // aquele bloco, a barra fica vazia (0%) e o texto mostra só o "feito".
+    // Enquanto a consulta ao SAEX ainda está em andamento (heAuthLoading),
+    // um spinner aparece no lugar do denominador em vez de nada.
     const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
+    const heAuthLoading = !!kpiData.heAuthLoading;
+    const heauthSpinner = '<span class="je-kpi-heauth-spinner" title="Consultando o autorizado no SAEX…"></span>';
     function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color, gradient) {
       const hasAuth = hasHEConfig && authMin > 0;
       const over = hasAuth && doneMin > authMin;
@@ -359,7 +363,7 @@ window.JEPessoasModernizer = (function () {
           <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9px; opacity:0.7;">${pct}</span></span>
           <span>${hasAuth
             ? `<strong style="color:${over ? '#db2777' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>`
-            : `<strong style="color:${color};">${doneFmt}</strong>`}</span>
+            : `<strong style="color:${color};">${doneFmt}</strong>${heAuthLoading ? heauthSpinner : ''}`}</span>
         </div>
         <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
           <div style="width:${barPct}%; height:100%; background:${over ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : gradient}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
@@ -380,7 +384,7 @@ window.JEPessoasModernizer = (function () {
     const execBarPct = execTargetMin > 0 ? Math.min(100, Math.round((pecTotalMin / execTargetMin) * 100)) : 0;
     const execLine = hasAuthTotal
       ? `Executado: <strong style="color:${execOver ? '#db2777' : '#0a2540'};">${kpiData.pecuniaTotalFormatted}</strong> / ${kpiData.authTotalHoursFormatted} Autorizadas <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês)</span>`
-      : `Executado: <strong style="color:#0a2540;">${kpiData.pecuniaTotalFormatted}</strong> <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês: resta ${kpiData.pecuniaLegalMonthlyRemainingFormatted})</span>`;
+      : `Executado: <strong style="color:#0a2540;">${kpiData.pecuniaTotalFormatted}</strong>${heAuthLoading ? heauthSpinner : ''} <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês: resta ${kpiData.pecuniaLegalMonthlyRemainingFormatted})</span>`;
 
     return `
       <!-- KPI 1: Saída de Hoje (jornada de hoje + zerar o mês) -->

@@ -46,6 +46,10 @@ window.JEPessoasKPI = (function () {
     const authWeekdaySatMin = Math.max(0, heAut.wkSatMin || 0);
     const authSundayHolidayMin = Math.max(0, heAut.sunHolMin || 0);
     const heAutorizadoSource = heAut.source || null;
+    // Sinaliza que a leitura do SAEX ainda está em andamento (1ª pintura do
+    // card, antes do fetch resolver) — domModernizer usa isso pra mostrar um
+    // spinner no lugar do denominador em vez de "sem autorizado".
+    const heAuthLoading = !!heAut.loading;
     const targetDailyMinutes = dailyTargetHours * 60;
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (!table) return null;
@@ -388,6 +392,7 @@ window.JEPessoasKPI = (function () {
       pecuniaLegalMonthlyRemainingFormatted: formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
       hasHEAutorizadoConfig,
       heAutorizadoSource,
+      heAuthLoading,
       authWeekdaySatMin,
       authSundayHolidayMin,
       authWeekdaySatFormatted: formatMinutesToTime(authWeekdaySatMin),
