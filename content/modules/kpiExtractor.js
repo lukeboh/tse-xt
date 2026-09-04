@@ -342,6 +342,21 @@ window.JEPessoasKPI = (function () {
     const exceededTimeFormatted = formatMinutesToTime(exceededMinutes);
     const barFillPercent = Math.min(100, progressPercent);
 
+    // --- Planejamento do mês (proposta docs/proposta-kpis-planejamento.md) ---
+    const regime = hasHybridWorkInMonth ? 'hibrido'
+      : (hasAuthorizedHEInMonth ? 'he'
+        : (isReducedRecessMonth ? 'recesso' : 'normal'));
+    const bancoBalanceMin = parseTimeToMinutes(accumulatedBankBalance);
+    const plan = deriveMonthPlan({
+      monthBalanceMin: totalExceedMinutesMonth,
+      bancoBalanceMin,
+      regime,
+      homologPreviewMinutes,
+      pecuniaWeekdaySatMinutes,
+      pecuniaSundayHolidayMinutes
+      // authWeekdaySatMin / authSundayHolidayMin entram na F2
+    });
+
     return {
       todayStr,
       todayData,
@@ -349,8 +364,21 @@ window.JEPessoasKPI = (function () {
       hasHybridWorkInMonth,
       hasAuthorizedHEInMonth,
       isReducedRecessMonth,
+      regime,
       homologPreviewMinutes,
       homologPreviewFormatted: formatMinutesToTime(homologPreviewMinutes),
+
+      // Planejamento do mês
+      monthBalanceMin: totalExceedMinutesMonth,
+      monthBalanceFormatted: formatMinutesToTime(totalExceedMinutesMonth, true),
+      bancoBalanceMin,
+      ...plan,
+      bancoWillAddFormatted: formatMinutesToTime(plan.bancoWillAddMin),
+      bancoWillConsumeFormatted: formatMinutesToTime(plan.bancoWillConsumeMin),
+      bancoOverdraftFormatted: formatMinutesToTime(plan.bancoOverdraftMin),
+      pecuniaOpenWeekdaySatFormatted: formatMinutesToTime(plan.pecuniaOpenWeekdaySatMin),
+      pecuniaOpenSundayHolidayFormatted: formatMinutesToTime(plan.pecuniaOpenSundayHolidayMin),
+      pecuniaLegalMonthlyRemainingFormatted: formatMinutesToTime(plan.pecuniaLegalMonthlyRemainingMin),
       estimatedExit,
       workedMinutesToday,
       remainingMinutesToday,
@@ -391,8 +419,73 @@ window.JEPessoasKPI = (function () {
     };
   }
 
+  /**
+   * Deriva os números de planejamento do mês a partir de valores já extraídos.
+   * Função pura — testada em tests/kpiPlan.test.mjs.
+   *
+   * @param {Object} o
+   * @param {number} o.monthBalanceMin           saldo líquido do mês (+ credor / − devedor)
+   * @param {number} o.bancoBalanceMin           saldo atual do banco de horas
+   * @param {'normal'|'he'|'hibrido'|'recesso'} o.regime
+   * @param {number} o.homologPreviewMinutes     Úteis×1 + Sáb×1,5 + DomFer×2 do rodapé
+   * @param {number} o.pecuniaWeekdaySatMinutes  pecúnia já feita — semana + sábado (+50%)
+   * @param {number} o.pecuniaSundayHolidayMinutes pecúnia já feita — domingo + feriado (+100%)
+   * @param {number} [o.authWeekdaySatMin]       HE autorizada semana/sábado (F2 — input manual)
+   * @param {number} [o.authSundayHolidayMin]    HE autorizada domingo/feriado (F2 — input manual)
+   */
+  function deriveMonthPlan(o) {
+    o = o || {};
+    const bal = o.monthBalanceMin || 0;
+    const banco = Math.max(0, o.bancoBalanceMin || 0);
+    const regime = o.regime || 'normal';
+    const homologPreview = Math.max(0, o.homologPreviewMinutes || 0);
+    const pecWkSat = Math.max(0, o.pecuniaWeekdaySatMinutes || 0);
+    const pecSunHol = Math.max(0, o.pecuniaSundayHolidayMinutes || 0);
+    const authWkSat = Math.max(0, o.authWeekdaySatMin || 0);
+    const authSunHol = Math.max(0, o.authSundayHolidayMin || 0);
+
+    const MONTHLY_CAP = (window.JEPessoasLegal && window.JEPessoasLegal.MAX_HE_MES_MIN && window.JEPessoasLegal.MAX_HE_MES_MIN.valor) || 3600;
+
+    const balanceStatus = bal > 0 ? 'credor' : (bal < 0 ? 'devedor' : 'zero');
+
+    // O consumo automático do banco só acontece no regime Normal.
+    // Híbrido (Port. 490/2022 art. 22), HE autorizado (Port. 380/2026 art. 13) e
+    // recesso (Port. 885/2024) não consomem o saldo automaticamente.
+    const canConsumeBanco = regime === 'normal';
+
+    let bancoWillConsumeMin = 0;
+    let bancoOverdraftMin = 0;
+    let bancoWillAddMin = 0;
+
+    if (balanceStatus === 'devedor' && canConsumeBanco) {
+      const deficit = Math.abs(bal);
+      bancoWillConsumeMin = Math.min(deficit, banco);
+      bancoOverdraftMin = Math.max(0, deficit - banco);
+    } else if (balanceStatus === 'credor') {
+      // O que já está marcado como homologável vai para o banco (com fator).
+      bancoWillAddMin = regime === 'hibrido' ? 0 : homologPreview;
+    }
+
+    const pecuniaOpenWeekdaySatMin = Math.max(0, authWkSat - pecWkSat);
+    const pecuniaOpenSundayHolidayMin = Math.max(0, authSunHol - pecSunHol);
+    const pecuniaTotalDoneMin = pecWkSat + pecSunHol;
+    const pecuniaLegalMonthlyRemainingMin = Math.max(0, MONTHLY_CAP - pecuniaTotalDoneMin);
+
+    return {
+      balanceStatus,
+      bancoWillConsumeMin,
+      bancoOverdraftMin,
+      bancoWillAddMin,
+      pecuniaOpenWeekdaySatMin,
+      pecuniaOpenSundayHolidayMin,
+      pecuniaTotalDoneMin,
+      pecuniaLegalMonthlyRemainingMin
+    };
+  }
+
   return {
     extractKPIs,
+    deriveMonthPlan,
     parseTimeToMinutes,
     formatMinutesToTime
   };

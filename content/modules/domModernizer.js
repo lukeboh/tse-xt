@@ -297,20 +297,46 @@ window.JEPessoasModernizer = (function () {
 
     const dashboard = document.createElement('div');
     dashboard.className = 'je-kpi-dashboard';
+    dashboard.innerHTML = buildKpiCardsHTML(kpiData);
 
-    const isPositiveBank = !kpiData.accumulatedBankBalance.startsWith('-');
-    const isZeroMonthPositive = kpiData.zeroMonthStatus === 'positive';
-    const isZeroMonthNegative = kpiData.zeroMonthStatus === 'negative';
+    const appHeader = getAppHeaderContainer();
+    appHeader.appendChild(dashboard);
+  }
+
+  // Monta o HTML dos 5 KPIs a partir de `kpiData` (função pura de string — testável).
+  function buildKpiCardsHTML(kpiData) {
+    const isPositiveBank = !String(kpiData.accumulatedBankBalance || '').startsWith('-');
 
     const URLS = (window.JEPessoasLegal && window.JEPessoasLegal.URLS) || {};
     const linkNorm = (url, txt, title) =>
       `<a href="${url}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''} style="color:inherit; text-decoration:underline; text-underline-offset:2px;">${txt}</a>`;
 
-    dashboard.innerHTML = `
-      <!-- Card 1: Previsão Saída p/ Completar Expediente -->
-      <div class="je-kpi-card" title="Horário estimado de saída para completar as ${kpiData.targetDailyHours}h de hoje">
+    // --- Planejamento: cores e textos derivados ---
+    const bs = kpiData.balanceStatus || (kpiData.monthBalanceMin > 0 ? 'credor' : (kpiData.monthBalanceMin < 0 ? 'devedor' : 'zero'));
+    const balColor = bs === 'credor' ? '#059669' : (bs === 'devedor' ? '#d97706' : '#475569');
+    const balLabel = bs === 'credor' ? 'credor' : (bs === 'devedor' ? 'devedor' : 'zerado');
+
+    // Linha do KPI 3 (Banco) — para onde vão / de onde vêm as horas do mês
+    let bancoFlowLine;
+    if (kpiData.hasHybridWorkInMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span>${linkNorm(URLS.prt490_2022 || '#', 'Sem acúmulo', 'Portaria-TSE 490/2022, art. 22')}</span>`;
+    } else if (kpiData.hasAuthorizedHEInMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`;
+    } else if (kpiData.isReducedRecessMonth) {
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">Recesso 5h</span><span>Acúmulo só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Port. 885/2024', 'Portaria-TSE 885/2024')})</span>`;
+    } else if (bs === 'credor' && kpiData.bancoWillAddMin > 0) {
+      bancoFlowLine = `<span class="je-badge-positive">+${kpiData.bancoWillAddFormatted} homologáveis</span><span>→ banco</span>`;
+    } else if (bs === 'devedor' && kpiData.bancoWillConsumeMin > 0) {
+      bancoFlowLine = `<span class="je-badge-negative">−${kpiData.bancoWillConsumeFormatted} do banco</span>${kpiData.bancoOverdraftMin > 0 ? `<span title="Excede o saldo do banco — vira débito / Resíduo de Horas">· vira débito ${kpiData.bancoOverdraftFormatted}</span>` : ''}`;
+    } else {
+      bancoFlowLine = `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`;
+    }
+
+    return `
+      <!-- KPI 1: Saída de Hoje (jornada de hoje + zerar o mês) -->
+      <div class="je-kpi-card" title="Horário para completar a jornada de hoje (${kpiData.targetDailyHours}h) e, na 2ª linha, para zerar o saldo do mês.">
         <div class="je-kpi-header">
-          <span class="je-kpi-title">Saída Expediente</span>
+          <span class="je-kpi-title">Saída de Hoje</span>
           <div class="je-kpi-icon-wrapper">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -319,17 +345,40 @@ window.JEPessoasModernizer = (function () {
           </div>
         </div>
         <div class="je-kpi-value" style="color: #0077ff;">${kpiData.estimatedExit}</div>
-        <div class="je-kpi-subtext">
-          ${!kpiData.hasTodayRow
-            ? `<span style="opacity: 0.45;">—</span>`
+        <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 2px;">
+          <span>${!kpiData.hasTodayRow
+            ? `Jornada de ${kpiData.targetDailyHours}h`
             : (kpiData.remainingMinutesToday > 0
-              ? `<span>Faltam <strong>${kpiData.remainingTimeFormatted}</strong> hoje</span>`
-              : `<span>Jornada de hoje <strong>cumprida</strong></span>`)}
+              ? `Jornada ${kpiData.targetDailyHours}h · faltam <strong>${kpiData.remainingTimeFormatted}</strong>`
+              : `Jornada de hoje <strong>cumprida</strong>`)}</span>
+          <span style="font-size: 10.5px; color: #64748b;">Zerar mês: <strong>${kpiData.estimatedExitToZeroMonth}</strong>${/^\d/.test(kpiData.estimatedExitToZeroMonth || '') ? ` (${kpiData.zeroMonthSubtext.replace(/<[^>]+>/g, '')})` : ''}</span>
         </div>
       </div>
 
-      <!-- Card 2: Saldo Acumulado do Banco de Horas -->
-      <div class="je-kpi-card" title="${kpiData.hasAuthorizedHEInMonth && !kpiData.hasHybridWorkInMonth ? 'Mês com hora extra autorizada: o consumo do banco é vedado (Portaria 380/2026 art. 13), mas a parcela homologada continua sendo creditada.' : 'Saldo homologado no banco de horas institucional'}">
+      <!-- KPI 2: Saldo do Mês (devedor / credor) -->
+      <div class="je-kpi-card" title="Saldo líquido do mês (excedente − pecúnia), já com a projeção de hoje e a compensação intra-mês. Positivo = credor, negativo = devedor.">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Saldo do Mês</span>
+          <div class="je-kpi-icon-wrapper" style="background: ${bs === 'credor' ? 'rgba(16, 185, 129, 0.12)' : (bs === 'devedor' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.1)')}; color: ${balColor};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-value" style="color: ${balColor};">${kpiData.monthBalanceFormatted}</div>
+        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
+          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+        <div class="je-kpi-subtext">
+          <span class="${bs === 'credor' ? 'je-badge-positive' : (bs === 'devedor' ? 'je-badge-negative' : '')}">${balLabel}</span>
+          <span>${kpiData.remainingWorkingDaysMonth > 0 ? `${kpiData.remainingWorkingDaysMonth} dias úteis restantes` : 'mês encerrado'}</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Banco de Horas (saldo + o que o mês adiciona/consome) -->
+      <div class="je-kpi-card" title="Saldo atual do banco de horas e o que este mês tende a adicionar (homologação) ou consumir.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Banco de Horas</span>
           <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#dc2626'};">
@@ -340,24 +389,39 @@ window.JEPessoasModernizer = (function () {
             </svg>
           </div>
         </div>
-        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#dc2626'};">
-          ${kpiData.accumulatedBankBalance}
+        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#dc2626'};">${kpiData.accumulatedBankBalance}</div>
+        <div class="je-kpi-subtext">${bancoFlowLine}</div>
+      </div>
+
+      <!-- KPI 4: Hora Extra (Pecúnia) — por tipo de dia -->
+      <div class="je-kpi-card" title="Horas extras que serão pagas em pecúnia, separadas por tipo de dia. Semana/Sábado = +50%; Domingo/Feriado = +100%.">
+        <div class="je-kpi-header">
+          <span class="je-kpi-title">Hora Extra (Pecúnia)</span>
+          <div class="je-kpi-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+        </div>
+        <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 4px; margin: 2px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px;">
+            <span style="color: #64748b; font-weight: 600;">Semana / Sábado <span style="font-size:9.5px; opacity:0.7;">+50%</span></span>
+            <strong style="color: #0a2540; font-size: 13px;">${kpiData.pecuniaWeekdaySat}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px;">
+            <span style="color: #64748b; font-weight: 600;">Domingo / Feriado <span style="font-size:9.5px; opacity:0.7;">+100%</span></span>
+            <strong style="color: #7c3aed; font-size: 13px;">${kpiData.pecuniaSundayHoliday}</strong>
+          </div>
         </div>
         <div class="je-kpi-subtext">
-          ${kpiData.hasHybridWorkInMonth
-            ? `<span class="je-badge-positive" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">Regime Híbrido</span><span title="Portaria 490/2022 art. 22: não se adquire banco de horas em teletrabalho/híbrido.">${linkNorm(URLS.prt490_2022 || '#', 'Sem acúmulo de BH', 'Portaria-TSE 490/2022, art. 22')}</span>`
-            : (kpiData.hasAuthorizedHEInMonth
-              ? `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado neste mês (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13: no mês com HE autorizada o saldo do banco não pode ser consumido; a parcela homologada continua sendo creditada.')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`
-              : (kpiData.isReducedRecessMonth
-                ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;">Recesso · jornada 5h</span><span>Acúmulo de BH só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Portaria 885/2024', 'Portaria-TSE 885/2024 e sucessoras: no recesso a jornada é de 5h e o excedente só vira banco por decisão da Diretoria-Geral.')})</span>`
-                : `<span class="${isPositiveBank ? 'je-badge-positive' : 'je-badge-negative'}">${isPositiveBank ? 'Positivo' : 'Débito'}</span><span>Homologado</span>`))}
+          <span title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">Teto 60h/mês: resta <strong>${kpiData.pecuniaLegalMonthlyRemainingFormatted}</strong></span>
         </div>
       </div>
 
-      <!-- Card 3: Meta / Progresso do Mês (Fração Ordinária Feito/Esperado) -->
-      <div class="je-kpi-card" title="Progresso da meta de horas ordinárias trabalhadas no mês (Meta: ${kpiData.totalExpectedTimeFormatted})">
+      <!-- KPI 5: Meta do Mês (jornada ordinária) -->
+      <div class="je-kpi-card" title="Progresso da jornada ordinária do mês (7h/8h/5h por dia útil, sem hora extra). Meta: ${kpiData.totalExpectedTimeFormatted}.">
         <div class="je-kpi-header">
-          <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : (kpiData.isTargetExceeded ? 'Meta Superada' : 'Meta do Mês')} (${kpiData.progressPercent}%)</span>
+          <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : 'Meta do Mês'} (${kpiData.progressPercent}%)</span>
           <div class="je-kpi-icon-wrapper" style="background: ${kpiData.isTargetExceeded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 102, 204, 0.1)'}; color: ${kpiData.isTargetExceeded ? '#059669' : 'var(--je-primary)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -369,72 +433,23 @@ window.JEPessoasModernizer = (function () {
         </div>
         <div class="je-kpi-value" style="display: flex; align-items: baseline; justify-content: space-between; gap: 4px;">
           <span>${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></span>
-          ${kpiData.isTargetExceeded 
-            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>` 
+          ${kpiData.isTargetExceeded
+            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>`
             : ''}
         </div>
-        
-        <!-- Barra de Progresso com Indicador de Meta e Extrapolação -->
         <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
           <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
         </div>
-
         <div class="je-kpi-subtext">
           ${kpiData.hasHybridWorkInMonth
             ? `<span>${kpiData.totalExpectedMinutesMonth === 0 ? 'Sem exigência presencial' : `Faltam <strong>${kpiData.remainingHoursFormatted}</strong> presencial`}</span>`
             : (kpiData.isTargetExceeded
               ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
-              : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias restantes</span>`)}
-          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024). Dias com intervalo de almoço seguem 8h.">meta reduzida · recesso 5h</span>` : ''}
-        </div>
-      </div>
-
-      <!-- Card 4: Previsão Saída p/ Zerar Saldo do Mês -->
-      <div class="je-kpi-card" title="Horário de saída para zerar o saldo acumulado até hoje (para mais ou para menos)">
-        <div class="je-kpi-header">
-          <span class="je-kpi-title">Saída p/ Zerar Mês</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${isZeroMonthPositive ? 'rgba(14, 165, 233, 0.1)' : (isZeroMonthNegative ? 'rgba(245, 158, 11, 0.1)' : 'rgba(100, 116, 139, 0.1)')}; color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#64748b')};">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-          </div>
-        </div>
-        <div class="je-kpi-value" style="color: ${isZeroMonthPositive ? '#0284c7' : (isZeroMonthNegative ? '#d97706' : '#1e293b')};">
-          ${kpiData.estimatedExitToZeroMonth}
-        </div>
-        <div class="je-kpi-subtext">
-          <span>${kpiData.zeroMonthSubtext}</span>
-        </div>
-      </div>
-
-      <!-- Card 5: Horas Extras — pecúnia a pagar por tipo de dia + saldo do mês -->
-      <div class="je-kpi-card" title="Horas de pecúnia (a pagar) acumuladas no mês, por tipo de dia. Rodapé: saldo excedente que foi para o banco de horas.">
-        <div class="je-kpi-header">
-          <span class="je-kpi-title">Horas Extras</span>
-          <div class="je-kpi-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-          </div>
-        </div>
-        <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 3px; margin: 2px 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Pecúnia úteis / Sáb:</span>
-            <strong style="color: #0a2540; font-size: 12.5px;">${kpiData.pecuniaWeekdaySat}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
-            <span style="color: #64748b; font-weight: 600;">Pecúnia Dom / Feriados:</span>
-            <strong style="color: #7c3aed; font-size: 12.5px;">${kpiData.pecuniaSundayHoliday}</strong>
-          </div>
-        </div>
-        <div class="je-kpi-subtext">
-          <span>Saldo Mês: <strong>${kpiData.totalExceedTimeFormatted}</strong></span>
+              : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias</span>`)}
+          ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(245, 158, 11, 0.16); color: #b45309;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024).">recesso 5h</span>` : ''}
         </div>
       </div>
     `;
-
-    const appHeader = getAppHeaderContainer();
-    appHeader.appendChild(dashboard);
   }
 
   function parseMinutes(str) {
@@ -1373,6 +1388,7 @@ window.JEPessoasModernizer = (function () {
     modernizeHeader,
     injectPageTitleHeader,
     injectKPICards,
+    buildKpiCardsHTML,
     modernizeTable,
     modernizeForm,
     modernizeCalendarIcons,
