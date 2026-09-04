@@ -5,7 +5,7 @@
  * chrome.storage.local (compartilhado entre popup e content script):
  *
  *   kpiCardStyle    : 'flat' (padrão) | 'gradient'
- *   kpiCardEmphasis : 'soft' (padrão) | 'glow'
+ *   kpiCardEmphasis : 'soft' | 'glow' (padrão)
  *
  * applyFrom() reflete os valores em atributos no <html> e no <body>; todo o
  * resto é CSS (body.je-xt-enabled[data-je-kpi-style="gradient"] .je-kpi-card …),
@@ -26,7 +26,7 @@ window.JEPessoasSettings = (function () {
     'kpiCardEmphasis': {
       attr: 'data-je-kpi-emphasis',
       values: ['soft', 'glow'],
-      def: 'soft'
+      def: 'glow'
     }
   };
 

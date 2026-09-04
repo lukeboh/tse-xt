@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Preferências de aparência do painel de KPIs (lidas pelo content script em
   // content/modules/settings.js via chrome.storage.local).
-  const DEFAULTS = { kpiCardStyle: 'flat', kpiCardEmphasis: 'soft' };
+  const DEFAULTS = { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' };
   const VALUES = {
     kpiCardStyle: ['flat', 'gradient'],
     kpiCardEmphasis: ['soft', 'glow']
