@@ -628,8 +628,12 @@ body.je-xt-enabled #opcoes-consulta tr {
   margin-bottom: 0 !important;
 }
 
-/* Oculta títulos de página legados duplicados */
+/* Oculta títulos de página legados duplicados — o <h2> nativo da página (fora
+   do #menu-lateral, que tem seu próprio "Menu" em h2) vira o texto do banner
+   de título genérico injetado por injectPageTitleHeader() (roadmap F2); aqui
+   só escondemos o original pra não duplicar. */
 body.je-xt-enabled #container > h2,
+body.je-xt-enabled #conteudo h2:not(#menu-lateral h2),
 body.je-xt-enabled #container > .titulo,
 body.je-xt-enabled #container > #tituloPagina,
 body.je-xt-enabled .tituloPagina,

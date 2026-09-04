@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.1';
+  const CURRENT_VERSION = '0.6.2';
 
   const CHANGELOG = [
+    {
+      version: '0.6.2',
+      date: '2026-09-04',
+      title: 'Fase 2 do roadmap de arquitetura visual — título de página genérico',
+      features: [
+        'O banner de título (breadcrumb + h1 + pill de referência) deixou de ser hardcoded para o Espelho de Ponto: em qualquer outra tela, o título vem do <h2> nativo da própria página e a categoria do breadcrumb é inferida automaticamente a partir do menu de serviços (ex.: "Meu Espaço / Financeiro / Contracheque e Rendimentos", "Meu Espaço / Banco de Horas / Extrato do banco de horas"). A pill de referência (mês/ano) só aparece quando a página realmente tem esses filtros. Espelho de Ponto e Alteração de Ponto continuam com o texto de sempre. Validado ao vivo em 3 telas via CDP.'
+      ]
+    },
     {
       version: '0.6.1',
       date: '2026-09-04',

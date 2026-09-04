@@ -236,21 +236,85 @@ window.JEPessoasModernizer = (function () {
     }
   }
 
-  function injectPageTitleHeader() {
+  // Título/breadcrumb fixos das duas telas já portadas (roadmap F1) — as
+  // únicas com modernização de formulário/tabela também hardcoded. Todas as
+  // demais páginas caem no caminho genérico abaixo (roadmap F2).
+  const KNOWN_PAGE_TITLES = {
+    espelhoMes: { title: 'Espelho de Ponto', breadcrumbCategory: 'Frequência', breadcrumbActive: 'Consulta Mensal' },
+    espelhoDia: { title: 'Alteração de Ponto', breadcrumbCategory: 'Frequência', breadcrumbActive: 'Alteração de Ponto' }
+  };
+
+  function normalizeText(str) {
+    return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  // Toda página do Meu Espaço tem um <h2> solto com o nome da funcionalidade
+  // (ex.: "Contracheque e Rendimentos"), fora do menu-lateral (que também tem
+  // seu próprio "Menu" em h2) e de qualquer coisa que o próprio TSE XT já
+  // tenha injetado (drawer, etc.). É esse <h2> nativo que vira o título
+  // genérico antes de a regra de CSS escondê-lo.
+  function isInsideInjectedUI(el) {
+    // Não usa .closest() com seletor de classe: <body class="je-xt-enabled">
+    // sempre tem prefixo "je-" quando a extensão está ativa, então bateria
+    // com QUALQUER elemento da página. Só os contêineres que o próprio TSE
+    // XT injeta (drawer, modais, topbar) têm id com esse prefixo — e parar
+    // em document.body evita a falsa positiva do body.
+    for (let node = el; node && node !== document.body; node = node.parentElement) {
+      if (node.id && node.id.indexOf('je-') === 0) return true;
+    }
+    return false;
+  }
+
+  function extractNativePageTitle() {
+    const menuLateral = document.getElementById('menu-lateral');
+    const headings = document.querySelectorAll('h2');
+    for (const h2 of headings) {
+      const text = h2.textContent.trim();
+      if (!text) continue;
+      if (menuLateral && menuLateral.contains(h2)) continue;
+      if (isInsideInjectedUI(h2)) continue;
+      return text;
+    }
+    return null;
+  }
+
+  // Acha a categoria do menu de serviços (Frequência, Financeiro, etc.) que
+  // contém o link para a página atual, comparando pelo texto do link com o
+  // título extraído — reaproveita o mesmo parser do drawer (navDrawer.js)
+  // em vez de duplicar a leitura do #menu-lateral.
+  function findBreadcrumbCategory(pageTitle) {
+    if (!pageTitle || !window.JEPessoasNavDrawer || !window.JEPessoasNavDrawer.extractMenuData) return null;
+    try {
+      const categories = window.JEPessoasNavDrawer.extractMenuData();
+      const normTitle = normalizeText(pageTitle);
+      for (const category of categories) {
+        // Categorias de 1 link só (sem submenu real) usam o próprio nome do
+        // link como título — não servem de "categoria pai", senão o
+        // breadcrumb duplicaria o mesmo texto duas vezes.
+        const isStandalone = category.links.length === 1 && normalizeText(category.links[0].name) === normalizeText(category.title);
+        if (isStandalone) continue;
+        if (category.links.some((link) => normalizeText(link.name) === normTitle)) return category.title;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function injectPageTitleHeader(profileId) {
     if (document.querySelector('.je-page-title-banner')) return;
 
-    const isEspelhoDia = window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia');
+    const known = KNOWN_PAGE_TITLES[profileId];
+    const pageTitleText = known ? known.title : (extractNativePageTitle() || 'Meu Espaço');
+    const breadcrumbCategory = known ? known.breadcrumbCategory : findBreadcrumbCategory(pageTitleText);
+    const breadcrumbActiveText = known ? known.breadcrumbActive : pageTitleText;
 
     const mesSelect = document.getElementById('mesSelecionado');
     const anoSelect = document.getElementById('anoSelecionado');
+    const hasReferencePill = !!(mesSelect || anoSelect);
     const mesNome = mesSelect && mesSelect.selectedOptions && mesSelect.selectedOptions[0] ? mesSelect.selectedOptions[0].text : 'Mês Atual';
     const anoNome = anoSelect ? anoSelect.value : new Date().getFullYear();
 
     const titleBanner = document.createElement('div');
     titleBanner.className = 'je-page-title-banner';
-
-    const breadcrumbActiveText = isEspelhoDia ? 'Alteração de Ponto' : 'Consulta Mensal';
-    const pageTitleText = isEspelhoDia ? 'Alteração de Ponto' : 'Espelho de Ponto';
 
     titleBanner.innerHTML = `
       <div class="je-title-content">
@@ -267,21 +331,21 @@ window.JEPessoasModernizer = (function () {
           <div>
             <nav class="je-breadcrumb" aria-label="Navegação">
               <span class="je-breadcrumb-item">Meu Espaço</span>
-              <span class="je-breadcrumb-separator">/</span>
-              <span class="je-breadcrumb-item">Frequência</span>
+              ${breadcrumbCategory ? `<span class="je-breadcrumb-separator">/</span><span class="je-breadcrumb-item">${escapeHTML(breadcrumbCategory)}</span>` : ''}
               <span class="je-breadcrumb-separator">/</span>
               <span class="je-breadcrumb-item active">${escapeHTML(breadcrumbActiveText)}</span>
             </nav>
             <h1 class="je-page-title">${escapeHTML(pageTitleText)}</h1>
           </div>
         </div>
+        ${hasReferencePill ? `
         <div class="je-reference-pill" title="Período de referência consultado">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
           <span>Referência: <strong class="je-ref-value">${escapeHTML(mesNome)}</strong><span class="je-ref-sep"> / </span><strong class="je-ref-value">${escapeHTML(String(anoNome))}</strong></span>
-        </div>
+        </div>` : ''}
       </div>
     `;
 
