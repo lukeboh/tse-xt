@@ -31,7 +31,11 @@ window.JEPessoasTableModernizer = (function () {
   // que o próprio TSE XT injetou.
   function isInsideInjectedUI(el) {
     for (let node = el; node && node !== document.body; node = node.parentElement) {
-      if (node.id && node.id.indexOf('je-') === 0) return true;
+      // node.id nem sempre é string: um <form> com campo name="id" expõe
+      // esse controle como propriedade nomeada, então form.id vira o
+      // elemento em vez do atributo — checar o tipo evita
+      // "node.id.indexOf is not a function" (achado no roadmap F7).
+      if (typeof node.id === 'string' && node.id.indexOf('je-') === 0) return true;
     }
     return false;
   }
