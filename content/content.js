@@ -22,6 +22,15 @@
       id: 'espelhoDia',
       isMatch: () => window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia'),
     },
+    {
+      // Tela de login (pré-autenticação) — Logout e Login_verTelaInicial*
+      // mostram o mesmo formulário nativo (#box-login), então casamos pelo
+      // próprio elemento em vez de enumerar toda variação de URL possível.
+      // Nunca detectar por URL sozinha aqui: mais seguro depender só de o
+      // formulário de login realmente existir na página.
+      id: 'login',
+      isMatch: () => !!document.getElementById('box-login'),
+    },
   ];
 
   function resolveProfileId() {
@@ -113,36 +122,66 @@
         try {
           if (window.JEPessoasModernizer) {
             window.JEPessoasModernizer.applyThemeState(isEnabled, false);
+          }
 
-            // Casca genérica: topbar, banner de título, ícones de calendário,
-            // ícones nativos de ação/status (detalhar/editar/aprovar/
-            // excluir), contador de caracteres e destaque de nomes de
-            // servidor/responsável já são agnósticos de página (lêem o DOM
-            // nativo com fallback), rodam em qualquer tela do portal
-            // (roadmap F1/F2/F5/F6/F7).
-            window.JEPessoasModernizer.modernizeHeader();
-            window.JEPessoasModernizer.injectPageTitleHeader(profileId);
-            window.JEPessoasModernizer.modernizeCalendarIcons();
-            window.JEPessoasModernizer.modernizeNativeIcons();
-            window.JEPessoasModernizer.setupGenericCharCounters();
-            window.JEPessoasModernizer.highlightUserAndManagerNames();
+          // Com o TSE XT desligado, NENHUMA modernização pode rodar — só o
+          // interruptor flutuante precisa existir, pra dar pro usuário como
+          // ligar de volta. createPersistentToggle() só adiciona um <aside>
+          // novo (escondido via CSS quando ligado, ver
+          // body.je-xt-disabled .je-persistent-toggle-bar em content.css) —
+          // nunca move nó nativo nenhum. Já modernizeGenericMoldura(), por
+          // exemplo, MOVE label/input nativos pra dentro de wrappers novos:
+          // isso muda o layout mesmo sem nenhuma classe CSS aplicada (divs
+          // são block por padrão), então não é seguro só "criar escondido"
+          // — tem que nem rodar enquanto o tema estiver desligado.
+          if (!isEnabled) {
+            if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
+              window.JEPessoasModernizer.createPersistentToggle();
+            }
+            return;
+          }
 
-            // Modernização específica de página: formulário e tabela do
-            // Espelho/Alteração de Ponto ainda são hardcoded (exigem as
-            // classes de coluna h01-h17, motivo de esquecimento, moldura de
-            // ajuste de ponto etc., que só essas duas telas têm) — só rodam
-            // quando a página bate com um perfil conhecido. Qualquer outra
-            // tela cai nos modernizadores genéricos (roadmap F3/F5/F6): o
-            // botão de busca vira o mesmo <button> moderno sem depender de
-            // função Struts nenhuma, e a tabela é decorada por texto de
-            // cabeçalho em vez de classe nativa.
-            if (profileId) {
-              window.JEPessoasModernizer.modernizeForm();
-              window.JEPessoasModernizer.modernizeTable(targetHours);
+          if (window.JEPessoasModernizer) {
+            if (profileId === 'login') {
+              // Tela de login (pré-autenticação): nenhuma parte da casca
+              // autenticada faz sentido aqui (sem servidor logado, o menu
+              // de serviços e a busca ficariam vazios/quebrados) — só um
+              // embelezamento visual do próprio formulário nativo, via CSS
+              // (ver .je-login-page em content.css). Nunca substitui nem
+              // esconde os campos matrícula/senha ou os botões de
+              // autenticação — só troca a classe do <body> que o CSS usa.
+              window.JEPessoasModernizer.mountLoginPage();
             } else {
-              window.JEPessoasModernizer.modernizeGenericFormButtons();
-              window.JEPessoasModernizer.modernizeGenericMoldura();
-              if (window.JEPessoasTableModernizer) window.JEPessoasTableModernizer.modernizeGenericTables();
+              // Casca genérica: topbar, banner de título, ícones de
+              // calendário, ícones nativos de ação/status (detalhar/editar/
+              // aprovar/excluir), contador de caracteres e destaque de
+              // nomes de servidor/responsável já são agnósticos de página
+              // (lêem o DOM nativo com fallback), rodam em qualquer tela
+              // autenticada do portal (roadmap F1/F2/F5/F6/F7).
+              window.JEPessoasModernizer.modernizeHeader();
+              window.JEPessoasModernizer.injectPageTitleHeader(profileId);
+              window.JEPessoasModernizer.modernizeCalendarIcons();
+              window.JEPessoasModernizer.modernizeNativeIcons();
+              window.JEPessoasModernizer.setupGenericCharCounters();
+              window.JEPessoasModernizer.highlightUserAndManagerNames();
+
+              // Modernização específica de página: formulário e tabela do
+              // Espelho/Alteração de Ponto ainda são hardcoded (exigem as
+              // classes de coluna h01-h17, motivo de esquecimento, moldura
+              // de ajuste de ponto etc., que só essas duas telas têm) — só
+              // rodam quando a página bate com um perfil conhecido.
+              // Qualquer outra tela cai nos modernizadores genéricos
+              // (roadmap F3/F5/F6): o botão de busca vira o mesmo <button>
+              // moderno sem depender de função Struts nenhuma, e a tabela é
+              // decorada por texto de cabeçalho em vez de classe nativa.
+              if (profileId) {
+                window.JEPessoasModernizer.modernizeForm();
+                window.JEPessoasModernizer.modernizeTable(targetHours);
+              } else {
+                window.JEPessoasModernizer.modernizeGenericFormButtons();
+                window.JEPessoasModernizer.modernizeGenericMoldura();
+                if (window.JEPessoasTableModernizer) window.JEPessoasTableModernizer.modernizeGenericTables();
+              }
             }
           }
 
@@ -178,15 +217,19 @@
           reveal();
         }
 
-        // Inicializa modais e atalhos
-        if (window.JEPessoasSearch) window.JEPessoasSearch.init();
-        if (window.JEPessoasQuickActions) window.JEPessoasQuickActions.init();
-        if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
-        if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
-        if (isEspelhoMes && window.JEPessoasLostHours) window.JEPessoasLostHours.init();
+        // Inicializa modais e atalhos — nenhum faz sentido pré-autenticação
+        // (menu de serviços e busca indexam telas que o usuário ainda não
+        // pode acessar), então não rodam na tela de login.
+        if (profileId !== 'login') {
+          if (window.JEPessoasSearch) window.JEPessoasSearch.init();
+          if (window.JEPessoasQuickActions) window.JEPessoasQuickActions.init();
+          if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
+          if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
+          if (isEspelhoMes && window.JEPessoasLostHours) window.JEPessoasLostHours.init();
 
-        // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
-        if (window.JEPessoasVersion) window.JEPessoasVersion.maybeShowDisclaimer();
+          // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
+          if (window.JEPessoasVersion) window.JEPessoasVersion.maybeShowDisclaimer();
+        }
       }
     });
   }
@@ -212,6 +255,11 @@
   let staleRetries = 0;
   const MAX_STALE_RETRIES = 5;
   function checkStaleAndRetry() {
+    // Com o tema desligado a topbar nunca é criada (de propósito — ver
+    // mountXT()), então "!hasTopBar" abaixo seria sempre verdadeiro e
+    // chamaria init() a cada mutação da página pra sempre. Sair cedo aqui
+    // evita esse loop inútil enquanto o TSE XT estiver desligado.
+    if (localStorage.getItem('je_xt_theme_enabled') === 'false') return;
     const tableMes = document.getElementById('tblEspelhoPontoMesCorrente');
     const hasTopBar = !!document.querySelector('.je-topbar');
     const hasKpiDash = !!document.querySelector('.je-kpi-dashboard');

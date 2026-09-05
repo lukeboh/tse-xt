@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.11';
+  const CURRENT_VERSION = '0.6.12';
 
   const CHANGELOG = [
+    {
+      version: '0.6.12',
+      date: '2026-09-05',
+      title: 'Tela de login modernizada (glassmorfismo, glow, logos harmonizadas) — e garantia de que NENHUMA tela muda com o TSE XT desligado',
+      features: [
+        'Novo perfil de página "login" (pré-autenticação, Logout/Login_verTelaInicial*): card #box-login ganha visual de glass card com glow respirável (nova animação jeCardGlowPulse), logos do Meu Espaço e do SGP harmonizadas, centralização real do formulário (o <table> nativo com a coluna invisível do captcha estava descentralizando o card) e largura de campo ajustada para matrícula/senha.',
+        'Diálogo nativo "Sua sessão foi encerrada..." (#mensagem/#transparencia) ganhou o mesmo tratamento de glass card, centralizado de verdade via position:fixed + transform (a posição nativa é calculada em pixels por JS do próprio portal). O botão CONFIRMAR desse diálogo é escondido/mostrado dinamicamente pelo script nativo do portal bem depois da montagem inicial — o substituto moderno agora usa um MutationObserver pra sincronizar sua visibilidade com o botão nativo em vez de checar só uma vez, então nunca mais aparece um botão moderno "fantasma" sem função.',
+        'manifest.json: exclude_matches restrito de "Login*"/"Logout*" (todo o namespace) para apenas Login_autenticar*/Login_encerrarSessao* — a própria tela de exibição do formulário de login (Logout, Login_verTelaInicialSemLogout) precisa carregar o content script para ser estilizada; só a ação de autenticar e a de encerrar sessão continuam de fora.',
+        'CORREÇÃO CRÍTICA: praticamente toda a montagem (topbar, título, ícones, contador de caracteres, agrupamento de campos em .moldura, formulário/tabela do Espelho) rodava incondicionalmente, mesmo com o toggle do TSE XT desligado — só ficava com a aparência nativa por causa de regras de CSS escopadas em body.je-xt-enabled. Isso não é 100% seguro: modernizeGenericMoldura(), por exemplo, MOVE <label>/<input> nativos pra dentro de wrappers <div> novos, e um <div> sem nenhum estilo já é block por padrão — muda o fluxo/posição de campos e botões mesmo sem nenhuma classe de tema aplicada. Comprovado com print comparando "extensão desativada" vs. "extensão habilitada com toggle desligado": os botões apareciam em posições diferentes. mountXT() agora sai antes de rodar qualquer modernizador quando o toggle está desligado — só o interruptor flutuante (createPersistentToggle(), que apenas adiciona um elemento novo, nunca move nó nativo) continua sendo criado, pra dar como ligar de volta. A mesma regra já valia para a tela de login (mountLoginPage() também só reorganiza o DOM quando ligado) e agora vale pra qualquer tela autenticada.',
+        'checkStaleAndRetry() (observador de tabela incompleta) ganhou a mesma guarda: sem o guard, com o tema desligado a topbar nunca existe e o observador reagendava init() a cada mutação da página pra sempre, sem necessidade.'
+      ]
+    },
     {
       version: '0.6.11',
       date: '2026-09-05',
