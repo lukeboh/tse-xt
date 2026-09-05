@@ -1,6 +1,6 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.3.0
+**Versão do documento:** 1.4.0
 **Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -106,6 +106,27 @@ Nenhuma das telas abaixo precisou de perfil de página dedicado — o caminho ge
 **Limitação conhecida, não corrigida (custo/benefício baixo):** quando o `<h2>` nativo e o texto do link do menu não compartilham nenhuma substring em comum (ex.: `"Benefícios Concedidos"` vs. link `"Consulta Benefícios"`; `"Acompanhamento da unidade"` vs. `"Consulta situação dos servidores"`), o breadcrumb fica só com `"Meu Espaço / <título>"`, sem a categoria intermediária. Cosmético — o título e a tabela continuam corretos. Um matching por sobreposição de palavras resolveria, mas não parece valer o risco de falsos positivos por enquanto.
 
 **Confirmado, não é regressão:** `Capacitação (relatório)` não tem `#container` — é um arquétipo de página diferente (relatório), o F1 já reage bem (não monta nada, não quebra). Ainda não mapeado quantas outras telas do menu compartilham esse arquétipo; fica para a próxima rodada de F7.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.7
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Alteração de dados dos dependentes | Assentamentos funcionais | ✅ | ✅ | n/a | — |
+| Homologação de banco de horas | Banco de Horas | ✅ ("Banco de Horas - Homologação") | ❌ (ordem de palavras invertida) | n/a (vazia até consultar) | ✅ |
+| Validade do banco de horas | Banco de Horas | ✅ (após fix "Opções de pesquisa") | ✅ | ✅ genérica | ✅ |
+| Reembolso Farmacêutico (Assistência farmacêutica) | Benefícios | ✅ | ❌ (farmacêutica/farmacêutico) | ✅ genérica (294 linhas) | ✅ "NOVO" |
+| Trabalho Híbrido | Frequência | ✅ | ✅ | ✅ genérica | ✅ |
+| Resumo Anual de Frequência | Frequência | ✅ | ✅ | ✅ genérica | ✅ |
+| Autorização das liberações médicas | Frequência | ✅ ("Análise dos pedidos de liberação médica") | ❌ | n/a (vazia até consultar) | ✅ + calendário |
+| Gestão de Serviço Extraordinário (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Declaração de Acumulação de Cargos | Declaração | ✅ | ✅ | n/a | ✅ "PESQUISAR" |
+| Carteira Funcional / Pasta Funcional Digitalizada | Assentamentos funcionais | — | — | — | — |
+
+**1 bug real encontrado e corrigido nesta rodada** (`domModernizer.js`): em "Validade do banco de horas" o primeiro `<h2>` da página é **"Opções de pesquisa:"** (rótulo da seção de filtro, não o título) — o título de verdade vem depois, num segundo `<h2>`. `firstUsableHeading()` ganhou uma lista de rótulos genéricos a ignorar (`NON_TITLE_HEADING_PATTERNS`, hoje só `/^opcoes de pesquisa\b/`) — cresce sob demanda se aparecer outro rótulo assim.
+
+**Confirmado, arquétipo novo (não é regressão):** `Carteira Funcional`/`Pasta Funcional Digitalizada` (`/smvc/identificacao/...`) é um módulo à parte, aparentemente uma SPA separada com login OAuth próprio (`autenticaje.tse.jus.br/auth/realms/administrativo/...`) — nem `#container` nem `#menu-lateral` do template clássico existem lá. TSE XT corretamente não monta nada. Terceiro arquétipo de página conhecido (além do clássico Struts com `#container` e do "relatório" tipo Capacitação): **módulo `/smvc/` com auth própria**. Não investigado a fundo — não parece haver ganho em portar o TSE XT pra dentro de uma SPA de terceiros.
+
+**Confirma padrão útil:** o fallback `input[type="submit"]` (além de `input[value="CONSULTAR"]`) já modernizou botões com texto bem diferente sem nenhum código novo — "EMITIR FICHA", "NOVO", "PESQUISAR" todos viraram `<button>` moderno de graça.
 
 ---
 
