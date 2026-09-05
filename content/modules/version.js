@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.6';
+  const CURRENT_VERSION = '0.6.7';
 
   const CHANGELOG = [
+    {
+      version: '0.6.7',
+      date: '2026-09-05',
+      title: 'Fase 7 do roadmap de arquitetura visual — mais 1 correção no título genérico e cobertura de mais 10 telas',
+      features: [
+        'Testadas ao vivo mais 10 telas (Alteração de dados dos dependentes, Homologação e Validade do banco de horas, Assistência farmacêutica, Trabalho Híbrido, Resumo Anual de Frequência, Autorização das liberações médicas, Gestão de Serviço Extraordinário, Declaração de Acumulação de Cargos, Carteira Funcional) — nenhuma precisou de código específico. Corrigido mais um caso do extrator de título: em "Validade do banco de horas" o primeiro <h2> da página é "Opções de pesquisa:" (rótulo da seção de filtro), não o título — o extrator agora ignora rótulos genéricos conhecidos antes de aceitar um heading como título. Confirmado um terceiro arquétipo de página no portal: o módulo /smvc/ (Carteira Funcional) é uma SPA à parte com login OAuth próprio, sem o shell clássico — a extensão corretamente não monta nada ali.'
+      ]
+    },
     {
       version: '0.6.6',
       date: '2026-09-05',

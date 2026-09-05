@@ -265,6 +265,17 @@ window.JEPessoasModernizer = (function () {
     return false;
   }
 
+  // Rótulos de seção genéricos que aparecem como heading em várias telas mas
+  // nunca são o título da página — ex.: "Validade do banco de horas" tem
+  // "Opções de pesquisa:" como <h2> ANTES do título de verdade. Sem esse
+  // filtro, o extrator pegaria o rótulo da seção de filtro em vez do título.
+  const NON_TITLE_HEADING_PATTERNS = [/^opcoes de pesquisa\b/];
+
+  function isGenericSectionLabel(text) {
+    const normalized = normalizeText(text);
+    return NON_TITLE_HEADING_PATTERNS.some((re) => re.test(normalized));
+  }
+
   function firstUsableHeading(selector, menuLateral) {
     const headings = document.querySelectorAll(selector);
     for (const heading of headings) {
@@ -272,6 +283,7 @@ window.JEPessoasModernizer = (function () {
       if (!text) continue;
       if (menuLateral && menuLateral.contains(heading)) continue;
       if (isInsideInjectedUI(heading)) continue;
+      if (isGenericSectionLabel(text)) continue;
       return text;
     }
     return null;
