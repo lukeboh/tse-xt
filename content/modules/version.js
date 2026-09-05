@@ -5,9 +5,22 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.10';
+  const CURRENT_VERSION = '0.6.11';
 
   const CHANGELOG = [
+    {
+      version: '0.6.11',
+      date: '2026-09-05',
+      title: 'Refinamento visual genérico: ícones semânticos, botões secundários, contador de caracteres e agrupamento de campos por feedback do usuário',
+      features: [
+        'Diálogo nativo de mensagem (.grupoBotoes): botões centralizados e ícone do botão CONFIRMAR trocado de lupa (busca) para check (confirmação) — cada ação agora usa o ícone certo (lupa só para Consultar/Pesquisar, "+" para Novo, check para as demais).',
+        'modernizeGenericFormButtons() reconhece mais textos por prefixo (ex.: "Consultar Endereço", "OK") e, quando há mais de um botão de ação no mesmo formulário, o 2º em diante vira um botão secundário (.je-btn-secondary, cinza) em vez de ficar sem estilo.',
+        'Novo setupGenericCharCounters(): substitui o texto estático "Máx. N caracteres" por um contador ao vivo em qualquer textarea fora do Espelho/Alteração de Ponto, detectando o limite real da tela (ex.: 100 no motivo de cancelamento de compensação de horas) em vez de usar um valor fixo.',
+        'Textarea genérico ganhou o mesmo visual (borda, cantos arredondados, foco) usado nos demais campos.',
+        'Novo modernizeNativeIcons(): substitui ícones nativos .png/.jpg de ação/status em tabelas (detalhar, editar, aprovar, excluir, aprovado) por SVGs no mesmo estilo do resto da extensão, preservando clique e estado desabilitado.',
+        'Novo modernizeGenericMoldura(): agrupa automaticamente rótulo+campo dentro de qualquer .moldura fora do Espelho, corrigindo formulários onde cada campo ocupava 100% da largura em vez de ficar em colunas.'
+      ]
+    },
     {
       version: '0.6.10',
       date: '2026-09-05',
