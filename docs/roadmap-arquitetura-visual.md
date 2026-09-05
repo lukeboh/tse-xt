@@ -1,6 +1,6 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.6.0
+**Versão do documento:** 1.7.0 (roadmap concluído — F1 a F7 entregues)
 **Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -13,7 +13,7 @@
 | F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ✅ v0.6.4 |
 | F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ✅ v0.6.5 |
 | F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ✅ v0.6.5 |
-| F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ⏳ |
+| F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ✅ v0.6.9 |
 
 ---
 
@@ -76,9 +76,13 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 - **Entregue nesta fase:** `domModernizer.js` ganhou `modernizeGenericFormButtons()` — mesma troca visual de `input[value="CONSULTAR"]`/`input[type="submit"]` por um `<button>` moderno que o Espelho já tinha, mas sem nenhuma parte específica daquelas telas (nome de função Struts, motivo de esquecimento, moldura de ajuste de ponto): o clique só reaproveita `legacyBtn.click()`. `modernizeCalendarIcons()` e `highlightUserAndManagerNames()` (já genéricos, só não eram chamados fora do Espelho) subiram para a casca genérica em `content.js`, rodando em qualquer página. Com isso o trio título+tabela+formulário fica genérico por completo — nenhuma tela nova precisa de código JS dedicado a menos que tenha lógica de negócio própria.
 - **Validado ao vivo (CDP):** botão "CONSULTAR" vira `<button class="je-btn-consultar">` em ambas as telas; Espelho de Ponto sem duplicação (modernizeCalendarIcons/highlightUserAndManagerNames idempotentes, chamadas uma vez só efetivamente).
 
-## F7 — 🟡 Expansão incremental para as demais funcionalidades
+## F7 — ✅ Expansão incremental para as demais funcionalidades (v0.6.9)
 
 - **Ação:** portar as demais telas do menu uma a uma, priorizando por uso, cada uma como um perfil de página curto (a maior parte do trabalho pesado já foi feito em F1–F4). Registrar aqui cada tela portada e eventuais desvios de padrão encontrados.
+- **Resultado:** as ~30 telas do menu clássico (Struts, com `#container`) foram varridas ao vivo via CDP — **nenhuma precisou de perfil de página dedicado**. O caminho genérico (título, tabela, formulário/botão) se provou suficiente para todo o menu clássico. 6 bugs reais encontrados e corrigidos ao longo da varredura (ver seções de cobertura abaixo), incluindo um crash silencioso que derrubava a montagem inteira em qualquer página com um `<form>` contendo campo `name="id"` — o mais grave do épico inteiro, só descoberto capturando exceções JS via CDP.
+- **3 arquétipos de página mapeados no portal:** (a) clássico Struts com `#container` — cobertura completa; (b) "relatório" sem `#container` (ex.: Consulta AQ) — TSE XT não monta nada, sem quebrar; (c) módulo `/smvc/` com login OAuth próprio (Carteira Funcional, Participação em Conselhos ou Assemelhados — só 2 telas) — TSE XT idem não interfere.
+- **Última verificação (Pasta Funcional Digitalizada):** lista simples de documentos (82 links de download, sem tabela nem formulário de busca) — título/breadcrumb/topbar/drawer/FAB corretos, sem erro JS. Passou limpo, sem necessidade de ajuste.
+- **Critério de pronto:** atingido — expansão via caminho genérico é a estratégia vencedora; perfis de página dedicados (como cogitado originalmente) só seriam necessários para uma tela com lógica de negócio própria (KPIs, cálculos), não para replicar o padrão visual.
 
 ### Cobertura verificada ao vivo (CDP) — v0.6.6
 
@@ -160,6 +164,8 @@ Com esta rodada, as ~30 telas do menu clássico (Struts, com `#container`) estã
 **1 gap real encontrado e corrigido** (`domModernizer.js`): o formulário de "Atualização de dados cadastrais" usa `input[type="button"]` (não `type="submit"`) com valores `"Consultar Endereço"` e **"SALVAR"** — nenhum batia no seletor genérico de botão (`input[value="CONSULTAR"], input[type="submit"]`), deixando o botão de salvar sem a modernização visual. `modernizeGenericFormButtons()` ganhou mais valores reconhecidos (case-insensitive): `SALVAR`, `PESQUISAR`, `CONFIRMAR`, `GRAVAR`, `ENVIAR`, `NOVO` — sempre ações primárias/positivas, nunca "Cancelar"/"Voltar"/"Excluir". Não revalidado ao vivo nesta tela específica para evitar disparar um novo código de verificação por e-mail (2FA) — mecanismo é o mesmo já comprovado (seletor de atributo, sem lógica nova).
 
 Pendências reais que ainda podem aparecer em telas não cobertas: outros valores de botão primário não listados (ex.: "ATUALIZAR", "REGISTRAR") ficariam sem modernização até serem encontrados e adicionados — mesmo padrão de manutenção incremental usado até aqui.
+
+**Última verificação — Pasta Funcional Digitalizada** (`AssentamentoFuncionalAction`): lista simples de 82 links de documentos pra download, sem tabela nem formulário de busca. Título "Pasta funcional digitalizada", breadcrumb "Meu Espaço / Assentamentos funcionais / Pasta funcional digitalizada", topbar/drawer/FAB corretos, captura de `Runtime.exceptionThrown` sem nenhum erro. Passou limpo — **fecha a varredura F7 do menu clássico**.
 
 ---
 
