@@ -167,6 +167,16 @@ Pendências reais que ainda podem aparecer em telas não cobertas: outros valore
 
 **Última verificação — Pasta Funcional Digitalizada** (`AssentamentoFuncionalAction`): lista simples de 82 links de documentos pra download, sem tabela nem formulário de busca. Título "Pasta funcional digitalizada", breadcrumb "Meu Espaço / Assentamentos funcionais / Pasta funcional digitalizada", topbar/drawer/FAB corretos, captura de `Runtime.exceptionThrown` sem nenhum erro. Passou limpo — **fecha a varredura F7 do menu clássico**.
 
+### Achado pós-fechamento (feedback visual do usuário, v0.6.10)
+
+Usuário reportou via captura de tela: no diálogo nativo de mensagem do portal (aparece, por exemplo, como aviso "O código de acesso expirou, foi enviado um novo por e-mail" na tela de 2FA), o botão primário **CONFIRMAR** já virava o `<button>` azul moderno (via `modernizeGenericFormButtons()`), mas o botão secundário **FECHAR** ficava com o estilo nativo escuro — visualmente destoante ao lado do botão modernizado.
+
+Inspeção ao vivo (somente leitura, sem clicar em nada — a aba estava em meio a um desafio de captcha) revelou que o diálogo é um componente **nativo e reutilizável do próprio portal**: `#mensagem` / `.grupoBotoes` / `#btnConfirmarMensagem` / `#btnFecharMensagem`, não algo específico da tela de 2FA — provavelmente aparece em várias outras telas do portal também.
+
+**Correção:** `content.css` ganhou estilo genérico para `.grupoBotoes` (flex/gap) e para botões nativos dentro dele que não viraram o botão primário (`input[type=button]:not(.je-legacy-btn-consultar)`, idem `type=submit`) — mesma paleta cinza/hover já usada no botão secundário da `.moldura`. Não revalidado ao vivo nesta tela específica (evitar reload no meio do fluxo de 2FA/captcha do usuário); mesmo padrão CSS já comprovado funcionando em outro contexto.
+
+**Padrão para o futuro:** sempre que um botão primário é modernizado, checar se há botões-irmãos no mesmo grupo/formulário que ficam destoando — o ideal é sempre estilizar o grupo inteiro, não só a ação reconhecida.
+
 ---
 
 ## Tarefas transversais
