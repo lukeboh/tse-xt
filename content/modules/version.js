@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.4';
+  const CURRENT_VERSION = '0.6.5';
 
   const CHANGELOG = [
+    {
+      version: '0.6.5',
+      date: '2026-09-05',
+      title: 'Fases 5/6 do roadmap de arquitetura visual — botão de busca genérico completa o trio título+tabela+formulário',
+      features: [
+        'Novo modernizeGenericFormButtons() troca o botão de busca legado ("CONSULTAR" ou qualquer input[type=submit]) por um <button> moderno em qualquer tela do Meu Espaço, sem depender de função Struts nenhuma (o clique só reaproveita o botão original). modernizeCalendarIcons() e highlightUserAndManagerNames() — já genéricos, mas só rodavam no Espelho/Alteração de Ponto — agora rodam em qualquer página. Com isso os pilotos do Extrato do Banco de Horas e do Contracheque e Rendimentos (roadmap F5/F6) ficam validados: nenhuma das duas telas precisou de perfil de página dedicado, o caminho genérico (título, tabela, formulário) já cobre tudo.'
+      ]
+    },
     {
       version: '0.6.4',
       date: '2026-09-04',

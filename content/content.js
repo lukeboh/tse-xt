@@ -114,23 +114,30 @@
           if (window.JEPessoasModernizer) {
             window.JEPessoasModernizer.applyThemeState(isEnabled, false);
 
-            // Casca genérica: topbar/menu de serviços e banner de título já
-            // são agnósticos de página (lêem o DOM nativo com fallback),
-            // rodam em qualquer tela do portal (roadmap F1/F2).
+            // Casca genérica: topbar, banner de título, ícones de calendário
+            // e destaque de nomes de servidor/responsável já são agnósticos
+            // de página (lêem o DOM nativo com fallback), rodam em qualquer
+            // tela do portal (roadmap F1/F2/F5/F6).
             window.JEPessoasModernizer.modernizeHeader();
             window.JEPessoasModernizer.injectPageTitleHeader(profileId);
+            window.JEPessoasModernizer.modernizeCalendarIcons();
+            window.JEPessoasModernizer.highlightUserAndManagerNames();
 
             // Modernização específica de página: formulário e tabela do
             // Espelho/Alteração de Ponto ainda são hardcoded (exigem as
-            // classes de coluna h01-h17, que só essas duas telas têm) — só
-            // rodam quando a página bate com um perfil conhecido. Qualquer
-            // outra tela cai no modernizador de tabela genérico (roadmap
-            // F3), que decora por texto de cabeçalho em vez de classe nativa.
+            // classes de coluna h01-h17, motivo de esquecimento, moldura de
+            // ajuste de ponto etc., que só essas duas telas têm) — só rodam
+            // quando a página bate com um perfil conhecido. Qualquer outra
+            // tela cai nos modernizadores genéricos (roadmap F3/F5/F6): o
+            // botão de busca vira o mesmo <button> moderno sem depender de
+            // função Struts nenhuma, e a tabela é decorada por texto de
+            // cabeçalho em vez de classe nativa.
             if (profileId) {
               window.JEPessoasModernizer.modernizeForm();
               window.JEPessoasModernizer.modernizeTable(targetHours);
-            } else if (window.JEPessoasTableModernizer) {
-              window.JEPessoasTableModernizer.modernizeGenericTables();
+            } else {
+              window.JEPessoasModernizer.modernizeGenericFormButtons();
+              if (window.JEPessoasTableModernizer) window.JEPessoasTableModernizer.modernizeGenericTables();
             }
           }
 

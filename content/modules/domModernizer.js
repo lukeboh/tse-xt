@@ -1263,9 +1263,9 @@ window.JEPessoasModernizer = (function () {
       setupJustificativaCharCounter(form);
       modernizeMolduraForm(form);
     });
-
-    modernizeCalendarIcons();
-    highlightUserAndManagerNames();
+    // modernizeCalendarIcons()/highlightUserAndManagerNames() rodam na casca
+    // genérica (content.js), para qualquer página — não precisam mais ser
+    // chamadas aqui.
   }
 
   function modernizeMolduraForm(targetRoot) {
@@ -1530,6 +1530,47 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Modernização genérica do botão de busca (roadmap F5/F6): mesma troca
+  // visual do botão legado por um <button> moderno que modernizeForm() já
+  // faz para o Espelho/Alteração de Ponto, mas sem nenhuma das partes
+  // específicas daquelas telas (nome de função Struts, motivo de
+  // esquecimento, moldura de ajuste de ponto etc.) — só reaproveita o
+  // clique nativo do botão legado. "CONSULTAR" é convenção confirmada em
+  // pelo menos duas telas fora do Espelho (Contracheque, Extrato do Banco
+  // de Horas); input[type=submit] cobre o caso de telas com outro texto.
+  function modernizeGenericFormButtons() {
+    const legacyBtns = document.querySelectorAll('#btnConsultar, input[value="CONSULTAR"], input[type="submit"]');
+    legacyBtns.forEach((legacyBtn) => {
+      const form = legacyBtn.closest('form');
+      if (!form || form.querySelector('.je-btn-consultar')) return;
+
+      legacyBtn.classList.add('je-legacy-btn-consultar');
+
+      const modernBtn = document.createElement('button');
+      modernBtn.type = 'button';
+      modernBtn.className = 'je-btn-consultar';
+      const btnText = legacyBtn.value ? escapeHTML(legacyBtn.value.toUpperCase()) : 'CONSULTAR';
+      modernBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>${btnText}</span>
+      `;
+      modernBtn.title = legacyBtn.title || btnText;
+
+      modernBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modernBtn.innerHTML = `<span>ENVIANDO...</span>`;
+        modernBtn.style.opacity = '0.8';
+        legacyBtn.click();
+      });
+
+      legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
+    });
+  }
+
   return {
     applyThemeState,
     modernizeHeader,
@@ -1538,6 +1579,7 @@ window.JEPessoasModernizer = (function () {
     buildKpiCardsHTML,
     modernizeTable,
     modernizeForm,
+    modernizeGenericFormButtons,
     modernizeCalendarIcons,
     highlightUserAndManagerNames
   };

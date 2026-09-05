@@ -1,7 +1,7 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.1.0
-**Data:** 04/09/2026
+**Versão do documento:** 1.2.0
+**Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
 
@@ -11,8 +11,8 @@
 | F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 | ✅ v0.6.2 |
 | F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ✅ v0.6.3 |
 | F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ✅ v0.6.4 |
-| F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ⏳ |
-| F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ⏳ |
+| F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ✅ v0.6.5 |
+| F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ✅ v0.6.5 |
 | F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ⏳ |
 
 ---
@@ -63,15 +63,18 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 - **Verificação:** script que extrai todo par (seletor, propriedade) do CSS original e dos dois novos arquivos e compara os conjuntos — confirmou **zero** declaração perdida (o conjunto original é subconjunto exato do novo); as únicas 6 diferenças "a mais" são um reforço intencional (o hover dos botões da `.moldura` passou a valer pela classe genérica também, não só pelo seletor posicional antigo — aditivo, sem regressão).
 - **Critério de pronto:** atingido — reorganização pura, sem mudança visual (validado ao vivo via CDP no Espelho de Ponto, Alteração de Ponto e Extrato do Banco de Horas).
 
-## F5 — 🟡 Piloto: Extrato do Banco de Horas
+## F5 — ✅ Piloto: Extrato do Banco de Horas (v0.6.5)
 
 - **Por quê primeiro:** já ganha topbar/menu/busca de graça (F1); testa o modernizador de tabela genérico (F3) numa tabela real e simples (5 colunas, sem paginação).
-- **Ação:** criar o perfil de página, aplicar título genérico (F2) e tabela genérica (F3), validar visualmente.
+- **Resultado:** título/breadcrumb (F2) e tabela genérica (F3) já validados ao vivo nas fases anteriores. O único gap encontrado ao revisar de perto foi o botão de busca "CONSULTAR" — ainda não virava o `<button>` moderno fora do Espelho, porque `modernizeForm()` só roda com perfil conhecido. Corrigido nesta fase (ver F5/F6 abaixo): nova `modernizeGenericFormButtons()`.
+- **Sem perfil de página dedicado:** não foi necessário criar um perfil específico em `PAGE_PROFILES` — o caminho genérico (F1-F3 + o botão novo) já cobre 100% do que essa tela precisa. Perfis dedicados ficam reservados para telas que realmente precisem de lógica de negócio própria (como o Espelho).
 
-## F6 — 🟢 Piloto: tela só-formulário (Contracheque e Rendimentos)
+## F6 — ✅ Piloto: tela só-formulário (Contracheque e Rendimentos) (v0.6.5)
 
 - **Por quê:** valida que o template tolera telas sem grade de resultados (filtro puro) e reaproveita `.moldura`/`.campoPesquisa`/`input[value="CONSULTAR"]` já genéricos.
-- **Ação:** criar o perfil de página, validar o formulário de filtro com o design system sem tabela.
+- **Resultado:** confirmado nas fases anteriores (título "Meu Espaço / Financeiro / Contracheque e Rendimentos", sem erro por não ter tabela). Mesmo gap do F5 (botão "CONSULTAR" cru) corrigido pela `modernizeGenericFormButtons()`.
+- **Entregue nesta fase:** `domModernizer.js` ganhou `modernizeGenericFormButtons()` — mesma troca visual de `input[value="CONSULTAR"]`/`input[type="submit"]` por um `<button>` moderno que o Espelho já tinha, mas sem nenhuma parte específica daquelas telas (nome de função Struts, motivo de esquecimento, moldura de ajuste de ponto): o clique só reaproveita `legacyBtn.click()`. `modernizeCalendarIcons()` e `highlightUserAndManagerNames()` (já genéricos, só não eram chamados fora do Espelho) subiram para a casca genérica em `content.js`, rodando em qualquer página. Com isso o trio título+tabela+formulário fica genérico por completo — nenhuma tela nova precisa de código JS dedicado a menos que tenha lógica de negócio própria.
+- **Validado ao vivo (CDP):** botão "CONSULTAR" vira `<button class="je-btn-consultar">` em ambas as telas; Espelho de Ponto sem duplicação (modernizeCalendarIcons/highlightUserAndManagerNames idempotentes, chamadas uma vez só efetivamente).
 
 ## F7 — 🟡 Expansão incremental para as demais funcionalidades
 
