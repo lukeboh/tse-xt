@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.8';
+  const CURRENT_VERSION = '0.6.9';
 
   const CHANGELOG = [
+    {
+      version: '0.6.9',
+      date: '2026-09-05',
+      title: 'Fase 7 do roadmap de arquitetura visual — botão de busca genérico reconhece mais textos (SALVAR, CONFIRMAR, GRAVAR, ENVIAR, NOVO, PESQUISAR)',
+      features: [
+        'A tela de Atualização de dados cadastrais usa input[type="button"] com valor "SALVAR" em vez de "CONSULTAR"/type=submit — o botão de salvar ficava sem a modernização visual. modernizeGenericFormButtons() agora reconhece mais textos de ação primária (case-insensitive): SALVAR, PESQUISAR, CONFIRMAR, GRAVAR, ENVIAR, NOVO — sempre ações positivas, nunca Cancelar/Voltar/Excluir. Com esta correção, a varredura de cobertura de telas (roadmap F7) chega a ~30 telas do menu clássico do Meu Espaço sem nenhum código específico de página.'
+      ]
+    },
     {
       version: '0.6.8',
       date: '2026-09-05',
