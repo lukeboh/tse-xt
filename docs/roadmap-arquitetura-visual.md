@@ -1,6 +1,6 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.2.0
+**Versão do documento:** 1.3.0
 **Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -79,6 +79,33 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 ## F7 — 🟡 Expansão incremental para as demais funcionalidades
 
 - **Ação:** portar as demais telas do menu uma a uma, priorizando por uso, cada uma como um perfil de página curto (a maior parte do trabalho pesado já foi feito em F1–F4). Registrar aqui cada tela portada e eventuais desvios de padrão encontrados.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.6
+
+Nenhuma das telas abaixo precisou de perfil de página dedicado — o caminho genérico (F1-F6) já cobre título, tabela e formulário sem código específico:
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Extrato do Banco de Horas | Banco de Horas | ✅ | ✅ | ✅ genérica | n/a |
+| Contracheque e Rendimentos | Financeiro | ✅ | ✅ | n/a (sem tabela) | ✅ |
+| Ficha Financeira | Financeiro | ✅ | ✅ | n/a | ✅ "EMITIR FICHA" |
+| Declaração de Nepotismo | Declaração | ✅ | ✅ | n/a (lista vazia) | — |
+| Afastamentos na equipe | Frequência | ✅ | ✅ (após fix) | n/a | ✅ |
+| Teletrabalho | Frequência | ✅ | ✅ | ✅ (vazia até consultar) | ✅ |
+| Consulta Benefícios | Benefícios | ✅ | ❌ (sem overlap léxico) | ✅ genérica | n/a |
+| Consulta situação dos servidores | Frequência | ✅ | ❌ (sem overlap léxico) | ✅ genérica | ✅ + calendário |
+| Dados cadastrais | Assentamentos funcionais | ✅ | ✅ | ✅ genérica (histórico de FC) | n/a |
+| Solicitar Horas Extras (SAEX) | Serviço Extraordinário | ✅ (após fix h3) | ❌ | n/a | ✅ + calendário |
+| Autorização de compensação de horas | Banco de Horas | ✅ | ❌ | ✅ genérica | ✅ + calendário |
+| Capacitação (relatório) | Capacitação | — | — | — | — |
+
+**2 bugs reais encontrados e corrigidos nesta rodada** (`domModernizer.js`):
+1. `findBreadcrumbCategory()` só casava por igualdade exata entre o `<h2>` e o texto do link do menu — falhava quando o título nativo é mais específico (`"Afastamentos na equipe"` vs. link `"Afastamentos"`). Ganhou uma 2ª passada por substring (mínimo 4 caracteres) antes de desistir.
+2. `extractNativePageTitle()` só olhava `<h2>`. A tela do SAEX (Solicitar/Gerir Horas Extras) não tem nenhum `<h2>` de título, só `<h3>` — caía no fallback genérico "Meu Espaço". Ganhou fallback pra `<h3>` quando não há `<h2>` aproveitável.
+
+**Limitação conhecida, não corrigida (custo/benefício baixo):** quando o `<h2>` nativo e o texto do link do menu não compartilham nenhuma substring em comum (ex.: `"Benefícios Concedidos"` vs. link `"Consulta Benefícios"`; `"Acompanhamento da unidade"` vs. `"Consulta situação dos servidores"`), o breadcrumb fica só com `"Meu Espaço / <título>"`, sem a categoria intermediária. Cosmético — o título e a tabela continuam corretos. Um matching por sobreposição de palavras resolveria, mas não parece valer o risco de falsos positivos por enquanto.
+
+**Confirmado, não é regressão:** `Capacitação (relatório)` não tem `#container` — é um arquétipo de página diferente (relatório), o F1 já reage bem (não monta nada, não quebra). Ainda não mapeado quantas outras telas do menu compartilham esse arquétipo; fica para a próxima rodada de F7.
 
 ---
 

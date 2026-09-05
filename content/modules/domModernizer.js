@@ -265,17 +265,25 @@ window.JEPessoasModernizer = (function () {
     return false;
   }
 
-  function extractNativePageTitle() {
-    const menuLateral = document.getElementById('menu-lateral');
-    const headings = document.querySelectorAll('h2');
-    for (const h2 of headings) {
-      const text = h2.textContent.trim();
+  function firstUsableHeading(selector, menuLateral) {
+    const headings = document.querySelectorAll(selector);
+    for (const heading of headings) {
+      const text = heading.textContent.trim();
       if (!text) continue;
-      if (menuLateral && menuLateral.contains(h2)) continue;
-      if (isInsideInjectedUI(h2)) continue;
+      if (menuLateral && menuLateral.contains(heading)) continue;
+      if (isInsideInjectedUI(heading)) continue;
       return text;
     }
     return null;
+  }
+
+  function extractNativePageTitle() {
+    const menuLateral = document.getElementById('menu-lateral');
+    // A maioria das páginas usa <h2> pro título nativo, mas algumas (ex.:
+    // Solicitar Horas Extras/SAEX) não têm h2 nenhum e usam <h3> direto —
+    // só cai pro h3 quando não há h2 aproveitável, pra não pegar um h3
+    // secundário (tipo "Opções de pesquisa") em página que tem os dois.
+    return firstUsableHeading('h2', menuLateral) || firstUsableHeading('h3', menuLateral);
   }
 
   // Acha a categoria do menu de serviços (Frequência, Financeiro, etc.) que
@@ -287,13 +295,29 @@ window.JEPessoasModernizer = (function () {
     try {
       const categories = window.JEPessoasNavDrawer.extractMenuData();
       const normTitle = normalizeText(pageTitle);
-      for (const category of categories) {
+      const candidates = categories.filter((category) => {
         // Categorias de 1 link só (sem submenu real) usam o próprio nome do
         // link como título — não servem de "categoria pai", senão o
         // breadcrumb duplicaria o mesmo texto duas vezes.
-        const isStandalone = category.links.length === 1 && normalizeText(category.links[0].name) === normalizeText(category.title);
-        if (isStandalone) continue;
+        return !(category.links.length === 1 && normalizeText(category.links[0].name) === normalizeText(category.title));
+      });
+
+      // 1ª passada: nome do link igual ao título (caso comum).
+      for (const category of candidates) {
         if (category.links.some((link) => normalizeText(link.name) === normTitle)) return category.title;
+      }
+
+      // 2ª passada: título nativo às vezes é mais específico que o link do
+      // menu (ex.: h2 "Afastamentos na equipe" vs link "Afastamentos") —
+      // aceita se um contém o outro, com um mínimo de 4 caracteres pra não
+      // casar por acidente com uma palavra curta qualquer.
+      for (const category of candidates) {
+        const match = category.links.some((link) => {
+          const normLink = normalizeText(link.name);
+          if (normLink.length < 4 || normTitle.length < 4) return false;
+          return normTitle.includes(normLink) || normLink.includes(normTitle);
+        });
+        if (match) return category.title;
       }
     } catch (e) {}
     return null;
