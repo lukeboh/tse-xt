@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.5';
+  const CURRENT_VERSION = '0.6.6';
 
   const CHANGELOG = [
+    {
+      version: '0.6.6',
+      date: '2026-09-05',
+      title: 'Início da Fase 7 do roadmap de arquitetura visual — varredura de cobertura e 2 correções no título genérico',
+      features: [
+        'Testadas ao vivo 9 telas novas fora do Espelho de Ponto (Declaração de Nepotismo, Ficha Financeira, Afastamentos na equipe, Teletrabalho, Consulta Benefícios, Consulta situação dos servidores, Dados cadastrais, Solicitar Horas Extras/SAEX, Autorização de compensação de horas) — nenhuma precisou de código específico de página. Duas correções no extrator de título genérico: a categoria do breadcrumb agora também casa por substring quando o <h2> nativo é mais específico que o texto do link do menu (ex.: "Afastamentos na equipe" vs. link "Afastamentos"); e o título cai para <h3> quando a página não tem nenhum <h2> aproveitável (telas do SAEX usam só <h3>).'
+      ]
+    },
     {
       version: '0.6.5',
       date: '2026-09-05',
