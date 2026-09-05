@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TSE XT",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",
@@ -42,7 +42,8 @@
         "*://*.tse.jus.br/portalservidor2/Logout*"
       ],
       "css": [
-        "content/content.css"
+        "content/content.css",
+        "content/espelho-ponto.css"
       ],
       "js": [
         "content/modules/version.js",

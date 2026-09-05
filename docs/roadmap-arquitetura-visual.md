@@ -10,7 +10,7 @@
 | F1 | Abrir injeção e criar registro de páginas suportadas | 🔴 | — | ✅ v0.6.1 |
 | F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 | ✅ v0.6.2 |
 | F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ✅ v0.6.3 |
-| F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ⏳ |
+| F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ✅ v0.6.4 |
 | F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ⏳ |
 | F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ⏳ |
 | F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ⏳ |
@@ -55,11 +55,13 @@ Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
 - **Critério de pronto:** atingido — a tabela do Extrato do Banco de Horas (nativamente sem nenhuma classe) recebeu zebra, alinhamento numérico nas 4 colunas de hora e o visual completo do design system sem nenhum CSS específico daquela página.
 - **Validado ao vivo (CDP):** Extrato do Banco de Horas — colunas "Horas Adquiridas/Utilizadas/Vencidas/Saldo" corretamente marcadas `.je-col-numeric`, zebra alternando linha a linha; Contracheque (sem tabela) sem erro nenhum; Espelho de Ponto sem nenhuma marca `.je-generic-data-table` (path genérico nunca roda lá, confirmado).
 
-## F4 — 🟢 Reorganização física do `content.css`
+## F4 — ✅ Reorganização física do `content.css` (v0.6.4)
 
-- **Hoje:** 3935 linhas num arquivo só, sem separação entre design system (tokens/reset/chrome) e específico de página (tabela do Espelho, coluna de saldo acumulado, auditoria de horas perdidas); alguns comentários de seção nomeiam como "Espelho de Ponto" componentes que já são genéricos.
-- **Ação:** dividir fisicamente em `design-system.css` (tokens, reset, chrome, componentes genéricos) + `espelho-ponto.css` (tabela e features específicas). O manifest MV3 já aceita múltiplos arquivos em `content_scripts.css` — sem bundler envolvido.
-- **Critério de pronto:** nenhuma mudança visual; só reorganização, com o objetivo de deixar óbvio o que é seguro reaproveitar ao abrir uma página nova.
+- **Era:** 3985 linhas num arquivo só, sem separação entre design system (tokens/reset/chrome) e específico de página; alguns comentários de seção nomeavam como "Espelho de Ponto" componentes que já eram genéricos.
+- **Implementado:** `content.css` (2247 linhas) ficou só com o design system — tokens, reset de layout legado, topbar, banner de título, drawer, busca rápida, ações rápidas, toggle, popup de calendário e a base compartilhada `table.je-modernized-table`/`table.grid` que o modernizador genérico de tabela (F3) usa. Novo `content/espelho-ponto.css` (1983 linhas) recebeu tudo que depende de estrutura nativa exclusiva do Espelho/Alteração de Ponto: `#tblEspelhoPontoMesCorrente`, `#opcoes-consulta`, `#formEspelhoPontoMes`, classes de coluna `h01`-`h17`, KPIs, coluna de saldo acumulado, auditoria de horas perdidas. Nas duas seções mistas (reset e painel de filtros) e na base da tabela, regras com seletores combinados (ex.: `.moldura, #conteudo > div:nth-child(2) > div.moldura`) foram separadas por arquivo, duplicando a declaração quando necessário — CSS não tem como uma regra "continuar" em outro arquivo.
+- **Manifest:** `content_scripts.css` agora lista os dois arquivos, `content.css` primeiro (design system) e `espelho-ponto.css` depois — ambos carregam em toda página autenticada do Meu Espaço (o manifest não tem carregamento condicional por página), então a separação é só organizacional, sem risco funcional de "faltar" um arquivo em alguma tela.
+- **Verificação:** script que extrai todo par (seletor, propriedade) do CSS original e dos dois novos arquivos e compara os conjuntos — confirmou **zero** declaração perdida (o conjunto original é subconjunto exato do novo); as únicas 6 diferenças "a mais" são um reforço intencional (o hover dos botões da `.moldura` passou a valer pela classe genérica também, não só pelo seletor posicional antigo — aditivo, sem regressão).
+- **Critério de pronto:** atingido — reorganização pura, sem mudança visual (validado ao vivo via CDP no Espelho de Ponto, Alteração de Ponto e Extrato do Banco de Horas).
 
 ## F5 — 🟡 Piloto: Extrato do Banco de Horas
 

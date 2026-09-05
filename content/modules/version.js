@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.3';
+  const CURRENT_VERSION = '0.6.4';
 
   const CHANGELOG = [
+    {
+      version: '0.6.4',
+      date: '2026-09-04',
+      title: 'Fase 4 do roadmap de arquitetura visual — content.css dividido em design system × Espelho de Ponto',
+      features: [
+        'Reorganização interna, sem mudança visual: content.css (2247 linhas) ficou só com o design system reaproveitável em qualquer tela (tokens, reset, topbar, banner de título, drawer, busca rápida, ações rápidas, toggle, calendário, base da tabela modernizada); novo espelho-ponto.css (1983 linhas) recebeu tudo específico do Espelho/Alteração de Ponto (tabela h01-h17, KPIs, saldo acumulado, auditoria de horas perdidas). Verificado por script que nenhuma regra de CSS foi perdida no processo (o conjunto original de seletores é subconjunto exato do novo).'
+      ]
+    },
     {
       version: '0.6.3',
       date: '2026-09-04',
