@@ -114,13 +114,17 @@
           if (window.JEPessoasModernizer) {
             window.JEPessoasModernizer.applyThemeState(isEnabled, false);
 
-            // Casca genérica: topbar, banner de título, ícones de calendário
-            // e destaque de nomes de servidor/responsável já são agnósticos
-            // de página (lêem o DOM nativo com fallback), rodam em qualquer
-            // tela do portal (roadmap F1/F2/F5/F6).
+            // Casca genérica: topbar, banner de título, ícones de calendário,
+            // ícones nativos de ação/status (detalhar/editar/aprovar/
+            // excluir), contador de caracteres e destaque de nomes de
+            // servidor/responsável já são agnósticos de página (lêem o DOM
+            // nativo com fallback), rodam em qualquer tela do portal
+            // (roadmap F1/F2/F5/F6/F7).
             window.JEPessoasModernizer.modernizeHeader();
             window.JEPessoasModernizer.injectPageTitleHeader(profileId);
             window.JEPessoasModernizer.modernizeCalendarIcons();
+            window.JEPessoasModernizer.modernizeNativeIcons();
+            window.JEPessoasModernizer.setupGenericCharCounters();
             window.JEPessoasModernizer.highlightUserAndManagerNames();
 
             // Modernização específica de página: formulário e tabela do
@@ -137,6 +141,7 @@
               window.JEPessoasModernizer.modernizeTable(targetHours);
             } else {
               window.JEPessoasModernizer.modernizeGenericFormButtons();
+              window.JEPessoasModernizer.modernizeGenericMoldura();
               if (window.JEPessoasTableModernizer) window.JEPessoasTableModernizer.modernizeGenericTables();
             }
           }

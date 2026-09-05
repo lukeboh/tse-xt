@@ -1440,6 +1440,157 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Acha o limite real de caracteres de um textarea sem inventar um valor:
+  // usa o atributo maxlength nativo se existir, senão tenta ler o texto
+  // legado "Máx. N caracteres" (varia por tela — ex.: 500 na justificativa
+  // do Espelho, 100 no motivo de cancelamento de compensação de horas).
+  // Sem nenhum dos dois sinais, retorna null e o contador genérico não é
+  // adicionado (melhor não mostrar contador do que mostrar um limite errado).
+  function detectNativeMaxLength(ta) {
+    const attr = ta.getAttribute('maxlength');
+    if (attr && /^\d+$/.test(attr)) return parseInt(attr, 10);
+
+    let sibling = ta.nextElementSibling;
+    for (let i = 0; i < 4 && sibling; i++, sibling = sibling.nextElementSibling) {
+      const m = (sibling.textContent || '').match(/(\d+)\s*caracte/i);
+      if (m) return parseInt(m[1], 10);
+    }
+
+    const parentText = ta.parentElement ? ta.parentElement.textContent : '';
+    const m2 = parentText.match(/(\d+)\s*caracte/i);
+    return m2 ? parseInt(m2[1], 10) : null;
+  }
+
+  // Versão genérica do contador de caracteres (roadmap F7 — feedback
+  // visual): setupJustificativaCharCounter() só pega textareas com
+  // "justificativa" no name/id (Espelho/Alteração de Ponto) e sempre usa
+  // 500 como limite. Fora dessas telas, o campo pode ter qualquer
+  // name/id (ex.: "motivoCancelamento") e qualquer limite (ex.: 100) — esta
+  // versão pega QUALQUER textarea, mas só se um limite real for detectado.
+  function setupGenericCharCounters(targetRoot) {
+    const root = targetRoot || document;
+    const textareas = root.querySelectorAll('textarea');
+    textareas.forEach((ta) => {
+      if (ta.dataset.jeCounterSet) return;
+
+      const max = detectNativeMaxLength(ta);
+      if (!max) return;
+
+      ta.dataset.jeCounterSet = 'true';
+      ta.setAttribute('maxlength', String(max));
+
+      const parent = ta.parentElement;
+      if (parent) {
+        Array.from(parent.childNodes).forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE && /caracteres/i.test(node.textContent)) {
+            node.textContent = '';
+          } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'TEXTAREA' && !node.classList.contains('je-char-counter-container') && /caracteres/i.test(node.innerText || '')) {
+            node.style.display = 'none';
+          }
+        });
+      }
+
+      let nextElem = ta.nextElementSibling;
+      while (nextElem && !nextElem.classList.contains('je-char-counter-container')) {
+        if (/caracteres/i.test(nextElem.innerText || '')) {
+          nextElem.style.display = 'none';
+        }
+        nextElem = nextElem.nextElementSibling;
+      }
+
+      const counterContainer = document.createElement('div');
+      counterContainer.className = 'je-char-counter-container';
+
+      const updateCount = () => {
+        const current = ta.value ? ta.value.length : 0;
+        const remaining = Math.max(0, max - current);
+        counterContainer.innerHTML = `
+          <span class="je-char-max">Máx. ${max} caracteres</span>
+          <span class="je-char-rem">Caracteres restantes: <strong class="${remaining < Math.max(10, max * 0.1) ? 'je-char-warning' : ''}">${remaining}</strong> / ${max}</span>
+        `;
+      };
+
+      ta.addEventListener('input', updateCount);
+      ta.addEventListener('keyup', updateCount);
+      ta.addEventListener('change', updateCount);
+      updateCount();
+
+      ta.parentNode.insertBefore(counterContainer, ta.nextSibling);
+    });
+  }
+
+  // Substitui ícones nativos (imagens .png/.jpg de ação/status em tabelas —
+  // ex.: detalhar, editar, autorizar, excluir, aprovado) por SVGs no mesmo
+  // estilo do resto da extensão (roadmap F7 — feedback visual). Mesma
+  // estratégia seletiva do modernizeCalendarIcons(): esconde a imagem
+  // original e insere um substituto que, se a imagem original era
+  // clicável (tinha onclick), repassa o clique pra ela — preserva o
+  // comportamento nativo (inclusive onclick="funcaoDoStruts(...)").
+  const NATIVE_ICON_PATTERNS = [
+    {
+      match: /detalhar/i,
+      color: 'var(--je-primary)',
+      svg: '<circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>'
+    },
+    {
+      match: /iconedit/i,
+      color: 'var(--je-primary)',
+      svg: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>'
+    },
+    {
+      match: /iconcheck/i,
+      color: 'var(--je-success-text)',
+      svg: '<polyline points="20 6 9 17 4 12"></polyline>'
+    },
+    {
+      match: /icondelete/i,
+      color: 'var(--je-danger-text)',
+      svg: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
+    },
+    {
+      match: /polegar-positivo/i,
+      color: 'var(--je-success-text)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10.5 14.5 8 12"></polyline>'
+    }
+  ];
+
+  function modernizeNativeIcons() {
+    const images = document.querySelectorAll('#container img');
+    images.forEach((img) => {
+      if (img.dataset.jeIconReplaced) return;
+      if (isInsideInjectedUI(img)) return;
+
+      const src = img.getAttribute('src') || '';
+      const pattern = NATIVE_ICON_PATTERNS.find((p) => p.match.test(src));
+      if (!pattern) return;
+
+      img.dataset.jeIconReplaced = 'true';
+      img.classList.add('je-legacy-icon-hidden');
+
+      const isClickable = img.hasAttribute('onclick');
+      const tooltip = img.getAttribute('title') || img.getAttribute('alt') || '';
+
+      const modernIcon = document.createElement(isClickable ? 'button' : 'span');
+      if (isClickable) modernIcon.type = 'button';
+      modernIcon.className = 'je-native-icon' + (isClickable ? '' : ' je-native-icon-static');
+      if (tooltip) modernIcon.title = tooltip;
+      modernIcon.style.color = pattern.color;
+      modernIcon.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${pattern.svg}</svg>
+      `;
+
+      if (isClickable) {
+        modernIcon.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          img.click();
+        });
+      }
+
+      img.parentNode.insertBefore(modernIcon, img.nextSibling);
+    });
+  }
+
   function setDefaultMotivoEsquecimento(form) {
     const motiveSelects = (form || document).querySelectorAll('select[name*="motivo" i], select[id*="motivo" i], select[name*="justificativa" i], select[name*="ocorrencia" i], #motivo, #motivoSelecionado');
     motiveSelects.forEach((select) => {
@@ -1574,6 +1725,21 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Ícone semântico do botão genérico: lupa só para busca/consulta de
+  // verdade (Consultar/Pesquisar), "+" para Novo, check para as demais
+  // ações positivas (Confirmar/Salvar/Gravar/Enviar/OK) — antes toda ação
+  // reutilizava a lupa, o que ficava sem sentido num botão "Confirmar".
+  function pickModernButtonIcon(text) {
+    const t = (text || '').toUpperCase();
+    if (t.indexOf('CONSULTAR') === 0 || t.indexOf('PESQUISAR') === 0) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+    }
+    if (t.indexOf('NOVO') === 0) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+    }
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  }
+
   // Modernização genérica do botão de busca (roadmap F5/F6): mesma troca
   // visual do botão legado por um <button> moderno que modernizeForm() já
   // faz para o Espelho/Alteração de Ponto, mas sem nenhuma das partes
@@ -1581,30 +1747,37 @@ window.JEPessoasModernizer = (function () {
   // esquecimento, moldura de ajuste de ponto etc.) — só reaproveita o
   // clique nativo do botão legado. input[type=submit] cobre a maioria; a
   // lista de valores cobre os `input[type=button]` (comum em telas Struts
-  // que despacham via JS, ex.: "Atualização de dados cadastrais" usa
-  // input[type=button] value="SALVAR") — só ações primárias/positivas,
-  // nunca "Cancelar"/"Voltar"/"Excluir".
+  // que despacham via JS). Prefixo (^=) em vez de igualdade porque o texto
+  // costuma vir com complemento (ex.: "Consultar Endereço", não só
+  // "CONSULTAR") — só ações primárias/positivas, nunca
+  // "Cancelar"/"Voltar"/"Excluir". Quando há mais de um botão de ação no
+  // mesmo <form> (ex.: "OK" pra escolher o dependente + "Consultar
+  // Endereço" mais abaixo), só o 1º encontrado vira primário/azul — os
+  // demais viram .je-btn-secondary em vez de ficarem sem estilo nenhum.
   function modernizeGenericFormButtons() {
     const legacyBtns = document.querySelectorAll(
       '#btnConsultar, input[type="submit"], ' +
-      'input[value="CONSULTAR" i], input[value="PESQUISAR" i], input[value="SALVAR" i], ' +
-      'input[value="CONFIRMAR" i], input[value="GRAVAR" i], input[value="ENVIAR" i], input[value="NOVO" i]'
+      'input[value^="CONSULTAR" i], input[value^="PESQUISAR" i], input[value^="SALVAR" i], ' +
+      'input[value^="CONFIRMAR" i], input[value^="GRAVAR" i], input[value^="ENVIAR" i], ' +
+      'input[value^="NOVO" i], input[value="OK" i]'
     );
+    const primaryDoneForForm = new WeakSet();
     legacyBtns.forEach((legacyBtn) => {
+      if (legacyBtn.classList.contains('je-legacy-btn-consultar')) return;
       const form = legacyBtn.closest('form');
-      if (!form || form.querySelector('.je-btn-consultar')) return;
+      if (!form) return;
+
+      const isPrimary = !primaryDoneForForm.has(form);
+      primaryDoneForForm.add(form);
 
       legacyBtn.classList.add('je-legacy-btn-consultar');
 
       const modernBtn = document.createElement('button');
       modernBtn.type = 'button';
-      modernBtn.className = 'je-btn-consultar';
+      modernBtn.className = isPrimary ? 'je-btn-consultar' : 'je-btn-secondary';
       const btnText = legacyBtn.value ? escapeHTML(legacyBtn.value.toUpperCase()) : 'CONSULTAR';
       modernBtn.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
+        ${pickModernButtonIcon(btnText)}
         <span>${btnText}</span>
       `;
       modernBtn.title = legacyBtn.title || btnText;
@@ -1621,6 +1794,44 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Agrupamento genérico de campos dentro de .moldura (roadmap F7 —
+  // feedback visual): a regra CSS de .moldura (display:flex,
+  // flex-direction:column) assume que cada rótulo+campo já foi agrupado
+  // num wrapper .je-form-group — modernizeMolduraForm() faz isso, mas só
+  // pra Espelho/Alteração de Ponto (procura rótulos/ids específicos
+  // daquela tela). Em qualquer outra página, um <label>/<input> soltos
+  // (padrão comum: "<label>Nome:</label> <input ...> <br> <label>CPF:...")
+  // viram flex items individuais e cada um estica pra 100% da largura —
+  // daí o formulário parecer "um campo por linha, ocupando tudo".
+  function modernizeGenericMoldura() {
+    const moldura = document.querySelector('.moldura');
+    if (!moldura || moldura.dataset.jeMolduraModernized) return;
+
+    // Só mexe se detectar o padrão "achatado" (mais de um <label> como
+    // filho direto da .moldura, sem nenhum wrapper) — se já vier agrupado
+    // de outra forma, não reorganiza pra não arriscar quebrar algo.
+    const directLabels = Array.from(moldura.children).filter((c) => c.tagName === 'LABEL');
+    if (directLabels.length < 2) return;
+
+    moldura.dataset.jeMolduraModernized = 'true';
+
+    const row = document.createElement('div');
+    row.className = 'je-form-row';
+    directLabels[0].parentNode.insertBefore(row, directLabels[0]);
+
+    directLabels.forEach((label) => {
+      let control = label.nextElementSibling;
+      while (control && control.tagName === 'BR') control = control.nextElementSibling;
+      if (!control || !/^(INPUT|SELECT|TEXTAREA)$/.test(control.tagName)) return;
+
+      const group = document.createElement('div');
+      group.className = 'je-form-group';
+      group.appendChild(label);
+      group.appendChild(control);
+      row.appendChild(group);
+    });
+  }
+
   return {
     applyThemeState,
     modernizeHeader,
@@ -1630,6 +1841,9 @@ window.JEPessoasModernizer = (function () {
     modernizeTable,
     modernizeForm,
     modernizeGenericFormButtons,
+    modernizeGenericMoldura,
+    setupGenericCharCounters,
+    modernizeNativeIcons,
     modernizeCalendarIcons,
     highlightUserAndManagerNames
   };

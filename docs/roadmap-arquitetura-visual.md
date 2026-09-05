@@ -177,6 +177,18 @@ Inspeção ao vivo (somente leitura, sem clicar em nada — a aba estava em meio
 
 **Padrão para o futuro:** sempre que um botão primário é modernizado, checar se há botões-irmãos no mesmo grupo/formulário que ficam destoando — o ideal é sempre estilizar o grupo inteiro, não só a ação reconhecida.
 
+### Ronda de refinamento visual (feedback do usuário, v0.6.11)
+
+Usuário reportou mais 3 problemas via captura de tela, todos corrigidos e validados ao vivo via CDP:
+
+1. **Diálogo `.grupoBotoes`** (mesmo componente do achado anterior): botões viraram centralizados (`justify-content: center`); o ícone do botão CONFIRMAR era uma lupa (semântica de busca), sem sentido pra uma ação de confirmação — `modernizeGenericFormButtons()` ganhou `pickModernButtonIcon()`, que escolhe lupa só pra Consultar/Pesquisar, "+" pra Novo, e check pras demais ações (Confirmar/Salvar/Gravar/Enviar/OK).
+2. **"Autorização de compensação de horas"**: botão "OK" (ao lado de um `<select>`) e "Consultar Endereço" ficavam sem estilo — nenhum batia no seletor exato de texto. `modernizeGenericFormButtons()` passou a usar prefixo (`^=`) em vez de igualdade pros verbos de ação e ganhou "OK" como valor exato; e quando há **mais de um** botão de ação no mesmo `<form>`, o 2º em diante vira `.je-btn-secondary` (cinza) em vez de ficar sem estilo nenhum (nova classe CSS genérica, mesma paleta do secundário da `.moldura`/`.grupoBotoes`).
+3. **Textarea "Justificativa"/"Motivo"**: o campo (`name="compensacaoHoras.motivoCancelamento"` — não continha a palavra "justificativa", por isso o seletor específico não batia) ficava com borda quadrada nativa, e o texto "Máx. 100 caracteres. Caracteres restantes:" era estático, não um contador ao vivo. Novo `setupGenericCharCounters()` detecta o limite real (atributo `maxlength` OU o próprio texto nativo "Máx. N caracteres" — sem inventar um valor) e monta o mesmo widget de contador ao vivo já usado no Espelho/Alteração de Ponto; textarea genérico ganhou o mesmo visual arredondado dos demais campos.
+4. **"Alteração de dados dos dependentes"**: 19 campos (Nome, CPF, Telefone, E-mail, endereço completo etc.) apareciam um por linha em largura total, porque o `.moldura` (reset genérico `display:flex; flex-direction:column`) esperava que rótulo+campo já estivessem agrupados num wrapper — isso só acontecia via função específica do Espelho. Novo `modernizeGenericMoldura()` detecta o padrão "achatado" (`<label>`/`<input>`/`<br>` soltos) e agrupa automaticamente em `.je-form-group` dentro de um `.je-form-row` (flex-wrap), reaproveitando CSS já existente.
+5. **Ícones nativos de ação/status** (tabela "Últimas solicitações"): 5 ícones `.png`/`.jpg` (detalhar, editar, aprovar/autorizar, excluir, "autorizado" com selo de polegar) destoavam do resto da interface. Novo `modernizeNativeIcons()` mapeia por trecho do nome do arquivo (`detalhar`, `iconEdit`, `iconCheck`, `iconDelete`, `polegar-positivo`) pra um SVG equivalente no estilo do design system, preservando o clique (via `img.click()`, mesmo padrão do `modernizeCalendarIcons()`) e o estado desabilitado/somente-status quando não há `onclick` nativo.
+
+Todos os 5 itens validados ao vivo via CDP nas telas reportadas (Autorização de compensação de horas, Alteração de dados dos dependentes) sem regressão no Espelho de Ponto/Alteração de Ponto.
+
 ---
 
 ## Tarefas transversais

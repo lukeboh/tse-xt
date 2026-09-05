@@ -917,8 +917,10 @@ body.je-xt-enabled div.moldura input[type=button]:nth-child(2):hover {
 body.je-xt-enabled .grupoBotoes {
   display: flex !important;
   align-items: center !important;
+  justify-content: center !important;
   flex-wrap: wrap !important;
   gap: 10px !important;
+  width: 100% !important;
 }
 
 body.je-xt-enabled .grupoBotoes input[type="button"]:not(.je-legacy-btn-consultar),
@@ -987,12 +989,72 @@ body.je-xt-enabled input[type="text"]:focus-visible {
   animation: jeGlowPulse 2.4s ease-in-out infinite !important;
 }
 
+/* Textarea genérico — qualquer tela fora do Espelho/Alteração de Ponto
+   (que já tem seu próprio textarea de justificativa mais específico em
+   espelho-ponto.css, com maior especificidade e por isso preservado). */
+body.je-xt-enabled textarea {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 102, 204, 0.2) !important;
+  border-radius: var(--je-radius-sm) !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: var(--je-font) !important;
+  color: #1e293b !important;
+  outline: none !important;
+  transition: all 0.25s ease !important;
+  box-shadow: var(--je-shadow-sm) !important;
+  box-sizing: border-box !important;
+}
+
+body.je-xt-enabled textarea:focus,
+body.je-xt-enabled textarea:focus-visible {
+  border-color: var(--je-primary-light) !important;
+  background: #ffffff !important;
+  animation: jeGlowPulse 2.4s ease-in-out infinite !important;
+}
+
+/* Ícones nativos de ação/status (roadmap F7 — feedback visual):
+   detalhar/editar/aprovar/excluir/aprovado viravam <img> .png/.jpg
+   destoantes; modernizeNativeIcons() esconde a imagem original e insere
+   este substituto SVG no mesmo estilo do resto da extensão. */
+body.je-xt-enabled .je-legacy-icon-hidden {
+  display: none !important;
+}
+
+body.je-xt-enabled .je-native-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: var(--je-radius-sm) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  vertical-align: middle !important;
+}
+
+body.je-xt-enabled button.je-native-icon:hover {
+  background: rgba(0, 119, 255, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+body.je-xt-enabled .je-native-icon-static {
+  cursor: default !important;
+  opacity: 0.9 !important;
+}
+
 /* Botão Consultar Moderno (Flexbox 100% Centralizado) */
 body.je-xt-enabled .je-legacy-btn-consultar {
   display: none !important;
 }
 
 body.je-xt-disabled .je-btn-consultar,
+body.je-xt-disabled .je-btn-secondary,
 body.je-xt-disabled #je-modern-btn-consultar {
   display: none !important;
 }
@@ -1027,13 +1089,15 @@ body.je-xt-disabled .je-legacy-btn-consultar {
   user-select: none !important;
 }
 
-.je-btn-consultar span {
+.je-btn-consultar span,
+.je-btn-secondary span {
   display: inline-block !important;
   float: none !important;
   line-height: 1 !important;
 }
 
-.je-btn-consultar svg {
+.je-btn-consultar svg,
+.je-btn-secondary svg {
   display: inline-block !important;
   float: none !important;
   flex-shrink: 0 !important;
@@ -1047,6 +1111,48 @@ body.je-xt-disabled .je-legacy-btn-consultar {
 .je-btn-consultar:active {
   transform: translateY(0) !important;
   box-shadow: var(--je-shadow-sm) !important;
+}
+
+/* Botão secundário genérico: mesma forma do .je-btn-consultar, mas na
+   paleta neutra — usado por modernizeGenericFormButtons() quando mais de
+   um botão de ação aparece no mesmo <form> (só o 1º vira primário/azul,
+   os demais viram secundário em vez de ficarem sem estilo nenhum). */
+.je-btn-secondary {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #475569 !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  padding: 0 20px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  cursor: pointer !important;
+  box-shadow: var(--je-shadow-sm) !important;
+  transition: all 0.2s ease !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  align-self: flex-end !important;
+  user-select: none !important;
+  font-family: var(--je-font) !important;
+}
+
+.je-btn-secondary:hover {
+  background: #ffffff !important;
+  color: var(--je-primary-dark) !important;
+  border-color: rgba(0, 119, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.je-btn-secondary:active {
+  transform: translateY(0) !important;
 }
 
 /* ==========================================================================
