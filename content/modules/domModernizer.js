@@ -1579,11 +1579,17 @@ window.JEPessoasModernizer = (function () {
   // faz para o Espelho/Alteração de Ponto, mas sem nenhuma das partes
   // específicas daquelas telas (nome de função Struts, motivo de
   // esquecimento, moldura de ajuste de ponto etc.) — só reaproveita o
-  // clique nativo do botão legado. "CONSULTAR" é convenção confirmada em
-  // pelo menos duas telas fora do Espelho (Contracheque, Extrato do Banco
-  // de Horas); input[type=submit] cobre o caso de telas com outro texto.
+  // clique nativo do botão legado. input[type=submit] cobre a maioria; a
+  // lista de valores cobre os `input[type=button]` (comum em telas Struts
+  // que despacham via JS, ex.: "Atualização de dados cadastrais" usa
+  // input[type=button] value="SALVAR") — só ações primárias/positivas,
+  // nunca "Cancelar"/"Voltar"/"Excluir".
   function modernizeGenericFormButtons() {
-    const legacyBtns = document.querySelectorAll('#btnConsultar, input[value="CONSULTAR"], input[type="submit"]');
+    const legacyBtns = document.querySelectorAll(
+      '#btnConsultar, input[type="submit"], ' +
+      'input[value="CONSULTAR" i], input[value="PESQUISAR" i], input[value="SALVAR" i], ' +
+      'input[value="CONFIRMAR" i], input[value="GRAVAR" i], input[value="ENVIAR" i], input[value="NOVO" i]'
+    );
     legacyBtns.forEach((legacyBtn) => {
       const form = legacyBtn.closest('form');
       if (!form || form.querySelector('.je-btn-consultar')) return;

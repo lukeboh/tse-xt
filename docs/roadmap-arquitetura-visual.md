@@ -1,6 +1,6 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.5.0
+**Versão do documento:** 1.6.0
 **Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -149,7 +149,17 @@ Nenhuma das telas abaixo precisou de perfil de página dedicado — o caminho ge
 
 **Cuidado registrado:** a tela de 2FA (`Autenticacao2FatoresAction_carregarTela`) pode reenviar o código de segurança por e-mail a cada `GET`/reload — evitar recarregar essa tela repetidamente durante testes futuros.
 
-Com esta rodada, as ~30 telas do menu clássico (Struts, com `#container`) estão cobertas — restam só as 2-3 telas do módulo `/smvc/` (arquétipo à parte, já confirmado que a extensão não interfere) sem verificação individual.
+Com esta rodada, as ~30 telas do menu clássico (Struts, com `#container`) estão cobertas — restam só 2 telas do módulo `/smvc/` (Carteira Funcional, Participação em Conselhos ou Assemelhados — arquétipo à parte, já confirmado que a extensão não interfere).
+
+### Cobertura verificada ao vivo (CDP) — v0.6.9
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Atualização de dados cadastrais (pós-2FA) | Assentamentos funcionais | ✅ | ✅ | n/a (formulário de edição) | ❌ "SALVAR" não modernizava (fix) |
+
+**1 gap real encontrado e corrigido** (`domModernizer.js`): o formulário de "Atualização de dados cadastrais" usa `input[type="button"]` (não `type="submit"`) com valores `"Consultar Endereço"` e **"SALVAR"** — nenhum batia no seletor genérico de botão (`input[value="CONSULTAR"], input[type="submit"]`), deixando o botão de salvar sem a modernização visual. `modernizeGenericFormButtons()` ganhou mais valores reconhecidos (case-insensitive): `SALVAR`, `PESQUISAR`, `CONFIRMAR`, `GRAVAR`, `ENVIAR`, `NOVO` — sempre ações primárias/positivas, nunca "Cancelar"/"Voltar"/"Excluir". Não revalidado ao vivo nesta tela específica para evitar disparar um novo código de verificação por e-mail (2FA) — mecanismo é o mesmo já comprovado (seletor de atributo, sem lógica nova).
+
+Pendências reais que ainda podem aparecer em telas não cobertas: outros valores de botão primário não listados (ex.: "ATUALIZAR", "REGISTRAR") ficariam sem modernização até serem encontrados e adicionados — mesmo padrão de manutenção incremental usado até aqui.
 
 ---
 
