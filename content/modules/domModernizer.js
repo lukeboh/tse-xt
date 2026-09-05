@@ -16,6 +16,18 @@ window.JEPessoasModernizer = (function () {
     }[tag] || tag));
   }
 
+  // Alternar o tema pelo toggle da página (topbar ou flutuante) NÃO pode
+  // mais ser só uma troca de classe CSS reversível: funções como
+  // modernizeGenericMoldura() MOVEM <label>/<input> nativos pra dentro de
+  // wrappers novos, e mountXT() (content.js) hoje nem roda essas funções
+  // quando o tema está desligado — sem um reload, ligar/desligar em
+  // sequência na mesma página deixaria o DOM num estado híbrido que nem
+  // reflete "ligado" nem "desligado" de verdade. Um reload garante que o
+  // próximo estado seja sempre produzido do zero por mountXT().
+  function reloadAfterThemeToggle() {
+    setTimeout(() => window.location.reload(), 250);
+  }
+
   function applyThemeState(enabled, isExplicitUserToggle = false) {
     if (isExplicitUserToggle) {
       document.body.classList.add('je-theme-transitioning');
@@ -156,9 +168,11 @@ window.JEPessoasModernizer = (function () {
         e.stopPropagation();
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
-        
+
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+          reloadAfterThemeToggle();
+        });
       });
     }
 
@@ -229,9 +243,11 @@ window.JEPessoasModernizer = (function () {
         e.stopPropagation();
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
-        
+
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+          reloadAfterThemeToggle();
+        });
       });
     }
   }
@@ -1767,8 +1783,19 @@ window.JEPessoasModernizer = (function () {
       const form = legacyBtn.closest('form');
       if (!form) return;
 
-      const isPrimary = !primaryDoneForForm.has(form);
-      primaryDoneForForm.add(form);
+      // offsetParent null = display:none nele ou em algum ancestral — ex.:
+      // o diálogo nativo de mensagem (#mensagem) reaproveita o mesmo par
+      // de botões (CONFIRMAR/FECHAR) pra várias mensagens diferentes, mas
+      // nem toda mensagem usa os dois. Um botão oculto agora não disputa o
+      // posto de primário (senão o único botão realmente visível virava
+      // secundário/cinza à toa), mas AINDA criamos o substituto (só que
+      // já escondido) — a página decide isso de forma assíncrona/tardia
+      // (bem depois da nossa 1ª montagem), então em vez de checar só uma
+      // vez, sincronizamos com um MutationObserver pra sempre refletir o
+      // estado real do nativo, mesmo que mude bem depois.
+      const initiallyHidden = legacyBtn.offsetParent === null;
+      const isPrimary = !initiallyHidden && !primaryDoneForForm.has(form);
+      if (!initiallyHidden) primaryDoneForForm.add(form);
 
       legacyBtn.classList.add('je-legacy-btn-consultar');
 
@@ -1781,6 +1808,7 @@ window.JEPessoasModernizer = (function () {
         <span>${btnText}</span>
       `;
       modernBtn.title = legacyBtn.title || btnText;
+      if (initiallyHidden) modernBtn.style.display = 'none';
 
       modernBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1791,6 +1819,11 @@ window.JEPessoasModernizer = (function () {
       });
 
       legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
+
+      const syncVisibility = () => {
+        modernBtn.style.display = legacyBtn.offsetParent === null ? 'none' : '';
+      };
+      new MutationObserver(syncVisibility).observe(legacyBtn, { attributes: true, attributeFilter: ['style', 'class'] });
     });
   }
 
@@ -1832,8 +1865,57 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Tela de login (pré-autenticação, perfil 'login' — ver PAGE_PROFILES em
+  // content.js). Propositalmente NÃO toca em nenhum input/button/onclick
+  // nativo — só marca o <body> com uma classe pra o CSS (.je-login-page em
+  // content.css) embelezar o formulário existente (#box-login,
+  // #login-btnEntrar, #login-btnOdin) puramente por seletor de ID. Sem
+  // isso o CSS genérico esconderia a logo nativa (#topo/#imgSGP) como faz
+  // em qualquer outra tela — aqui não tem topbar substituta, então a classe
+  // também é o que o CSS usa pra manter a logo original visível.
+  function mountLoginPage() {
+    // Sem topbar nesta tela (pré-autenticação), então o toggle "ligar/
+    // desligar TSE XT" não tem onde morar — createPersistentToggle() já
+    // existe (o mesmo usado como fallback quando o tema está OFF em
+    // qualquer outra página), só precisa de uma regra CSS liberando ele
+    // aparecer aqui mesmo com o tema ligado (.je-login-page em content.css).
+    // Igual em toda página, o toggle é a ÚNICA exceção que roda
+    // independente do estado — senão não haveria como ligar de volta.
+    createPersistentToggle();
+    const loginToggleEnabled = document.body.classList.contains('je-xt-enabled');
+    const loginToggleLabel = document.querySelector('#je-persistent-toggle-bar .je-toggle-label');
+    if (loginToggleLabel) {
+      loginToggleLabel.innerHTML = loginToggleEnabled
+        ? '✨ <strong>TSE XT</strong> Ativo'
+        : '🏛️ <strong>TSE XT</strong> Desligado';
+    }
+
+    // Tudo daqui pra baixo só pode mudar a tela com o TSE XT realmente
+    // ligado — a limpeza de texto abaixo é uma mutação de DOM (não só
+    // CSS), então rodar com o tema desligado alterava o espaçamento
+    // nativo mesmo sem nenhum estilo visível, quebrando a regra de que
+    // nenhuma mudança acontece com a extensão desligada.
+    if (!loginToggleEnabled) return;
+
+    document.body.classList.add('je-login-page');
+
+    // Limpeza cosmética: nós de texto com só espaços/&nbsp; soltos dentro
+    // do card de login (usados nativamente só pra espaçamento visual antes
+    // dos links "Redefinir senha"/"Primeira Senha") — remover deixa o
+    // espaçamento do flex/gap do card consistente. Não mexe em elemento
+    // nenhum, só em texto solto.
+    const box = document.getElementById('box-login');
+    if (!box) return;
+    Array.from(box.childNodes).forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent.replace(/[\s ]/g, '')) {
+        node.textContent = '';
+      }
+    });
+  }
+
   return {
     applyThemeState,
+    createPersistentToggle,
     modernizeHeader,
     injectPageTitleHeader,
     injectKPICards,
@@ -1845,6 +1927,7 @@ window.JEPessoasModernizer = (function () {
     setupGenericCharCounters,
     modernizeNativeIcons,
     modernizeCalendarIcons,
-    highlightUserAndManagerNames
+    highlightUserAndManagerNames,
+    mountLoginPage
   };
 })();

@@ -953,6 +953,56 @@ body.je-xt-enabled .grupoBotoes input[type="submit"]:not(.je-legacy-btn-consulta
   transform: translateY(-1px) !important;
 }
 
+/* O card da mensagem em si (#mensagem) nunca tinha ganho estilo, só os
+   botões dentro dele — o JS nativo posiciona via left/top em pixel fixo
+   (calculado uma vez, não reage a resize), então position:fixed +
+   transform garante centralização de verdade sempre. #transparencia é o
+   véu escuro nativo atrás (idem, dimensão em pixel fixo do JS — cobrimos
+   com inset:0 pra sempre preencher a viewport). */
+body.je-xt-enabled #mensagem {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: var(--je-glass-card) !important;
+  backdrop-filter: var(--je-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
+  border: 1px solid var(--je-glass-border) !important;
+  border-radius: var(--je-radius-lg) !important;
+  padding: 28px 32px !important;
+  box-shadow: var(--je-shadow-lg) !important;
+  max-width: 420px !important;
+  width: calc(100vw - 40px) !important;
+  box-sizing: border-box !important;
+  z-index: 100000 !important;
+}
+
+body.je-xt-enabled #mensagem img {
+  width: 32px !important;
+  height: 32px !important;
+  float: left !important;
+  margin: 0 14px 8px 0 !important;
+}
+
+body.je-xt-enabled #caixaTexto {
+  font-family: var(--je-font) !important;
+  font-size: 13.5px !important;
+  color: #1e293b !important;
+  line-height: 1.6 !important;
+  overflow: hidden !important;
+  margin-bottom: 18px !important;
+}
+
+body.je-xt-enabled #transparencia {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(10, 37, 64, 0.35) !important;
+  backdrop-filter: blur(2px) !important;
+  z-index: 99999 !important;
+}
+
 body.je-xt-enabled select,
 body.je-xt-enabled input[type="text"],
 body.je-xt-enabled input[type="password"] {
@@ -1176,6 +1226,19 @@ body.je-xt-disabled .je-legacy-btn-consultar {
   }
 }
 
+/* Variante com sombra de profundidade (var(--je-shadow-lg)) combinada ao
+   glow — usada em cards que precisam manter o relevo tátil enquanto
+   "respiram" (ex.: #box-login da tela de login), diferente do
+   jeGlowPulse puro (só o anel de glow, sem sombra de profundidade). */
+@keyframes jeCardGlowPulse {
+  0%, 100% {
+    box-shadow: var(--je-shadow-lg), var(--je-glow-blue-soft);
+  }
+  50% {
+    box-shadow: var(--je-shadow-lg), var(--je-glow-blue);
+  }
+}
+
 @keyframes jeRowGlowPulse {
   0%, 100% {
     background-color: rgba(0, 119, 255, 0.07);
@@ -1232,6 +1295,11 @@ body.je-xt-enabled button:focus-visible {
     animation: none;
     background-color: rgba(0, 119, 255, 0.12);
     outline-color: rgba(0, 140, 255, 0.4);
+  }
+
+  body.je-xt-enabled.je-login-page #box-login {
+    animation: none !important;
+    box-shadow: var(--je-shadow-lg), var(--je-glow-blue) !important;
   }
 }
 
@@ -1350,12 +1418,15 @@ body.je-xt-enabled .je-kpi-planner-link:hover {
    Toggle Switch Integrado & Persistente (Animação Suave & Alinhamento Preciso)
    ========================================================================== */
 
-/* Toggle Flutuante: Apenas visível no modo legado (XT Desligado) */
+/* Toggle Flutuante: Apenas visível no modo legado (XT Desligado) — exceto
+   na tela de login, que não tem topbar (logo não tem onde morar o toggle
+   integrado) e por isso precisa do flutuante mesmo com o tema ligado. */
 body.je-xt-enabled .je-persistent-toggle-bar {
   display: none !important;
 }
 
-body.je-xt-disabled .je-persistent-toggle-bar {
+body.je-xt-disabled .je-persistent-toggle-bar,
+body.je-xt-enabled.je-login-page .je-persistent-toggle-bar {
   position: fixed;
   top: 14px;
   right: 20px;
@@ -2392,5 +2463,206 @@ body.je-xt-enabled div.calendar tr.rowhilite td.weekend,
 body.je-xt-enabled .calendar td.weekend {
   color: #7c3aed !important;
   font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   Tela de Login (pré-autenticação, perfil 'login' — mountLoginPage() em
+   domModernizer.js). Nenhum seletor aqui troca comportamento de clique —
+   só reestiliza os elementos nativos por ID (#box-login,
+   #login-btnEntrar, #login-btnOdin). O fundo radial e os inputs de texto
+   já vêm do reset genérico acima (regras sem escopo de página); aqui só
+   o que é específico desta tela: reexibir a logo nativa (o reset genérico
+   esconde #topo/#imgSGP em toda página) e o card de login em si.
+   ========================================================================== */
+
+/* Bloco de marca: #topo (logo "Meu Espaço") e #imgSGP (logo SGP) são
+   <div> irmãos nativos (não dá pra uni-los num único flex sem mexer no
+   DOM) — harmonizados por tamanho/espaçamento consistentes e um traço
+   sutil entre os dois, centralizados como se fossem um bloco só. */
+body.je-xt-enabled.je-login-page #topo,
+body.je-xt-enabled.je-login-page #imgSGP {
+  opacity: 1 !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+  float: none !important;
+  max-height: none !important;
+  width: fit-content !important;
+  margin: 0 auto !important;
+}
+
+body.je-xt-enabled.je-login-page #topo {
+  padding: 20px 0 14px !important;
+}
+
+body.je-xt-enabled.je-login-page #topo img {
+  max-width: 260px !important;
+  height: auto !important;
+  filter: drop-shadow(0 2px 6px rgba(10, 37, 64, 0.12));
+}
+
+body.je-xt-enabled.je-login-page #versaoSistema {
+  display: none !important;
+}
+
+body.je-xt-enabled.je-login-page #imgSGP {
+  padding: 0 0 22px !important;
+  border-bottom: 1px solid var(--je-glass-border-subtle) !important;
+  margin-bottom: 22px !important;
+  width: 280px !important;
+}
+
+body.je-xt-enabled.je-login-page #imgSGP img {
+  max-width: 130px !important;
+  height: auto !important;
+  opacity: 0.85 !important;
+}
+
+body.je-xt-enabled.je-login-page #conteudo {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding-top: 4px !important;
+  min-height: 50vh !important;
+  width: 100% !important;
+  float: none !important;
+}
+
+/* Centraliza o <table> nativo (formulário + coluna do captcha) como bloco
+   — table respeita margin:auto igual um elemento block comum quando a
+   largura é a do próprio conteúdo, então a 2ª coluna (captcha, quase
+   sempre vazia/invisível) não puxa o card pra fora do centro. */
+body.je-xt-enabled.je-login-page table {
+  border: none !important;
+  background: transparent !important;
+  border-collapse: collapse !important;
+  width: auto !important;
+  margin: 0 auto !important;
+}
+
+body.je-xt-enabled.je-login-page table td {
+  border: none !important;
+  background: transparent !important;
+  vertical-align: top !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login {
+  background: var(--je-glass-card) !important;
+  backdrop-filter: var(--je-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
+  border: 1px solid var(--je-glass-border) !important;
+  border-radius: var(--je-radius-lg) !important;
+  padding: 32px 32px 28px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  box-sizing: border-box !important;
+  float: none !important;
+  width: 300px !important;
+  margin: 0 auto !important;
+  /* box-shadow vem só da animação (não declarar estático aqui também —
+     as duas fontes de box-shadow no mesmo elemento confundiam o efeito) */
+  animation: jeCardGlowPulse 3.2s ease-in-out infinite !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login label {
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  margin: 10px 0 2px !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login label:first-child {
+  margin-top: 0 !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login input[type="text"],
+body.je-xt-enabled.je-login-page #box-login input[type="password"] {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login br {
+  display: none !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login a {
+  color: var(--je-primary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  margin-top: 6px !important;
+}
+
+body.je-xt-enabled.je-login-page #box-login a:hover {
+  text-decoration: underline !important;
+}
+
+body.je-xt-enabled.je-login-page #login-btnEntrar {
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--je-radius-sm) !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.6px !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+  box-shadow: var(--je-shadow-sm), var(--je-glow-blue-soft) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  width: 100% !important;
+  margin-top: 16px !important;
+  font-family: var(--je-font) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+}
+
+body.je-xt-enabled.je-login-page #login-btnEntrar:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--je-shadow-md), var(--je-glow-blue) !important;
+}
+
+body.je-xt-enabled.je-login-page #login-btnEntrar:active {
+  transform: translateY(0) !important;
+}
+
+body.je-xt-enabled.je-login-page #login-btnOdin {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #475569 !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+  transition: all 0.2s ease !important;
+  font-family: var(--je-font) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+}
+
+body.je-xt-enabled.je-login-page #login-btnOdin:hover {
+  background: #ffffff !important;
+  color: var(--je-primary-dark) !important;
+  border-color: rgba(0, 119, 255, 0.3) !important;
 }
 
