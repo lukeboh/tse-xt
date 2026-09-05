@@ -1,6 +1,6 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
-**Versão do documento:** 1.4.0
+**Versão do documento:** 1.5.0
 **Data:** 05/09/2026
 
 > Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
@@ -127,6 +127,29 @@ Nenhuma das telas abaixo precisou de perfil de página dedicado — o caminho ge
 **Confirmado, arquétipo novo (não é regressão):** `Carteira Funcional`/`Pasta Funcional Digitalizada` (`/smvc/identificacao/...`) é um módulo à parte, aparentemente uma SPA separada com login OAuth próprio (`autenticaje.tse.jus.br/auth/realms/administrativo/...`) — nem `#container` nem `#menu-lateral` do template clássico existem lá. TSE XT corretamente não monta nada. Terceiro arquétipo de página conhecido (além do clássico Struts com `#container` e do "relatório" tipo Capacitação): **módulo `/smvc/` com auth própria**. Não investigado a fundo — não parece haver ganho em portar o TSE XT pra dentro de uma SPA de terceiros.
 
 **Confirma padrão útil:** o fallback `input[type="submit"]` (além de `input[value="CONSULTAR"]`) já modernizou botões com texto bem diferente sem nenhum código novo — "EMITIR FICHA", "NOVO", "PESQUISAR" todos viraram `<button>` moderno de graça.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.8
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Alteração de dados cadastrais (2FA por e-mail) | Assentamentos funcionais | ✅ (após fix "Olá") | ❌ | n/a | — |
+| Solicitação de compensação de horas | Banco de Horas | ✅ | ❌ | n/a | — + calendário |
+| Histórico de Capacitação | Capacitação | ✅ | ✅ | ✅ genérica (191 linhas) | — |
+| Período Aquisitivo | Capacitação | ✅ | ✅ | n/a (vazia até consultar) | ✅ |
+| Eventos de capacitação por período | Capacitação | ✅ | ✅ | n/a (vazia até consultar) | ✅ |
+| Requerimento de AQ Treinamento ("Registro de certificados") | Capacitação | ✅ (após fix crash) | ❌ | ✅ genérica (54 linhas, após fix) | ✅ "INCLUIR" (após fix) |
+| Solicitação de liberação médica | Frequência | ✅ | ❌ | n/a | — + calendário |
+| Devolver Valor Orçamentário (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Homologar Relatório de Serviços Realizados (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Relatório de Serviços Realizados (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+
+**2 bugs reais encontrados e corrigidos nesta rodada** (`domModernizer.js` + `tableModernizer.js`):
+1. **Crash silencioso** (o mais grave até agora): em "Requerimento de AQ Treinamento" (`CapacitacaoExternaAction`), `isInsideInjectedUI()` lançava `TypeError: node.id.indexOf is not a function` e derrubava a montagem inteira a partir do banner de título em diante (topbar sobrevivia, mas título/tabela/botão/FAB/drawer sumiam) — sem nenhum erro visível pro usuário. Causa: um `<form>` no caminho de ancestrais tem um campo `name="id"`, e formulários expõem controles filhos como propriedades nomeadas, então `form.id` retorna o elemento em vez da string do atributo. Corrigido checando `typeof node.id === 'string'` antes de `.indexOf` — mesmo padrão existia duplicado em `tableModernizer.js`, corrigido nos dois lugares. Achado só porque configurei captura de `Runtime.exceptionThrown` via CDP (script novo `cdp-capture-errors.mjs`) — os sintomas visuais sozinhos (nada quebrado "na tela", só faltando peças) não davam pra diagnosticar a causa raiz.
+2. Tela de confirmação por e-mail (2FA) tem só uma saudação **"Olá LUCIANO SOARES BOHNERT"** como heading — o extrator pegava o nome do próprio usuário como se fosse o título da página. `NON_TITLE_HEADING_PATTERNS` ganhou `/^ola\b/`.
+
+**Cuidado registrado:** a tela de 2FA (`Autenticacao2FatoresAction_carregarTela`) pode reenviar o código de segurança por e-mail a cada `GET`/reload — evitar recarregar essa tela repetidamente durante testes futuros.
+
+Com esta rodada, as ~30 telas do menu clássico (Struts, com `#container`) estão cobertas — restam só as 2-3 telas do módulo `/smvc/` (arquétipo à parte, já confirmado que a extensão não interfere) sem verificação individual.
 
 ---
 

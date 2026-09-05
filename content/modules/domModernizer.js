@@ -260,16 +260,24 @@ window.JEPessoasModernizer = (function () {
     // XT injeta (drawer, modais, topbar) têm id com esse prefixo — e parar
     // em document.body evita a falsa positiva do body.
     for (let node = el; node && node !== document.body; node = node.parentElement) {
-      if (node.id && node.id.indexOf('je-') === 0) return true;
+      // node.id nem sempre é string: um <form> expõe seus controles filhos
+      // como propriedades nomeadas, então form.id vira o próprio <input
+      // name="id"> (comum em formulários Struts com campo oculto "id" da
+      // entidade) em vez do atributo id do form — quebrava com
+      // "node.id.indexOf is not a function" (achado ao varrer
+      // CapacitacaoExternaAction, roadmap F7).
+      if (typeof node.id === 'string' && node.id.indexOf('je-') === 0) return true;
     }
     return false;
   }
 
   // Rótulos de seção genéricos que aparecem como heading em várias telas mas
   // nunca são o título da página — ex.: "Validade do banco de horas" tem
-  // "Opções de pesquisa:" como <h2> ANTES do título de verdade. Sem esse
-  // filtro, o extrator pegaria o rótulo da seção de filtro em vez do título.
-  const NON_TITLE_HEADING_PATTERNS = [/^opcoes de pesquisa\b/];
+  // "Opções de pesquisa:" como <h2> ANTES do título de verdade; a tela de
+  // confirmação por e-mail (2FA) só tem uma saudação "Olá <nome>" como h3,
+  // sem nenhum h2/h3 de título de verdade. Sem esse filtro o extrator
+  // pegaria o rótulo da seção ou o próprio nome do usuário como "título".
+  const NON_TITLE_HEADING_PATTERNS = [/^opcoes de pesquisa\b/, /^ola\b/];
 
   function isGenericSectionLabel(text) {
     const normalized = normalizeText(text);

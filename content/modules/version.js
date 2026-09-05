@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.7';
+  const CURRENT_VERSION = '0.6.8';
 
   const CHANGELOG = [
+    {
+      version: '0.6.8',
+      date: '2026-09-05',
+      title: 'Fase 7 do roadmap de arquitetura visual — corrigido crash silencioso que derrubava a montagem em telas com campo de formulário "id"',
+      features: [
+        'Corrigido o bug mais sério achado até agora na varredura de telas: em "Requerimento de AQ Treinamento" (e potencialmente qualquer tela com um <form> contendo um campo name="id"), a extensão lançava um erro interno (form.id retorna o próprio campo em vez do texto do id, por causa de como formulários expõem controles filhos como propriedades nomeadas) que derrubava a montagem — título, tabela, botão de busca, FAB e menu de serviços sumiam sem nenhum aviso. Corrigido em domModernizer.js e tableModernizer.js. Também corrigida a tela de confirmação por e-mail (2FA), que mostrava o nome do próprio usuário como se fosse o título da página. Mais 9 telas validadas ao vivo sem precisar de perfil dedicado, completando a cobertura de todo o menu clássico do Meu Espaço.'
+      ]
+    },
     {
       version: '0.6.7',
       date: '2026-09-05',
