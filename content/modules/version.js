@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.9';
+  const CURRENT_VERSION = '0.6.10';
 
   const CHANGELOG = [
+    {
+      version: '0.6.10',
+      date: '2026-09-05',
+      title: 'Botão secundário nativo (FECHAR, etc.) ganha estilo consistente ao lado do botão moderno',
+      features: [
+        'Diálogo nativo de mensagem/confirmação do portal (#mensagem, .grupoBotoes — usado em várias telas, ex.: aviso de "código expirado, foi enviado um novo" no 2FA) tinha o botão primário (CONFIRMAR) modernizado, mas o botão secundário (FECHAR) ficava sem nenhum estilo, destoando visualmente ao lado do botão azul moderno. .grupoBotoes ganhou o mesmo tratamento de botão secundário já usado na moldura do Espelho/Alteração de Ponto — cinza, com hover consistente.'
+      ]
+    },
     {
       version: '0.6.9',
       date: '2026-09-05',
