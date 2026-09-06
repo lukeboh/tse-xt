@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.14';
+  const CURRENT_VERSION = '0.6.15';
 
   const CHANGELOG = [
+    {
+      version: '0.6.15',
+      date: '2026-09-05',
+      title: 'Splash usa o ícone real da extensão + botões da tela de login com texto centralizado de verdade',
+      features: [
+        'Splash de carregamento (#je-boot-splash) troca o escudo genérico pelo ícone real do TSE XT (icons/icon-128.png, liberado via web_accessible_resources), reforçando a marca.',
+        'Botões ENTRAR e Acesso Extranet da tela de login (#login-btnEntrar/#login-btnOdin) ganharam appearance:none — sem isso, o texto de um <input type="button"> continua sendo desenhado pelo motor nativo do Chrome (appearance: push-button), que ignora o display:flex/justify-content:center já declarado, deixando o texto puxado pra esquerda em vez de centralizado. Achado por print comparando os dois botões lado a lado.'
+      ]
+    },
     {
       version: '0.6.14',
       date: '2026-09-05',
