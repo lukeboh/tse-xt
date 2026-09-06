@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.16';
+  const CURRENT_VERSION = '0.6.17';
 
   const CHANGELOG = [
+    {
+      version: '0.6.17',
+      date: '2026-09-06',
+      title: 'Bug 🪲 CRÍTICO: o splash nunca aparecia de verdade + redesenho como glow crescente (glassmorfismo)',
+      features: [
+        'Achado ao investigar o pedido de redesenho: #je-boot-splash é filho de <html>, e html.je-xt-boot aplica visibility:hidden !important — como visibility é uma propriedade herdada, o splash inteiro herdava esse hidden e nunca era realmente visível pro usuário (getComputedStyle confirmou "hidden"; os screenshots anteriores que pareciam mostrar o splash funcionando só pegaram o instante em que reveal() já tinha rodado por coincidência de tempo). Corrigido com visibility:visible !important na própria #je-boot-splash — só ela reaparece, o resto da página (body) continua corretamente escondido até a montagem terminar.',
+        'Redesenho do splash a pedido do usuário: em vez de um retângulo com gradiente já pronto desde o primeiro frame, agora um glow azul (mesma linguagem do glow respirável de #box-login) nasce do centro e cresce até cobrir a tela (.je-boot-glow, ~800ms), com um .je-boot-backdrop sólido entrando um instante depois como rede de segurança (garante cobertura total mesmo em telas de aspect ratio extremo). O conteúdo (ícone, título, barra) entra com fade+scale logo depois do glow começar a crescer. Ao terminar a montagem real, tudo (glow+conteúdo) some com um fade, revelando a página já modernizada por baixo — sensação de "a splash nasce e se dissolve", não de um cartão estático aparecendo e sumindo.',
+        'prefers-reduced-motion: reduce agora também neutraliza o crescimento do glow e a entrada do conteúdo, indo direto pro estado final.'
+      ]
+    },
     {
       version: '0.6.16',
       date: '2026-09-05',

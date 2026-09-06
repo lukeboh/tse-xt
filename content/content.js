@@ -66,13 +66,21 @@
       // versão base (não a já reduzida icon-128.png) pra ficar nítido em
       // qualquer densidade de tela, já que aqui é exibido bem pequeno.
       const iconUrl = chrome.runtime.getURL('icons/base.png');
+      // .je-boot-backdrop e .je-boot-glow são só decoração (glow azul
+      // crescendo do centro, na linguagem visual de glassmorfismo já usada
+      // no resto da extensão — ver content.css); .je-boot-content (ícone,
+      // título, barra) entra com fade+scale um instante depois.
       splash.innerHTML = `
-        <div class="je-boot-logo">
-          <img src="${iconUrl}" alt="" width="40" height="40" />
+        <div class="je-boot-backdrop"></div>
+        <div class="je-boot-glow"></div>
+        <div class="je-boot-content">
+          <div class="je-boot-logo">
+            <img src="${iconUrl}" alt="" width="40" height="40" />
+          </div>
+          <div class="je-boot-title">TSE <span>XT</span></div>
+          <div class="je-boot-tagline">Preparando sua área de trabalho&hellip;</div>
+          <div class="je-boot-progress-track"><div class="je-boot-progress-fill"></div></div>
         </div>
-        <div class="je-boot-title">TSE <span>XT</span></div>
-        <div class="je-boot-tagline">Preparando sua área de trabalho&hellip;</div>
-        <div class="je-boot-progress-track"><div class="je-boot-progress-fill"></div></div>
       `;
       document.documentElement.appendChild(splash);
     } catch (e) {}
