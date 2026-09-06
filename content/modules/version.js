@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.18';
+  const CURRENT_VERSION = '0.6.19';
 
   const CHANGELOG = [
+    {
+      version: '0.6.19',
+      date: '2026-09-06',
+      title: 'Splash: revelação vira uma dissolução (blur + zoom sutil), não um corte seco de opacidade',
+      features: [
+        'Pedido do usuário: a saída do splash (reveal()) precisava ser tão elegante quanto a entrada. Em vez de só opacity:1→0, #je-boot-splash.je-boot-hide agora combina opacidade, um leve desfoque (blur até 14px) e um zoom sutil (scale até 1.04) em 350ms — como vidro embaçando e se dissipando, reforçando o glassmorfismo em vez de um corte seco. prefers-reduced-motion cai para um fade simples, sem blur/zoom.'
+      ]
+    },
     {
       version: '0.6.18',
       date: '2026-09-06',

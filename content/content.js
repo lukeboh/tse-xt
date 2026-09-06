@@ -95,12 +95,13 @@
     revealed = true;
     const splash = document.getElementById('je-boot-splash');
     if (splash) {
-      // Completa a barra até 100% e some com o splash num crossfade curto
-      // (~300ms) por cima do conteúdo real, que já é revelado no mesmo
-      // instante — evita tanto o corte abrupto da animação de progresso
-      // quanto atrasar artificialmente páginas que carregam rápido.
+      // Completa a barra até 100% e dissolve o splash (opacidade + blur +
+      // leve zoom, ver .je-boot-hide em content.css) por cima do conteúdo
+      // real, que já é revelado no mesmo instante — evita tanto o corte
+      // abrupto da animação de progresso quanto atrasar artificialmente
+      // páginas que carregam rápido.
       splash.classList.add('je-boot-complete', 'je-boot-hide');
-      setTimeout(() => splash.remove(), 320);
+      setTimeout(() => splash.remove(), 370);
     }
     document.documentElement.classList.remove('je-xt-boot');
   }
