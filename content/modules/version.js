@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.17';
+  const CURRENT_VERSION = '0.6.18';
 
   const CHANGELOG = [
+    {
+      version: '0.6.18',
+      date: '2026-09-06',
+      title: 'Splash: crescimento do glow mais suave e constante',
+      features: [
+        'Feedback do usuário sobre a v1: o crescimento do glow (.je-boot-glow) usava keyframes em 35%/70% pra compensar uma curva de easing rápida demais no início — mas isso criava uma mudança perceptível de ritmo bem nesses dois pontos. Trocado por um único trecho 0%→100% com cubic-bezier(0.45, 0, 0.55, 1) (ease-in-out simétrico) e duração um pouco maior (1100ms) — o crescimento fica parelho do início ao fim, sem nenhuma quebra de velocidade no meio.',
+        'Timing do backdrop e do conteúdo (ícone/título/barra) ajustado junto para acompanhar a nova duração do glow.'
+      ]
+    },
     {
       version: '0.6.17',
       date: '2026-09-06',

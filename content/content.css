@@ -129,21 +129,22 @@ body.je-xt-disabled #je-boot-splash {
   inset: 0;
   background: linear-gradient(145deg, var(--je-primary-dark) 0%, var(--je-primary) 55%, var(--je-primary-light) 100%);
   opacity: 0;
-  animation: jeBootBackdropFade 650ms ease forwards;
-  animation-delay: 350ms;
+  animation: jeBootBackdropFade 750ms ease forwards;
+  animation-delay: 400ms;
 }
 
 /* O glow "respirável" que já existe em #box-login (login) e nos cards
    modernizados, só que aqui cresce a partir de um ponto central — pedido
    do usuário pra dar a entrada a sensação de glassmorfismo (a splash
    "nasce" da própria tela, em vez de já surgir como um retângulo pronto).
-   Keyframes com pontos intermediários (35%/70%) em vez de só 0%→100%: uma
-   curva de easing sozinha (ex.: a cubic-bezier(0.16,1,0.3,1) usada no
-   resto do design system) cresce rápido demais nos primeiros ~30% do
-   tempo e o crescimento fica imperceptível — testado com screenshots em
-   intervalos de 50-100ms, que mostraram a tela já 100% coberta aos 350ms
-   de uma animação de 800ms. Com pontos intermediários mais graduais, o
-   crescimento fica visível ao longo de quase toda a duração. */
+   v2 (feedback do usuário: "mais suavidade e constância"): um único
+   trecho 0%→100% com cubic-bezier(0.45,0,0.55,1) — ease-in-out simétrico,
+   sem pontos intermediários. A v1 usava keyframes em 35%/70% pra
+   contornar uma curva que crescia rápido demais no início, mas isso
+   criava uma mudança perceptível de ritmo exatamente nesses pontos —
+   com uma curva única e mais gentil (e duração um pouco maior, 1100ms) o
+   crescimento fica parelho do início ao fim, sem nenhuma quebra de
+   velocidade no meio do caminho. */
 .je-boot-glow {
   position: absolute;
   top: 50%;
@@ -153,7 +154,7 @@ body.je-xt-disabled #je-boot-splash {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(0, 198, 255, 0.9) 0%, rgba(0, 119, 255, 0.6) 32%, rgba(0, 86, 179, 0.32) 52%, rgba(10, 37, 64, 0) 70%);
   transform: translate(-50%, -50%) scale(0.01);
-  animation: jeBootGlowGrow 950ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: jeBootGlowGrow 1100ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
 }
 
 @keyframes jeBootBackdropFade {
@@ -162,8 +163,6 @@ body.je-xt-disabled #je-boot-splash {
 
 @keyframes jeBootGlowGrow {
   0% { transform: translate(-50%, -50%) scale(0.01); }
-  35% { transform: translate(-50%, -50%) scale(0.12); }
-  70% { transform: translate(-50%, -50%) scale(0.5); }
   100% { transform: translate(-50%, -50%) scale(1); }
 }
 
@@ -176,8 +175,8 @@ body.je-xt-disabled #je-boot-splash {
   gap: 18px;
   opacity: 0;
   transform: scale(0.85);
-  animation: jeBootContentIn 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 480ms;
+  animation: jeBootContentIn 550ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 550ms;
 }
 
 @keyframes jeBootContentIn {
