@@ -15,27 +15,64 @@
   // portadas (F5-F7).
   const PAGE_PROFILES = [
     {
+      // Tela de login (pré-autenticação) — Logout, Login_verTelaInicial* e
+      // qualquer redirecionamento de sessão expirada mostram o mesmo
+      // formulário nativo (#box-login), então casamos pelo próprio
+      // elemento em vez de enumerar toda variação de URL possível. Fica
+      // ANTES dos perfis de Espelho de propósito: quando a sessão expira
+      // no meio do uso, o portal redireciona pra cá com a URL de destino
+      // original como query string (ex.:
+      // "Login_verTelaInicialSemLogout.action?url=/Login_/EspelhoPontoMesAction_recuperar"),
+      // e se o perfil de Espelho fosse checado primeiro, o "includes"
+      // bateria nessa query string e montaria a topbar autenticada por
+      // cima do formulário de login puro (achado ao vivo em 2026-09-05).
+      id: 'login',
+      isMatch: () => !!document.getElementById('box-login'),
+    },
+    {
       id: 'espelhoMes',
-      isMatch: () => window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente'),
+      // location.pathname (não href) — href inclui a query string, e ela
+      // pode carregar o nome de outra action como parâmetro (ver comentário
+      // acima), o que já causou falso positivo mesmo com essa checagem
+      // vindo depois do perfil de login.
+      isMatch: () => window.location.pathname.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente'),
     },
     {
       id: 'espelhoDia',
-      isMatch: () => window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia'),
-    },
-    {
-      // Tela de login (pré-autenticação) — Logout e Login_verTelaInicial*
-      // mostram o mesmo formulário nativo (#box-login), então casamos pelo
-      // próprio elemento em vez de enumerar toda variação de URL possível.
-      // Nunca detectar por URL sozinha aqui: mais seguro depender só de o
-      // formulário de login realmente existir na página.
-      id: 'login',
-      isMatch: () => !!document.getElementById('box-login'),
+      isMatch: () => window.location.pathname.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia'),
     },
   ];
 
   function resolveProfileId() {
     const profile = PAGE_PROFILES.find((p) => p.isMatch());
     return profile ? profile.id : null;
+  }
+
+  // Splash de carregamento (ver #je-boot-splash em content.css): cobre a
+  // tela escondida por je-xt-boot com a marca do TSE XT + barra de
+  // progresso, em vez de deixar branco enquanto a página autenticada
+  // (às vezes lenta no backend Struts) termina de montar. Criado direto
+  // em <html> porque roda em document_start, antes de <body> existir —
+  // é escondido via CSS (display:none) na tela de login e com o tema
+  // desligado, então não precisa de nenhuma checagem de perfil aqui.
+  function injectBootSplash() {
+    try {
+      const splash = document.createElement('div');
+      splash.id = 'je-boot-splash';
+      splash.setAttribute('aria-hidden', 'true');
+      splash.innerHTML = `
+        <div class="je-boot-logo">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6l-9-4z"></path>
+            <polyline points="8.5 12 11 14.5 16 9"></polyline>
+          </svg>
+        </div>
+        <div class="je-boot-title">TSE <span>XT</span></div>
+        <div class="je-boot-tagline">Preparando sua área de trabalho&hellip;</div>
+        <div class="je-boot-progress-track"><div class="je-boot-progress-fill"></div></div>
+      `;
+      document.documentElement.appendChild(splash);
+    } catch (e) {}
   }
 
   // Anti-FOUC: revela a página (remove je-xt-boot) uma única vez. Chamada ao
@@ -45,6 +82,15 @@
   function reveal() {
     if (revealed) return;
     revealed = true;
+    const splash = document.getElementById('je-boot-splash');
+    if (splash) {
+      // Completa a barra até 100% e some com o splash num crossfade curto
+      // (~300ms) por cima do conteúdo real, que já é revelado no mesmo
+      // instante — evita tanto o corte abrupto da animação de progresso
+      // quanto atrasar artificialmente páginas que carregam rápido.
+      splash.classList.add('je-boot-complete', 'je-boot-hide');
+      setTimeout(() => splash.remove(), 320);
+    }
     document.documentElement.classList.remove('je-xt-boot');
   }
 
@@ -57,6 +103,7 @@
     if (localStorage.getItem('je_xt_theme_enabled') !== 'false') {
       document.documentElement.classList.add('je-xt-enabled', 'je-xt-boot');
       document.documentElement.classList.remove('je-xt-disabled');
+      injectBootSplash();
     } else {
       document.documentElement.classList.add('je-xt-disabled');
       document.documentElement.classList.remove('je-xt-enabled');

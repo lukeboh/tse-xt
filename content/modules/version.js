@@ -5,9 +5,28 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.12';
+  const CURRENT_VERSION = '0.6.14';
 
   const CHANGELOG = [
+    {
+      version: '0.6.14',
+      date: '2026-09-05',
+      title: 'Bug 🪲: sessão expirada podia montar a topbar autenticada por cima da tela de login nua',
+      features: [
+        'Achado ao vivo enquanto testava o splash: quando a sessão expira e o portal redireciona para Login_verTelaInicialSemLogout com a URL de destino original na query string (ex.: "?url=/Login_/EspelhoPontoMesAction_recuperar"), o reconhecimento de perfil de página batia por substring simples em window.location.href — a query string continha "EspelhoPontoMesAction" e a extensão tratava a tela de login como se fosse o Espelho de Ponto, montando a topbar/menu autenticado por cima do formulário de login puro (sem nenhum estilo do TSE XT nos campos).',
+        'PAGE_PROFILES agora checa o perfil "login" (existência de #box-login, um DOM check inequívoco) ANTES dos perfis de Espelho, e a checagem de URL destes últimos passou a usar location.pathname em vez de location.href — a query string nunca mais entra na comparação.'
+      ]
+    },
+    {
+      version: '0.6.13',
+      date: '2026-09-05',
+      title: 'Splash de carregamento entre o login e a área autenticada — sem mais tela em branco',
+      features: [
+        'Novo #je-boot-splash: enquanto a página autenticada monta (às vezes o backend Struts demora, principalmente logo após o login), em vez de deixar a tela em branco (anti-FOUC html.je-xt-boot escondia tudo, sem feedback nenhum), agora aparece um splash de tela cheia com a marca TSE XT (gradiente nos tons institucionais --je-primary-dark/--je-primary/--je-primary-light) e uma barra de progresso animada.',
+        'Barra de progresso avança sozinha até ~82% enquanto a montagem roda (não temos um percentual real de conclusão, então a animação sugere progresso contínuo sem prometer um número exato) e completa para 100% assim que a montagem termina de verdade, com um crossfade curto (~300ms) para o conteúdo já modernizado por baixo — não atrasa artificialmente páginas que carregam rápido.',
+        'Criado direto em document_start (antes de <body> existir) para cobrir o maior intervalo possível; escondido via CSS na tela de login (nada de "carregando" por cima do formulário de autenticação) e com o tema desligado, e com prefers-reduced-motion: reduce cai para uma barra estática sem animação.'
+      ]
+    },
     {
       version: '0.6.12',
       date: '2026-09-05',
