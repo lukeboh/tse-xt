@@ -94,7 +94,9 @@ html.je-xt-boot {
   font-family: var(--je-font);
   color: #fff;
   opacity: 1;
-  transition: opacity 0.4s ease;
+  filter: blur(0px);
+  transform: scale(1);
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 1, 1), filter 0.35s ease-in, transform 0.35s cubic-bezier(0.4, 0, 1, 1);
   /* html.je-xt-boot esconde a página inteira com visibility:hidden, e
      visibility É herdado — sem este !important aqui, o próprio splash
      (filho de <html>) herdava o hidden do pai e nunca aparecia de
@@ -114,8 +116,14 @@ body.je-xt-disabled #je-boot-splash {
   display: none !important;
 }
 
+/* Revelação (reveal() em content.js): em vez de um corte seco de
+   opacidade, o splash dissolve — desfoca e infla ~4% ao mesmo tempo que
+   desaparece, como vidro embaçando e se dissipando (reforça o
+   glassmorfismo pedido pelo usuário, igual o glow crescente da entrada). */
 #je-boot-splash.je-boot-hide {
   opacity: 0;
+  filter: blur(14px);
+  transform: scale(1.04);
   pointer-events: none;
 }
 
@@ -265,6 +273,8 @@ body.je-xt-disabled #je-boot-splash {
   .je-boot-logo { animation: none; }
   .je-boot-progress-fill { animation: none; width: 60%; }
   #je-boot-splash.je-boot-complete .je-boot-progress-fill { transition: none; }
+  /* Saída sem o blur/zoom — só um fade simples de opacidade. */
+  #je-boot-splash.je-boot-hide { filter: none; transform: none; }
 }
 
 /* ==========================================================================
