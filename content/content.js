@@ -60,10 +60,12 @@
       const splash = document.createElement('div');
       splash.id = 'je-boot-splash';
       splash.setAttribute('aria-hidden', 'true');
-      // Ícone real da extensão (icons/icon-128.png, listado em
-      // web_accessible_resources) em vez de um SVG genérico — pedido
-      // explícito do usuário pra reforçar a marca no splash.
-      const iconUrl = chrome.runtime.getURL('icons/icon-128.png');
+      // Ícone real da extensão em alta resolução (icons/base.png, 512x512,
+      // listado em web_accessible_resources) em vez de um SVG genérico —
+      // pedido explícito do usuário pra reforçar a marca no splash. Usa a
+      // versão base (não a já reduzida icon-128.png) pra ficar nítido em
+      // qualquer densidade de tela, já que aqui é exibido bem pequeno.
+      const iconUrl = chrome.runtime.getURL('icons/base.png');
       splash.innerHTML = `
         <div class="je-boot-logo">
           <img src="${iconUrl}" alt="" width="40" height="40" />
