@@ -77,6 +77,115 @@ html.je-xt-boot {
   --je-transition-smooth: all 0.3s ease;
 }
 
+/* ==========================================================================
+   Splash de Carregamento (cobre o anti-FOUC html.je-xt-boot)
+   Injetado em document.js direto em <html> (roda antes de <body> existir).
+   Some quando reveal() roda (montagem terminou) ou logo se a tela for de
+   login/tema desligado — nenhuma das duas precisa do aviso de carregamento.
+   ========================================================================== */
+#je-boot-splash {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: linear-gradient(145deg, var(--je-primary-dark) 0%, var(--je-primary) 55%, var(--je-primary-light) 100%);
+  font-family: var(--je-font);
+  color: #fff;
+  opacity: 1;
+  transition: opacity 0.32s ease;
+}
+
+html.je-xt-boot #je-boot-splash {
+  display: flex;
+}
+
+body.je-login-page #je-boot-splash,
+body.je-xt-disabled #je-boot-splash {
+  display: none !important;
+}
+
+#je-boot-splash.je-boot-hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.je-boot-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--je-radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  animation: jeBootLogoPulse 2.2s ease-in-out infinite;
+}
+
+.je-boot-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.je-boot-title span {
+  color: var(--je-accent-cyan);
+}
+
+.je-boot-tagline {
+  margin-top: -10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.68);
+  letter-spacing: 0.02em;
+}
+
+.je-boot-progress-track {
+  width: 220px;
+  height: 5px;
+  border-radius: var(--je-radius-full);
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.je-boot-progress-fill {
+  height: 100%;
+  width: 6%;
+  border-radius: var(--je-radius-full);
+  background: linear-gradient(90deg, var(--je-accent-cyan), #fff);
+  box-shadow: 0 0 10px rgba(0, 198, 255, 0.6);
+  animation: jeBootProgress 2.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+#je-boot-splash.je-boot-complete .je-boot-progress-fill {
+  animation: none;
+  width: 100% !important;
+  transition: width 0.22s ease;
+}
+
+@keyframes jeBootLogoPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.25); }
+  50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+@keyframes jeBootProgress {
+  0% { width: 6%; }
+  20% { width: 32%; }
+  45% { width: 52%; }
+  70% { width: 68%; }
+  100% { width: 82%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .je-boot-logo { animation: none; }
+  .je-boot-progress-fill { animation: none; width: 60%; }
+  #je-boot-splash.je-boot-complete .je-boot-progress-fill { transition: none; }
+}
 
 /* ==========================================================================
    Reset Estrito de Floats e Box-Sizing Herdados de CSS Legados
