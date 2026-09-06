@@ -101,7 +101,7 @@
       // abrupto da animação de progresso quanto atrasar artificialmente
       // páginas que carregam rápido.
       splash.classList.add('je-boot-complete', 'je-boot-hide');
-      setTimeout(() => splash.remove(), 370);
+      setTimeout(() => splash.remove(), 400);
     }
     document.documentElement.classList.remove('je-xt-boot');
   }

@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.19';
+  const CURRENT_VERSION = '0.6.20';
 
   const CHANGELOG = [
+    {
+      version: '0.6.20',
+      date: '2026-09-06',
+      title: 'Bug 🪲: dissolução da splash lia como corte seco no celular do usuário — curva de easing errada',
+      features: [
+        'Usuário reportou que, testando pelo celular, a saída do splash ainda parecia um corte seco em vez da dissolução prevista na v0.6.19. Causa: opacidade/blur/escala usavam cubic-bezier(0.4, 0, 1, 1) — um ease-in "de livro" que concentra quase toda a mudança visual nos últimos instantes da transição. Com as três propriedades crespando juntas bem no fim, a dissolução inteira lia como nada acontecendo por 300ms e depois um corte, em vez de gradual.',
+        'Trocado para cubic-bezier(0.45, 0, 0.55, 1) — a mesma curva simétrica (ease-in-out) já usada no crescimento do glow de entrada — que distribui a mudança por toda a duração (agora 380ms). Cada etapa (opacidade caindo, desfoque aumentando, leve zoom) fica perceptível do início ao fim.'
+      ]
+    },
     {
       version: '0.6.19',
       date: '2026-09-06',

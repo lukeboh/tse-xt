@@ -96,7 +96,15 @@ html.je-xt-boot {
   opacity: 1;
   filter: blur(0px);
   transform: scale(1);
-  transition: opacity 0.35s cubic-bezier(0.4, 0, 1, 1), filter 0.35s ease-in, transform 0.35s cubic-bezier(0.4, 0, 1, 1);
+  /* cubic-bezier simétrico (mesma curva do glow de entrada) — um ease-in
+     "de livro" (0.4,0,1,1) concentra quase toda a mudança visual nos
+     últimos instantes da transição, e com opacidade+blur+escala todos
+     crespando juntos bem no fim, a dissolução inteira lia como um corte
+     seco em vez de gradual (reportado pelo usuário testando no celular).
+     Com a mudança distribuída por toda a duração, cada etapa (opacidade
+     caindo, imagem desfocando, leve zoom) fica perceptível do início ao
+     fim, não só no último instante. */
+  transition: opacity 0.38s cubic-bezier(0.45, 0, 0.55, 1), filter 0.38s cubic-bezier(0.45, 0, 0.55, 1), transform 0.38s cubic-bezier(0.45, 0, 0.55, 1);
   /* html.je-xt-boot esconde a página inteira com visibility:hidden, e
      visibility É herdado — sem este !important aqui, o próprio splash
      (filho de <html>) herdava o hidden do pai e nunca aparecia de
