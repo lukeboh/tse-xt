@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.15';
+  const CURRENT_VERSION = '0.6.16';
 
   const CHANGELOG = [
+    {
+      version: '0.6.16',
+      date: '2026-09-05',
+      title: 'Splash usa a versão em alta resolução do logo (icons/base.png)',
+      features: [
+        'Ícone do splash de carregamento trocado de icons/icon-128.png (já reduzido) para icons/base.png (512x512, fundo transparente) — fica nítido em qualquer densidade de tela, já que a extensão pede a pasta de logos como fonte oficial do ícone.'
+      ]
+    },
     {
       version: '0.6.15',
       date: '2026-09-05',
