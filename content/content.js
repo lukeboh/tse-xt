@@ -60,12 +60,13 @@
       const splash = document.createElement('div');
       splash.id = 'je-boot-splash';
       splash.setAttribute('aria-hidden', 'true');
+      // Ícone real da extensão (icons/icon-128.png, listado em
+      // web_accessible_resources) em vez de um SVG genérico — pedido
+      // explícito do usuário pra reforçar a marca no splash.
+      const iconUrl = chrome.runtime.getURL('icons/icon-128.png');
       splash.innerHTML = `
         <div class="je-boot-logo">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6l-9-4z"></path>
-            <polyline points="8.5 12 11 14.5 16 9"></polyline>
-          </svg>
+          <img src="${iconUrl}" alt="" width="40" height="40" />
         </div>
         <div class="je-boot-title">TSE <span>XT</span></div>
         <div class="je-boot-tagline">Preparando sua área de trabalho&hellip;</div>
