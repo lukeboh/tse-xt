@@ -122,10 +122,15 @@
     }
   } catch (e) {}
 
-  // Válvula de segurança: nunca deixa a página escondida por mais de ~1.2s,
-  // mesmo se a montagem falhar ou a URL não for uma página suportada.
-  // Melhor um flash raro do que travar a tela do usuário.
-  setTimeout(reveal, 1200);
+  // Válvula de segurança: nunca deixa a página escondida por mais de ~1.6s,
+  // mesmo se a montagem falhar ou a URL não for uma página suportada (ou
+  // uma tela transitória sem #container, ver o "return" sem reveal() em
+  // init() abaixo). Melhor um flash raro do que travar a tela do usuário.
+  // Levemente maior que antes (1.2s→1.6s): HAR real do fluxo "Acesso
+  // Extranet" (SSO) mostrou uma tela intermediária que fica visível por
+  // ~1-2s antes de redirecionar adiante — a folga extra ajuda o splash a
+  // continuar cobrindo esse trecho em vez de revelar cedo demais.
+  setTimeout(reveal, 1600);
 
   function init() {
     if (!document.body) return;
@@ -144,11 +149,20 @@
     // no <html>/<body>). Assíncrono, mas os cards só são injetados depois.
     if (window.JEPessoasSettings) window.JEPessoasSettings.load();
 
-    // Só monta em páginas autenticadas do Meu Espaço com o shell padrão do
-    // portal (div#container) — o manifest já exclui Login/Logout, isto é só
-    // uma rede de segurança extra para telas fora do layout conhecido.
+    // Páginas fora do shell padrão do portal (sem div#container) não têm
+    // o que modernizar — mas NÃO revela na hora: telas transitórias do
+    // fluxo de login (ex.: o retorno do SSO/RH-SSO em
+    // .../jsp/rhsso/login-rhsso.jsp, sem #container) só ficam na tela por
+    // um instante antes de redirecionar adiante, e revelar cedo demais
+    // aqui deixava o usuário vendo a página nativa (ou em branco) daquele
+    // instante em vez do splash continuar cobrindo. Só sai daqui sem
+    // montar nada — quem revela é a válvula de segurança abaixo (ou uma
+    // nova chamada de init() se essa mesma página navegar via SPA, o que
+    // não é o caso aqui). Confirmado com HAR real: o tempo realmente
+    // gasto no fluxo de "Acesso Extranet" (SSO) é majoritariamente TTFB
+    // do backend (até a resposta começar a chegar) — isso nenhum content
+    // script alcança, não tem documento pra rodar ainda.
     if (!document.getElementById('container')) {
-      reveal();
       return;
     }
 
