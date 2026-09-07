@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.20';
+  const CURRENT_VERSION = '0.6.21';
 
   const CHANGELOG = [
+    {
+      version: '0.6.21',
+      date: '2026-09-07',
+      title: 'Bug 🪲: splash desistia cedo demais em telas transitórias (fluxo "Acesso Extranet"/SSO)',
+      features: [
+        'Usuário reportou tela em branco por vários segundos ao clicar "Acesso Extranet" (login via RH-SSO/Keycloak, token já válido) — mandou um HAR real do fluxo pra investigação. Achado: a tela de retorno do SSO (.../jsp/rhsso/login-rhsso.jsp) não tem div#container, e init() chamava reveal() imediatamente nesse caso — o splash sumia quase na hora, bem antes da página seguir adiante, deixando o usuário olhando pra tela nativa/branca no meio do caminho.',
+        'init() agora só sai sem montar nada quando não há #container (não há o que modernizar mesmo), mas NÃO revela mais na hora — quem revela é a válvula de segurança, agora esticada de 1.2s para 1.6s (folga extra baseada no HAR real, que mostrou a tela intermediária visível por ~1-2s antes de redirecionar).',
+        'Limite técnico que não dá pra contornar (registrado pra referência futura): o HAR mostrou 1,85s e 1,55s de TTFB (tempo até a resposta do servidor começar a chegar) nos dois maiores saltos do fluxo — nesse intervalo não existe documento nenhum pra injetar nada, é espera de rede pura. Nenhuma extensão de navegador alcança esse trecho.'
+      ]
+    },
     {
       version: '0.6.20',
       date: '2026-09-06',
