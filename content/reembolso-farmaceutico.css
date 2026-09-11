@@ -335,7 +335,7 @@ body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) 
 
 body.je-xt-enabled .je-reembolso-layout {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px) !important;
   gap: 20px !important;
   align-items: start !important;
 }
@@ -367,6 +367,23 @@ body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
 body.je-xt-enabled .je-reembolso-layout > .grupoTopicos.je-detail-form-exempt {
   max-width: none !important;
   margin: 0 !important;
+}
+
+/* A tabela "rótulo: valor" do Resumo é table.je-filter-table-card, cuja
+   regra genérica (content.css) usa width:auto de propósito — certo pra
+   painel de filtro solto na página, mas aqui o card É um sidebar
+   dedicado: a tabela deve preencher a largura toda dele, senão sobra
+   espaço morto e o campo de Observações fica espremido. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Contador de caracteres das Observações: o número que conta usa a cor
+   azul padrão do projeto (--je-primary — a mesma dos botões/links/
+   badges), não o navy escuro do texto comum. */
+body.je-xt-enabled .je-reembolso-layout-aside .je-char-counter-container strong {
+  color: var(--je-primary) !important;
 }
 
 /* Só empilha (Resumo desce pra baixo) quando o espaço realmente acaba —

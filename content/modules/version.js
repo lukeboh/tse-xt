@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.16';
+  const CURRENT_VERSION = '0.6.17';
 
   const CHANGELOG = [
+    {
+      version: '0.6.17',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: Resumo do Pedido mais largo, sem rótulos cinzas e contador na cor da marca',
+      features: [
+        'Coluna lateral do Resumo do Pedido de Reembolso mais larga (280-360px -> 320-460px), e a tabela interna passa a ocupar a largura toda do card (era width:auto, pensado pra painel de filtro solto — aqui sobrava espaço morto e o campo de Observações ficava espremido).',
+        'Rótulos "Valor referência para reembolso:" e "Observações:" não ficam mais cinzas: o portal tem uma regra nativa "th { background: #ccc }" sem !important em duas folhas de estilo, e a neutralização existente só cobria a 1ª linha de cada tabela (certo pra cabeçalho de resultado, onde só a 1ª linha tem <th> — errado nestas tabelas "rótulo: valor", onde toda linha tem um).',
+        'Número do contador de caracteres das Observações usa a cor azul padrão do projeto (--je-primary) em vez do navy escuro de texto comum.'
+      ]
+    },
     {
       version: '0.6.16',
       date: '2026-09-11',

@@ -3001,6 +3001,18 @@ body.je-xt-enabled .grupoTopicos.je-detail-form-exempt > ul {
   padding: 0 !important;
 }
 
+/* O portal tem uma regra nativa genérica "th { background: #ccc }" (sem
+   !important) em duas folhas de estilo próprias — o padrão unificado de
+   tabela (content.css, mais abaixo) só neutraliza isso na tr:first-child
+   (cabeçalho de tabela de RESULTADOS, onde só a 1ª linha tem <th>). Nas
+   tabelas "rótulo: valor" destes cartões (cada linha é um <th> de rótulo),
+   só a 1ª linha ficava sem o cinza — as demais (ex.: "Valor referência
+   para reembolso:", "Observações:" no Resumo do Pedido) continuavam
+   cinzas. */
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt th {
+  background: transparent !important;
+}
+
 /* O bloco de detalhe realocado: neutraliza o position:absolute nativo e a
    moldura crua; deixa as duplas rótulo/valor legíveis em coluna. */
 body.je-xt-enabled .je-detail-in-modal {
