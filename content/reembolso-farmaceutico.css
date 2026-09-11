@@ -13,51 +13,21 @@
 
 /* --------------------------------------------------------------------------
    1. Acordeão do bloco "Informações - Leia as instruções..."
+   (#divFormInformacoes, marcado por setupInstructionsAccordion() em
+   reembolsoFarmaceutico.js) — some por inteiro por padrão (título nativo
+   incluso), com um toggle próprio, fora do bloco, sempre visível.
    -------------------------------------------------------------------------- */
 
-/* clearfix defensivo no <div> que envolve o <h4> — reforça o float:none
-   abaixo caso outro filho flutuante apareça no futuro. */
-body.je-xt-enabled div:has(> .je-instrucoes-heading) {
-  overflow: hidden !important;
-}
-
-body.je-xt-enabled .je-instrucoes-heading {
+body.je-xt-enabled .je-instrucoes-toggle-wrap {
   display: flex !important;
-  /* o <h4> nativo do portal tem float:left (o mesmo CSS antigo baseado em
-     float do blueprint.css) — sem isto o pai (um <div> sem clearfix)
-     colapsa pra altura 0 e o card "Formulário" seguinte, mais adiante no
-     DOM, pinta por cima do título das instruções. */
-  float: none !important;
-  clear: both !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-  cursor: pointer !important;
-  font-family: var(--je-font) !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  color: var(--je-primary-dark) !important;
+  justify-content: flex-end !important;
   margin: 0 0 10px 0 !important;
-  padding-bottom: 10px !important;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
-}
-
-/* ícone nativo de ajuda (abre outra janela) — mantém o tamanho discreto ao
-   lado do texto, sem herdar peso/città do título. */
-body.je-xt-enabled .je-instrucoes-heading img {
-  width: 15px !important;
-  height: 15px !important;
-  vertical-align: middle !important;
-  margin-left: 6px !important;
-  cursor: help !important;
 }
 
 body.je-xt-enabled .je-instrucoes-toggle {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  flex: 0 0 auto !important;
-  margin-left: auto !important;
   background: rgba(0, 119, 255, 0.08) !important;
   border: 1px solid rgba(0, 119, 255, 0.2) !important;
   border-radius: var(--je-radius-full, 999px) !important;
@@ -81,26 +51,41 @@ body.je-xt-enabled .je-instrucoes-toggle svg {
   transition: transform 0.2s ease !important;
 }
 
-body.je-xt-enabled .je-instrucoes-heading[aria-expanded] { /* no-op, mantém especificidade baixa */ }
-
 body.je-xt-enabled .je-instrucoes-toggle[aria-expanded="true"] svg {
   transform: rotate(90deg) !important;
 }
 
-/* Conteúdo: colapsado por padrão (max-height:0 + overflow:hidden, não
-   display:none — assim a transição de altura anima suavemente e o texto
-   continua indexável/acessível a leitor de tela mesmo fechado, só oculto
-   visualmente). */
-body.je-xt-enabled #conteudoFormInstrucoes {
-  overflow: hidden !important;
-  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
-  max-height: 600px !important;
-  opacity: 1 !important;
+/* Bloco inteiro (título "Informações..." + ícone de ajuda nativo + lista)
+   some junto — não só a lista. */
+body.je-xt-enabled #divFormInformacoes.je-instrucoes-wrap-collapsed {
+  display: none !important;
 }
 
-body.je-xt-enabled #conteudoFormInstrucoes.je-instrucoes-collapsed {
-  max-height: 0 !important;
-  opacity: 0 !important;
+body.je-xt-enabled .je-instrucoes-heading {
+  display: flex !important;
+  /* o <h4> nativo do portal tem float:left (o mesmo CSS antigo baseado em
+     float do blueprint.css) — sem isto o pai (um <div> sem clearfix)
+     colapsa pra altura 0 e o conteúdo seguinte pinta por cima do título. */
+  float: none !important;
+  clear: both !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  margin: 0 0 10px 0 !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* ícone nativo de ajuda (abre outra janela) — mantém o tamanho discreto ao
+   lado do texto, sem herdar peso/tamanho do título. */
+body.je-xt-enabled .je-instrucoes-heading img {
+  width: 15px !important;
+  height: 15px !important;
+  vertical-align: middle !important;
+  cursor: help !important;
 }
 
 body.je-xt-enabled #conteudoFormInstrucoes ul {
@@ -337,4 +322,80 @@ body.je-xt-enabled .je-medicamento-results-wrap tr.cabecalhoColunas th {
 
 body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) {
   cursor: pointer !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Layout lateral: Resumo do Pedido (.je-reembolso-layout-aside) ao lado
+      do Formulário + Lista de Medicamentos, enquanto houver espaço — só
+      desce pra baixo deles por responsividade. Marcado por
+      setupSidebarLayout() em reembolsoFarmaceutico.js, que embrulha os 3
+      blocos (deixando #divFormInformacoes/instruções de fora — quando
+      abertas, continuam ocupando a largura toda da coluna principal).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-reembolso-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+  gap: 20px !important;
+  align-items: start !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-form {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > table.je-reembolso-layout-list {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  margin: 0 !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
+  grid-column: 2 !important;
+  /* estica pelas 2 linhas da coluna principal (Formulário + Lista) —
+     assim o card acompanha a altura visual do que está ao lado, mesmo
+     quando o Resumo em si é bem mais baixo. */
+  grid-row: 1 / 3 !important;
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+}
+
+/* dentro do layout, quem controla largura/espaçamento é o grid — o
+   max-width/margin genérico do cartão (content.css) atrapalharia. */
+body.je-xt-enabled .je-reembolso-layout > .grupoTopicos.je-detail-form-exempt {
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* Só empilha (Resumo desce pra baixo) quando o espaço realmente acaba —
+   card lateral mínimo de 280px não cabendo mais ao lado da coluna
+   principal com folga legível. */
+@media (max-width: 900px) {
+  body.je-xt-enabled .je-reembolso-layout {
+    display: block !important;
+  }
+
+  body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
+    position: static !important;
+    margin-top: 20px !important;
+  }
+
+  body.je-xt-enabled .je-reembolso-layout > table.je-reembolso-layout-list {
+    margin: 20px 0 !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Observações (dentro do Resumo, marcado por setupObservacoesCounter()):
+      contador dinâmico de caracteres no lugar do "(máx. 1000 caracteres)"
+      estático — mesmo componente visual (.je-char-counter-container) do
+      resto do TSE XT (content.css), aqui só o campo em si.
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled #formReembolsoNovoPedido_observacoes {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }

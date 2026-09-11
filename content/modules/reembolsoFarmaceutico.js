@@ -40,19 +40,22 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
   }
 
   // --------------------------------------------------------------------
-  // Acordeão do bloco de instruções (#conteudoFormInstrucoes, precedido
-  // por um <div><h4>Informações - Leia as instruções...</h4></div>).
+  // Acordeão do bloco de instruções — #divFormInformacoes envolve tanto o
+  // <h4>"Informações..."</h4> quanto a lista (#conteudoFormInstrucoes).
+  // Fica oculto por inteiro por padrão (não só a lista): o título nativo
+  // some junto, o "Formulário para Novo Pedido" sobe. O toggle próprio
+  // (fora do bloco, sempre visível) é quem controla a exibição.
   // --------------------------------------------------------------------
   function setupInstructionsAccordion() {
+    var wrap = document.getElementById('divFormInformacoes');
     var list = document.getElementById('conteudoFormInstrucoes');
-    if (!list || list.dataset.jeAccordion === '1') return;
-    list.dataset.jeAccordion = '1';
+    if (!wrap || !list || wrap.dataset.jeAccordion === '1') return;
+    wrap.dataset.jeAccordion = '1';
 
-    var headingWrap = list.previousElementSibling;
-    var heading = headingWrap ? headingWrap.querySelector('h4') : null;
-    if (!heading) return;
-
-    heading.classList.add('je-instrucoes-heading');
+    // O <h4> tem um ícone nativo de ajuda (AbrirHelp(), abre outra janela)
+    // — deixa como está, só não interfere no toggle (que agora é externo).
+    var heading = wrap.querySelector('h4');
+    if (heading) heading.classList.add('je-instrucoes-heading');
 
     var toggle = document.createElement('button');
     toggle.type = 'button';
@@ -63,12 +66,15 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
         '<polyline points="9 18 15 12 9 6"></polyline>' +
       '</svg>' +
       '<span>Ver instruções</span>';
-    heading.appendChild(toggle);
+    var toggleWrap = document.createElement('div');
+    toggleWrap.className = 'je-instrucoes-toggle-wrap';
+    toggleWrap.appendChild(toggle);
+    wrap.parentNode.insertBefore(toggleWrap, wrap);
 
-    list.classList.add('je-instrucoes-collapsed');
+    wrap.classList.add('je-instrucoes-wrap-collapsed');
 
     function setOpen(open) {
-      list.classList.toggle('je-instrucoes-collapsed', !open);
+      wrap.classList.toggle('je-instrucoes-wrap-collapsed', !open);
       toggle.setAttribute('aria-expanded', String(open));
       var label = toggle.querySelector('span');
       if (label) label.textContent = open ? 'Ocultar instruções' : 'Ver instruções';
@@ -76,16 +82,8 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
 
     toggle.addEventListener('click', function (e) {
       e.preventDefault();
-      e.stopPropagation();
-      setOpen(list.classList.contains('je-instrucoes-collapsed'));
+      setOpen(wrap.classList.contains('je-instrucoes-wrap-collapsed'));
     });
-
-    // O <h4> tem um ícone nativo de ajuda (AbrirHelp(), abre outra janela) —
-    // clicar nele não deve também abrir/fechar o acordeão.
-    var helpIcon = heading.querySelector('img');
-    if (helpIcon) {
-      helpIcon.addEventListener('click', function (e) { e.stopPropagation(); });
-    }
   }
 
   // --------------------------------------------------------------------
@@ -191,6 +189,82 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
     });
   }
 
+  // --------------------------------------------------------------------
+  // Resumo do Pedido de Reembolso (#divFormFinalizacao) vai pra lateral
+  // direita, ao lado do Formulário + Lista de Medicamentos, enquanto
+  // houver espaço — só desce pra baixo deles por responsividade (grid com
+  // breakpoint em CSS). #divFormInformacoes/#tblListaItensNotas ficam de
+  // fora de propósito: as instruções (quando abertas) e a lista de itens
+  // continuam ocupando a coluna principal, largura toda.
+  // --------------------------------------------------------------------
+  function setupSidebarLayout() {
+    var formulario = null;
+    document.querySelectorAll('.grupoTopicos.je-detail-form-exempt').forEach(function (c) {
+      if (/Formulário para Novo Pedido/i.test(c.textContent || '')) formulario = c;
+    });
+    var resumo = document.getElementById('divFormFinalizacao');
+    var lista = document.getElementById('tblListaItensNotas');
+    if (!formulario || !resumo || formulario.dataset.jeLayoutWrapped === '1') return;
+    formulario.dataset.jeLayoutWrapped = '1';
+
+    var layout = document.createElement('div');
+    layout.className = 'je-reembolso-layout';
+    formulario.parentNode.insertBefore(layout, formulario);
+
+    formulario.classList.add('je-reembolso-layout-form');
+    layout.appendChild(formulario);
+    if (lista) {
+      lista.classList.add('je-reembolso-layout-list');
+      layout.appendChild(lista);
+    }
+    resumo.classList.add('je-reembolso-layout-aside');
+    layout.appendChild(resumo);
+  }
+
+  // --------------------------------------------------------------------
+  // Observações (dentro do Resumo do Pedido) é um <input type="text"> —
+  // não um <textarea>, por isso o contador genérico de caracteres
+  // (setupGenericCharCounters em domModernizer.js, que só olha pra
+  // <textarea>) não pega esse campo. Mesmo componente visual
+  // (.je-char-counter-container), adaptado pra um <input>. O aviso
+  // "(máx. 1000 caracteres)" nativo vem dentro do próprio <th> do rótulo
+  // (não como texto solto perto do campo, o padrão que o genérico
+  // reconhece) — por isso precisa reescrever o rótulo aqui também.
+  // --------------------------------------------------------------------
+  function setupObservacoesCounter() {
+    var input = document.getElementById('formReembolsoNovoPedido_observacoes');
+    if (!input || input.dataset.jeCounterSet === '1') return;
+    input.dataset.jeCounterSet = '1';
+
+    var max = parseInt(input.getAttribute('maxlength'), 10) || 1000;
+
+    var row = input.closest('tr');
+    var label = row ? row.querySelector('th') : null;
+    if (label && /caracteres/i.test(label.textContent || '')) {
+      label.textContent = 'Observações:';
+    }
+
+    var counterContainer = document.createElement('div');
+    counterContainer.className = 'je-char-counter-container';
+
+    function updateCount() {
+      var current = input.value ? input.value.length : 0;
+      var remaining = Math.max(0, max - current);
+      var warn = remaining < Math.max(10, max * 0.1) ? 'je-char-warning' : '';
+      counterContainer.innerHTML =
+        '<span class="je-char-max">Máx. ' + max + ' caracteres</span>' +
+        '<span class="je-char-rem">Caracteres restantes: <strong class="' + warn + '">' +
+        remaining + '</strong> / ' + max + '</span>';
+    }
+
+    input.addEventListener('input', updateCount);
+    input.addEventListener('keyup', updateCount);
+    input.addEventListener('change', updateCount);
+    updateCount();
+
+    input.parentNode.insertBefore(counterContainer, input.nextSibling);
+  }
+
   function init() {
     if (!isNovoPedidoPage()) return;
     try { setupFormGrid(); } catch (e) { /* não bloqueia o resto */ }
@@ -198,6 +272,8 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
     try { setupAutoSearch(); } catch (e) {}
     try { setupResultRowClick(); } catch (e) {}
     try { setupResultsScroll(); } catch (e) {}
+    try { setupObservacoesCounter(); } catch (e) {}
+    try { setupSidebarLayout(); } catch (e) {}
   }
 
   return { init: init };

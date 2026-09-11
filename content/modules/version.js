@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.15';
+  const CURRENT_VERSION = '0.6.16';
 
   const CHANGELOG = [
+    {
+      version: '0.6.16',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: instruções somem por inteiro, Resumo vira sidebar, contador nas Observações',
+      features: [
+        'Bloco de instruções agora some por inteiro por padrão (título "Informações..." incluso, não só a lista) — toggle próprio, fora do bloco, sempre visível. O Formulário para Novo Pedido sobe no lugar do espaço que o título ocupava.',
+        'Resumo do Pedido de Reembolso vai para a lateral direita, ao lado do Formulário + Lista de Medicamentos, enquanto houver espaço — só desce pra baixo deles por responsividade (abaixo de ~900px de largura).',
+        'Campo Observações do Resumo ganhou o mesmo contador dinâmico de caracteres do resto do TSE XT, no lugar do "(máx. 1000 caracteres)" estático — era um <input> comum, não um <textarea>, então o contador genérico (que só olha textarea) não pegava.'
+      ]
+    },
     {
       version: '0.6.15',
       date: '2026-09-11',
