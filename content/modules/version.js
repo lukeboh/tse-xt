@@ -5,9 +5,78 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.7';
+  const CURRENT_VERSION = '0.6.15';
 
   const CHANGELOG = [
+    {
+      version: '0.6.15',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: correção definitiva do "Calcular Desconto" vazando',
+      features: [
+        'O white-space:normal do 0.6.14 ainda perdia: table.je-generic-data-table td.je-cell-actions tem 3 classes no seletor contra as 2 do meu (mesmo com mais tipos via combinador >), logo mais especificidade. Repetido com o mesmo peso de classes pra pelo menos empatar — no empate, quem carrega por último no manifest (este arquivo) vence.'
+      ]
+    },
+    {
+      version: '0.6.14',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: "Calcular Desconto" vazando pra coluna vizinha do grid',
+      features: [
+        'A célula do Valor Total Pago foi classificada .je-cell-actions pelo modernizador genérico de tabelas (a tabela do formulário inteiro é .je-generic-data-table) e herdou white-space:nowrap — bom numa coluna de ícone/ação estreita de tabela de resultados, ruim aqui: o link "Calcular Desconto" não quebrava linha e vazava por cima da coluna vizinha (Beneficiário) do grid.'
+      ]
+    },
+    {
+      version: '0.6.13',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: resultado da busca ao lado do campo em vez de embaixo',
+      features: [
+        'O <input> do Medicamento (e outros campos do formulário) também tem float:left nativo — sem neutralizar, o que vem depois (o resultado da busca, o link "Calcular Desconto") contornava o campo flutuante em vez de cair numa linha nova embaixo, ou vazava pra célula vizinha do grid.'
+      ]
+    },
+    {
+      version: '0.6.12',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: auto-busca do medicamento não disparava de verdade',
+      features: [
+        'A auto-busca (0.6.9) chamava window.pesquisaMedicamento() diretamente, mas essa função é da página, definida num <script> nativo — content script roda em mundo JS isolado por padrão, e a função simplesmente não existe nesse mundo (mesmo presente no mundo principal), então a checagem "typeof === function" sempre falhava, silenciosa. Corrigido clicando no próprio elemento nativo #lupa: o DOM é compartilhado entre os dois mundos, e seu onclick roda no mundo certo independente de quem disparou o clique.'
+      ]
+    },
+    {
+      version: '0.6.11',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: linha vazia reaparecendo e ícone da calculadora gigante',
+      features: [
+        'A linha "&nbsp;" de espaçamento nativa (sem função num grid com gap) voltava a aparecer: a regra genérica que transforma cada <tr> em item flex tinha mais classes no seletor (logo mais especificidade) que a regra de escondê-la, mesmo esta vindo depois no arquivo. Linhas especiais (Medicamento, espaçador, botão) agora são marcadas por classe via JS em vez de disputar especificidade com :has().',
+        '#imgCalculadora ("Calcular Desconto") é um <input type="image"> sem width/height no HTML — sem tamanho reservado, ocupava ~196x294px em vez do ícone pequeno que o nome do arquivo (calculadora18px.jpg) promete.'
+      ]
+    },
+    {
+      version: '0.6.10',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: título das seções flutuando por cima do conteúdo',
+      features: [
+        'Os <h4> "Informações..." e "Formulário para Novo Pedido" têm float:left nativo (CSS antigo do portal) — sem neutralizar isso, o <div> pai colapsava pra altura 0 e o título ficava flutuando por cima do que vem depois em vez de empurrar o conteúdo pra baixo (o cabeçalho das instruções sumia atrás do card do formulário). Corrigido com float:none nos dois.'
+      ]
+    },
+    {
+      version: '0.6.9',
+      date: '2026-09-11',
+      title: 'Revisão de UX do cadastro de Reembolso Farmacêutico (Novo Pedido)',
+      features: [
+        'Bloco de instruções ("Leia as instruções antes de solicitar o reembolso") virou um acordeão fechado por padrão — o próprio sistema já valida as regras nele descritas, então o texto raramente precisa ficar aberto ocupando a tela; um clique reabre a qualquer momento.',
+        'A busca de medicamento dispara sozinha enquanto o usuário digita (debounced, 800ms sem digitar e mínimo de 3 caracteres) — não precisa mais clicar na lupa.',
+        'Clique em qualquer parte da linha da "Lista de Apresentações" seleciona o radio — antes só o próprio radio (um alvo minúsculo) respondia ao clique.',
+        'Resultado da busca ganhou rolagem própria (cabeçalho fixo) em vez de esticar a página toda quando a lista passa de 15 itens.',
+        'Formulário inteiro reorganizado num cartão com grid de campos responsivo (2-3 colunas conforme a largura da tela) em vez de uma tabela de 1 coluna só — o "tamanho satisfatório" deixa de depender de já ter pesquisado um medicamento. Radios do Beneficiário ganharam o mesmo estilo do resto do design system.'
+      ]
+    },
+    {
+      version: '0.6.8',
+      date: '2026-09-11',
+      title: 'Formulário de Novo Pedido (Reembolso Farmacêutico) não vira mais modal de detalhamento',
+      features: [
+        'A tela de cadastro (ReembolsoFarmaceuticoAction_registrarPedidoload) tinha o formulário inteiro sequestrado pro modal de "Detalhamento": .grupoTopicos é reaproveitado pelo portal tanto pro detalhe read-only de um pedido já existente quanto pra seções de um formulário ativo (o próprio formulário, e um resumo de totais dentro dele) — e ambos batiam na mesma regra "grupoTopicos = sempre visível, mostra em modal". Como havia 2 candidatos na mesma página, um sobrepunha o outro (o form principal ficava escondido igual antes de o módulo existir, só o resumo de totais aparecia, isolado, dentro do modal). Agora um .grupoTopicos com campo de entrada de dados de verdade (input/select/textarea, fora do botão Retornar) é tratado como formulário, não detalhe: fica no lugar, visível, sem virar modal.'
+      ]
+    },
     {
       version: '0.6.7',
       date: '2026-09-11',

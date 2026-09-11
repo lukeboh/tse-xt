@@ -2959,6 +2959,48 @@ body.je-xt-enabled .je-detail-modal-body {
   line-height: 1.6 !important;
 }
 
+/* .grupoTopicos que detailModal.js decidiu NÃO tratar como detalhe (tem
+   campo de entrada de dados de verdade — é seção de um formulário ativo,
+   não visualização read-only de um registro já existente; ver
+   je-detail-form-exempt em detailModal.js) continua na página normal, mas
+   sem nenhum cartão em volta — a moldura crua do <div class="grupoTopicos">
+   nativo. Cartão glass genérico, no mesmo padrão dos demais painéis do TSE
+   XT, reutilizável por qualquer tela (não é específico do Reembolso
+   Farmacêutico, que tem seu próprio CSS pro grid interno dos campos). */
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt {
+  background: var(--je-glass-card) !important;
+  backdrop-filter: var(--je-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
+  border: 1px solid var(--je-glass-border) !important;
+  border-radius: var(--je-radius-md) !important;
+  box-shadow: var(--je-shadow-tactile) !important;
+  padding: 20px 24px !important;
+  margin: 0 0 20px 0 !important;
+  max-width: var(--je-card-max) !important;
+  float: none !important;
+}
+
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt > h4 {
+  /* <h4> nativo tem float:left (CSS antigo do portal) — sem isto o
+     cabeçalho fica flutuando por cima do que vem embaixo em vez de empurrar
+     o conteúdo. */
+  float: none !important;
+  display: block !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--je-primary-dark) !important;
+  margin: 0 0 16px 0 !important;
+}
+
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt > ul {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* O bloco de detalhe realocado: neutraliza o position:absolute nativo e a
    moldura crua; deixa as duplas rótulo/valor legíveis em coluna. */
 body.je-xt-enabled .je-detail-in-modal {

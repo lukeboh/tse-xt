@@ -227,6 +227,7 @@
           if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
           if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
           if (window.JEPessoasDetailModal) window.JEPessoasDetailModal.init();
+          if (window.JEPessoasReembolsoFarmaceutico) window.JEPessoasReembolsoFarmaceutico.init();
           if (isEspelhoMes && window.JEPessoasLostHours) window.JEPessoasLostHours.init();
 
           // Aviso de aplicação experimental (1º uso e a cada atualização de versão)

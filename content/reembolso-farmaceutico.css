@@ -1,0 +1,340 @@
+/* ==========================================================================
+   TSE XT - Reembolso Farmacêutico: revisão de UX do cadastro de Novo Pedido
+   (ReembolsoFarmaceuticoAction_registrarPedidoload)
+
+   O cartão em volta de cada seção (.grupoTopicos.je-detail-form-exempt,
+   marcado por detailModal.js pras seções que TÊM campo de entrada de dados
+   — logo não são "detalhe" pra virar modal, mas também não deveriam ficar
+   cruas) é genérico e mora em content.css. Aqui só o que é específico desta
+   tela: o acordeão de instruções, o grid do formulário (marcado
+   .je-reembolso-form-grid por reembolsoFarmaceutico.js) e a rolagem própria
+   da lista de resultados da busca de medicamento.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Acordeão do bloco "Informações - Leia as instruções..."
+   -------------------------------------------------------------------------- */
+
+/* clearfix defensivo no <div> que envolve o <h4> — reforça o float:none
+   abaixo caso outro filho flutuante apareça no futuro. */
+body.je-xt-enabled div:has(> .je-instrucoes-heading) {
+  overflow: hidden !important;
+}
+
+body.je-xt-enabled .je-instrucoes-heading {
+  display: flex !important;
+  /* o <h4> nativo do portal tem float:left (o mesmo CSS antigo baseado em
+     float do blueprint.css) — sem isto o pai (um <div> sem clearfix)
+     colapsa pra altura 0 e o card "Formulário" seguinte, mais adiante no
+     DOM, pinta por cima do título das instruções. */
+  float: none !important;
+  clear: both !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  margin: 0 0 10px 0 !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* ícone nativo de ajuda (abre outra janela) — mantém o tamanho discreto ao
+   lado do texto, sem herdar peso/città do título. */
+body.je-xt-enabled .je-instrucoes-heading img {
+  width: 15px !important;
+  height: 15px !important;
+  vertical-align: middle !important;
+  margin-left: 6px !important;
+  cursor: help !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  background: rgba(0, 119, 255, 0.08) !important;
+  border: 1px solid rgba(0, 119, 255, 0.2) !important;
+  border-radius: var(--je-radius-full, 999px) !important;
+  color: var(--je-primary-dark) !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  padding: 5px 12px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle:hover {
+  background: rgba(0, 119, 255, 0.15) !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle svg {
+  flex-shrink: 0 !important;
+  transition: transform 0.2s ease !important;
+}
+
+body.je-xt-enabled .je-instrucoes-heading[aria-expanded] { /* no-op, mantém especificidade baixa */ }
+
+body.je-xt-enabled .je-instrucoes-toggle[aria-expanded="true"] svg {
+  transform: rotate(90deg) !important;
+}
+
+/* Conteúdo: colapsado por padrão (max-height:0 + overflow:hidden, não
+   display:none — assim a transição de altura anima suavemente e o texto
+   continua indexável/acessível a leitor de tela mesmo fechado, só oculto
+   visualmente). */
+body.je-xt-enabled #conteudoFormInstrucoes {
+  overflow: hidden !important;
+  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+  max-height: 600px !important;
+  opacity: 1 !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes.je-instrucoes-collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes ul {
+  margin: 4px 0 0 0 !important;
+  padding: 0 0 0 20px !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes li {
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+  margin-bottom: 6px !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes li a {
+  color: var(--je-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Grid do formulário (table.je-reembolso-form-grid, marcado por JS em
+      cima do <table> que contém o campo "nomeMedicamento" — evita que
+      seletores baseados em :has() peguem também a Lista de Apresentações,
+      que é uma <table> aninhada dentro da própria célula do Medicamento).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled table.je-reembolso-form-grid {
+  display: block !important;
+  width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  border-collapse: collapse !important;
+  box-shadow: none !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 18px 24px !important;
+  align-items: start !important;
+}
+
+/* Cada <tr> é um campo — label (th) em cima, controle (td) embaixo, como
+   os demais formulários do TSE XT. O :not([style*="display: none"]) é
+   essencial: a linha "Nome do Beneficiário" começa escondida por JS
+   nativo (alteraBeneficiario()) e só aparece quando "Dependente" é
+   marcado — sem essa exclusão, o !important abaixo reexibiria a linha
+   sempre, quebrando a alternância nativa. .je-reembolso-row-spacer
+   também é excluída aqui (em vez de deixar a regra dela mais abaixo
+   competir por especificidade — ela tem menos classes no seletor e
+   perdia, mesmo vindo depois no arquivo). */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr:not([style*="display: none"]):not([style*="display:none"]):not(.je-reembolso-row-spacer) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display: none"],
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display:none"] {
+  display: none !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr > th {
+  display: block !important;
+  text-align: left !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  white-space: normal !important;
+  vertical-align: top !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr > td {
+  display: block !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  vertical-align: top !important;
+  /* algumas dessas células foram classificadas .je-cell-actions pelo
+     modernizador genérico de tabelas (a tabela inteira é .je-generic-data-
+     table — ver comentário no topo do arquivo) e herdam white-space:nowrap
+     — bom pra uma coluna de ícone/ação estreita numa grade de resultados,
+     ruim aqui: "Calcular Desconto" não quebra linha e vaza por cima da
+     coluna vizinha do grid. */
+  white-space: normal !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid a {
+  white-space: normal !important;
+}
+
+/* O white-space:normal acima (seletor com mais tipos que classes) perde
+   pra regra genérica table.je-generic-data-table td.je-cell-actions —
+   3 classes contra 2, então especificidade maior mesmo com menos peso
+   "visual" no seletor. Repete o mesmo peso de classes (3) pra pelo menos
+   empatar — no empate, quem carrega por último (este arquivo, depois de
+   content.css no manifest) vence. */
+body.je-xt-enabled table.je-reembolso-form-grid td.je-cell-actions {
+  white-space: normal !important;
+}
+
+/* input/select/a nativos do portal têm float:left (o mesmo CSS antigo do
+   blueprint.css) — sem neutralizar, o próximo elemento (o resultado da
+   busca, o ícone/link "Calcular Desconto") não cai numa linha nova embaixo:
+   contorna o elemento flutuante e aparece do lado, ou vaza pra célula
+   vizinha do grid. */
+body.je-xt-enabled table.je-reembolso-form-grid td > input,
+body.je-xt-enabled table.je-reembolso-form-grid td > select,
+body.je-xt-enabled table.je-reembolso-form-grid td > a,
+body.je-xt-enabled table.je-reembolso-form-grid td > img,
+body.je-xt-enabled table.je-reembolso-form-grid td > span,
+body.je-xt-enabled table.je-reembolso-form-grid td > div,
+body.je-xt-enabled table.je-reembolso-form-grid td > label {
+  float: none !important;
+}
+
+/* Campos de texto/select genéricos do grid: largura contida na coluna.
+   O campo do Medicamento é excluído (:not) — a linha dele ocupa a largura
+   toda do grid (regra abaixo) e o input acompanha. */
+body.je-xt-enabled table.je-reembolso-form-grid input[type="text"]:not([name="nomeMedicamento"]),
+body.je-xt-enabled table.je-reembolso-form-grid select {
+  width: 100% !important;
+  max-width: 260px !important;
+  box-sizing: border-box !important;
+}
+
+/* Linhas "especiais", marcadas por reembolsoFarmaceutico.js (setupFormGrid)
+   — classe em vez de :has(), pra não depender de aritmética de
+   especificidade contra a regra genérica ":not([style...])" acima (que
+   tem mais classes no seletor mesmo sendo "mais simples"). */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-full {
+  grid-column: 1 / -1 !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid input[name="nomeMedicamento"] {
+  width: 100% !important;
+  max-width: 640px !important;
+  box-sizing: border-box !important;
+}
+
+/* Linha vazia ("&nbsp;" que o portal usa só de espaçador visual entre os
+   campos e o botão) — sem função nenhuma dentro de um grid com gap. */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-spacer {
+  display: none !important;
+}
+
+/* Linha do botão ADICIONAR ITEM: largura inteira, com um filete acima
+   separando do resto do formulário. */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-actions {
+  padding-top: 14px !important;
+  margin-top: 4px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-actions > td {
+  text-align: left !important;
+}
+
+/* Radios do Beneficiário (não usam o padrão .grupoRadioCheck) — mesmo
+   tratamento visual dos demais checkboxes/radios do design system. */
+body.je-xt-enabled table.je-reembolso-form-grid input[type="radio"] {
+  accent-color: var(--je-primary) !important;
+  width: 15px !important;
+  height: 15px !important;
+  cursor: pointer !important;
+  vertical-align: middle !important;
+  margin: 0 4px 0 0 !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid .lblRadio {
+  font-size: 13px !important;
+  color: #334155 !important;
+  margin-right: 18px !important;
+  cursor: pointer !important;
+}
+
+/* Ícones nativos auxiliares (ajuda do tipo de uso, calculadora) — só
+   alinhamento, sem trocar de ícone. */
+body.je-xt-enabled table.je-reembolso-form-grid img {
+  vertical-align: middle !important;
+}
+
+/* #imgCalculadora ("Calcular Desconto") é um <input type="image"> sem
+   width/height no HTML — sem a imagem carregar (ou fora daqui, sem
+   nenhum tamanho declarado), o navegador reserva um espaço enorme
+   (~196x294px) em vez do ícone pequeno que o nome do arquivo promete. */
+body.je-xt-enabled #imgCalculadora {
+  width: 18px !important;
+  height: 18px !important;
+  vertical-align: middle !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid td > span {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Resultado da busca (#tblListaApresentacoes): rolagem própria — a
+      lista pode passar de 15 itens e esticar a página toda.
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-medicamento-results-wrap {
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  margin-top: 10px !important;
+  border-radius: var(--je-radius-sm) !important;
+  border: 1px solid var(--je-glass-border) !important;
+}
+
+body.je-xt-enabled .je-medicamento-results-wrap table.je-generic-data-table {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* cabeçalho gruda no topo da área de rolagem */
+body.je-xt-enabled .je-medicamento-results-wrap thead th,
+body.je-xt-enabled .je-medicamento-results-wrap tr.cabecalhoColunas th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1 !important;
+}
+
+body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) {
+  cursor: pointer !important;
+}

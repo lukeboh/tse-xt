@@ -32,6 +32,22 @@ window.JEPessoasDetailModal = (function () {
   let currentOverlay = null;
   let scanTimer = null;
 
+  // .grupoTopicos é reaproveitado pelo portal como wrapper genérico de
+  // SEÇÃO DE PÁGINA — não só pro "detalhe read-only de um registro já
+  // existente" que este módulo trata (ex.: no cadastro de Novo Pedido do
+  // Reembolso Farmacêutico, tanto o formulário inteiro quanto um resumo
+  // interno de totais são .grupoTopicos, e nenhum dos dois deveria virar
+  // modal). O sinal confiável: um detalhe de verdade é sempre read-only
+  // (th/td, no máximo um botão Retornar/Fechar); um formulário ativo tem
+  // campo de entrada de dados.
+  function hasEditableFields(el) {
+    return !!el.querySelector(
+      'input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([readonly]):not([disabled]),' +
+      'select:not([disabled]),' +
+      'textarea:not([readonly]):not([disabled])'
+    );
+  }
+
   // O CSS esconde o bloco nativo SEMPRE (até o JS pôr .je-detail-in-modal),
   // pra NÃO piscar no formato antigo. Então não dá pra confiar em
   // offsetParent/computed style — a "intenção de exibir" do portal vem da
@@ -53,7 +69,15 @@ window.JEPessoasDetailModal = (function () {
     // esquema) — daí o marcador: só a nossa própria closeCurrent() seta
     // jeClosedByModal, e só enquanto o bloco continuar display:none.
     if (el.classList.contains('grupoTopicos')) {
-      return el.dataset.jeClosedByModal !== '1';
+      if (el.classList.contains('je-detail-form-exempt')) return false;
+      if (el.dataset.jeClosedByModal === '1') return false;
+      if (hasEditableFields(el)) {
+        // formulário ativo, não detalhe — ver hasEditableFields() acima.
+        // Marca pra CSS (injectHideRule) parar de escondê-lo também.
+        el.classList.add('je-detail-form-exempt');
+        return false;
+      }
+      return true;
     }
     return el.offsetParent !== null;
   }
@@ -202,7 +226,7 @@ window.JEPessoasDetailModal = (function () {
     st.textContent =
       'body.je-xt-enabled .molduraDetalheLiberacaoMedica:not(.je-detail-in-modal),' +
       'body.je-xt-enabled [class*="molduraDetalhe"]:not(.je-detail-in-modal),' +
-      'body.je-xt-enabled .grupoTopicos:not(.je-detail-in-modal),' +
+      'body.je-xt-enabled .grupoTopicos:not(.je-detail-in-modal):not(.je-detail-form-exempt),' +
       'body.je-xt-enabled #divDetalhamento:not(.je-detail-in-modal),' +
       'body.je-xt-enabled #detalhamento:not(.je-detail-in-modal)' +
       '{display:none !important;}';
