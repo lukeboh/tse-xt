@@ -20,9 +20,19 @@ window.JEPessoasTableModernizer = (function () {
   // Conservador de propósito: cobre os status mais comuns do português
   // administrativo do TSE; cresce sob demanda ao portar novas telas (F7).
   const STATUS_KEYWORDS = {
-    success: ['sim', 'ativo', 'homologado', 'aprovado', 'deferido', 'concluído', 'concluido', 'regular'],
-    warning: ['pendente', 'aguardando', 'parcial'],
-    danger: ['não', 'nao', 'inativo', 'indeferido', 'reprovado', 'cancelado', 'negado', 'irregular']
+    success: [
+      'sim', 'ativo', 'homologado', 'aprovado', 'deferido', 'concluído', 'concluido', 'regular',
+      'pago', 'encaminhado para pagamento'
+    ],
+    warning: [
+      'pendente', 'aguardando', 'parcial', 'em análise', 'em analise',
+      'aguardando documentação', 'aguardando documentacao', 'aguardando homologação',
+      'aguardando homologacao', 'em andamento'
+    ],
+    danger: [
+      'não', 'nao', 'inativo', 'indeferido', 'reprovado', 'cancelado', 'negado', 'irregular',
+      'rejeitado'
+    ]
   };
 
   // Mesma lógica de exclusão usada em domModernizer.js (extractNativePageTitle):
@@ -153,7 +163,11 @@ window.JEPessoasTableModernizer = (function () {
     cells.forEach((cell) => {
       if (cell.querySelector('*')) return;
       const text = cell.textContent.trim();
-      if (!text || text.length > 24) return;
+      // 40 (era 24): dá margem pra status de duas/três palavras comuns no
+      // domínio administrativo do TSE ("ENCAMINHADO PARA PAGAMENTO",
+      // "AGUARDANDO DOCUMENTAÇÃO") — ainda é exact-match contra
+      // STATUS_KEYWORDS, então não vira badge em frase livre por acaso.
+      if (!text || text.length > 40) return;
 
       const normalized = text.toLowerCase();
       let variant = null;

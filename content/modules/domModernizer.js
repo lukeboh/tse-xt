@@ -1692,9 +1692,16 @@ window.JEPessoasModernizer = (function () {
   // comportamento nativo (inclusive onclick="funcaoDoStruts(...)").
   const NATIVE_ICON_PATTERNS = [
     {
-      match: /detalhar/i,
+      // Ícone de "ver detalhes" (lupa) — MESMO traço circle+linha usado em
+      // todo lugar que a extensão desenha uma lupa (cabeçalho de filtro,
+      // busca do Menu de Serviços). "detalhar" pega a maioria das telas;
+      // "lupa" cobre o padrão de arquivo usado por outras (ex.: Reembolso
+      // Farmacêutico, img/lupa16x16.gif) — antes ficava com o ícone nativo
+      // (não era "olho": simplesmente não batia em nenhum padrão e não era
+      // substituído).
+      match: /detalhar|lupa/i,
       color: 'var(--je-primary)',
-      svg: '<circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>'
+      svg: '<circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line>'
     },
     {
       match: /iconedit/i,

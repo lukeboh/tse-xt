@@ -5,9 +5,72 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.0';
+  const CURRENT_VERSION = '0.6.7';
 
   const CHANGELOG = [
+    {
+      version: '0.6.7',
+      date: '2026-09-11',
+      title: 'Header "MEDICAMENTO" também alinhado à direita no modal de detalhamento',
+      features: [
+        'O <th> "MEDICAMENTO" continuava centralizado mesmo depois do alinhamento à direita do 0.6.4: cada linha "rótulo: valor" desse detalhamento é a tr:first-child da própria mini-tabela, batendo numa regra genérica de cabeçalho de tabela de dados com mais especificidade que a regra de alinhamento do modal (0-2-4 contra 0-2-3, os dois !important). Acrescentadas variantes explícitas por classe de tabela (.je-generic-data-table/.je-filter-table-card/.je-modernized-table/.grid) pra vencer em todos os casos.'
+      ]
+    },
+    {
+      version: '0.6.6',
+      date: '2026-09-11',
+      title: 'X do modal de detalhamento não deixa mais página em branco',
+      features: [
+        'Telas onde o detalhamento é uma página própria (não anexada por AJAX à listagem, ex.: Reembolso Farmacêutico) tinham um botão "Retornar" que navega de volta de verdade — mas o X/Esc/clique-fora do modal só escondia o bloco de novo, sem navegar, deixando uma página em branco atrás do overlay fechado. Agora X/Esc/clique-fora detectam um botão "Retornar"/"Voltar" dentro do próprio detalhe e disparam a mesma navegação nativa. Onde o padrão é outro (grupoTopicos + .grupoBotoes "Fechar", a lista já viva por trás), nada muda — continua só escondendo.'
+      ]
+    },
+    {
+      version: '0.6.5',
+      date: '2026-09-11',
+      title: 'Modal de Detalhamento ainda mais larga (900px)',
+      features: [
+        'Nomes de servidor com 3-4 palavras (ex. "DORACY COSTA VIANNA EDINGTON") ainda quebravam em 2 linhas nos 820px do 0.6.3 — data/hora já cabiam numa linha só. Subiu pra 900px.'
+      ]
+    },
+    {
+      version: '0.6.4',
+      date: '2026-09-11',
+      title: 'Modal de Detalhamento: alinhamento original das tabelas + corrige regressão de abertura',
+      features: [
+        'Rótulo (th, ex. "MEDICAMENTO") volta a alinhar à direita e o valor (td, última coluna) à esquerda nas tabelas de detalhamento — como no layout original do portal; o th caía no center padrão do navegador.',
+        'Corrigida regressão do fix do botão Fechar (0.6.1): em telas onde o detalhamento é acessado por navegação direta em vez de AJAX da listagem (Reembolso Farmacêutico), o bloco já chega do servidor com display:none inline — a blindagem contra reabertura em loop (que também usa display:none pra reconhecer "acabei de fechar") estava barrando a primeira abertura também. Agora só um marcador que a própria closeCurrent() grava é que impede reabrir; um display:none "de fábrica" continua abrindo normalmente.'
+      ]
+    },
+    {
+      version: '0.6.3',
+      date: '2026-09-11',
+      title: 'Modal de Detalhamento mais larga',
+      features: [
+        'Card do modal de detalhamento (Reembolso Farmacêutico e afins) passou de 640px para 820px de largura máxima — nomes de servidor e "dd/mm/aaaa - hh:mm:ss" quebravam linha à toa num card estreito demais pro conteúdo.'
+      ]
+    },
+    {
+      version: '0.6.2',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: follow-up do 0.6.1 — botões do filtro, lupa nativa e "Retornar" duplicado',
+      features: [
+        'Botões PESQUISAR/NOVO ainda desalinhados: causa diferente do CONSULTAR do Espelho (0.6.58) — aqui cada botão fica no seu próprio .campoPesquisa (coluna vertical), então quem manda é justify-content (não align-self). Sem rótulo, o botão ficava grudado no topo da coluna de 58px em vez de embaixo, na mesma faixa dos demais campos.',
+        'Ícone de lupa da linha da tabela continuava nativo: o padrão de arquivo desta tela (img/lupa16x16.gif) não batia com a regex "detalhar" usada pra reconhecer o ícone — agora cobre também "lupa".',
+        'Modal de detalhe: o table-layout: fixed do 0.6.1 piorou o problema que tentava resolver — com o <colgroup> nativo (248/""/208/148px) somando mais que a largura do modal, a coluna sem largura ficava espremida a quase zero e o texto virava uma letra por linha. Voltou pro layout automático (o padrão), que quebra no limite da palavra dentro do espaço real disponível.',
+        '"Retornar" duplicado: o botão nativo, escondido via .je-legacy-btn-consultar, reaparecia porque vive dentro de uma <table class="je-filter-table-card"> própria (#tblBotoes) — e a regra genérica que força os controles de tabela-filtro a display:block (para inputs/selects de verdade) tinha especificidade maior que a regra que esconde o botão legado, e não tinha a mesma exclusão que as outras 3 regras parecidas já tinham.'
+      ]
+    },
+    {
+      version: '0.6.1',
+      date: '2026-09-11',
+      title: 'Reembolso Farmacêutico: modal de detalhe utilizável, mais status com badge e ícone de lupa padronizado',
+      features: [
+        'Modal de detalhamento tinha uma <li> por bloco tratada com grid de 2 colunas (rótulo/valor) genérico — mas aqui cada item é uma <table> inteira; a tabela não cabia na coluna e ficava praticamente invisível, empurrada pra fora do card. <li> com tabela agora fica em bloco normal de largura cheia, e a tabela usa table-layout: fixed (a largura fixa em px do <colgroup> nativo virava overflow em vez de proporção).',
+        'Corrigido bug que impedia fechar esse mesmo modal: o botão Fechar/X escondia o bloco de detalhe via style.display, mas isVisibleDetail() tinha uma regra que considerava qualquer .grupoTopicos sempre visível, ignorando esse display:none — a primeira varredura do observer depois de fechar reabria o modal na hora.',
+        'Badge de status: além de REPROVADO, agora ENCAMINHADO PARA PAGAMENTO, PAGO, EM ANÁLISE, AGUARDANDO DOCUMENTAÇÃO/HOMOLOGAÇÃO e afins também ganham o chip colorido (limite de tamanho da célula subiu de 24 para 40 caracteres — a checagem continua sendo por correspondência exata com a lista de status conhecidos, não por trecho de frase).',
+        'Ícone de "ver detalhes" nas tabelas: era um olho (SVG de visibilidade); virou a mesma lupa (círculo + traço) usada no resto do TSE XT.'
+      ]
+    },
     {
       version: '0.6.0',
       date: '2026-09-11',

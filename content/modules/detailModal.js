@@ -42,8 +42,38 @@ window.JEPessoasDetailModal = (function () {
     if (el.classList.contains('escondido')) return false;
     if (el.classList.contains('exibido')) return true;
     if (el.style && el.style.display && el.style.display !== 'none') return true;
-    if (el.classList.contains('grupoTopicos')) return true;
+    // .grupoTopicos sem esquema exibido/escondido: por padrão é considerado
+    // visível mesmo com style.display:none — em algumas telas (ex.:
+    // Reembolso Farmacêutico, navegado direto pra ação de detalhe em vez de
+    // via AJAX da listagem) o bloco já chega do servidor com display:none
+    // inline e nada nativo tira isso; se essa regra exigisse display
+    // diferente de none aqui, o modal nunca abriria sozinho nessa tela.
+    // MAS não pode reabrir um bloco que ESTE módulo acabou de fechar
+    // (_jeCleanup também usa style.display='none' pra esconder, no mesmo
+    // esquema) — daí o marcador: só a nossa própria closeCurrent() seta
+    // jeClosedByModal, e só enquanto o bloco continuar display:none.
+    if (el.classList.contains('grupoTopicos')) {
+      return el.dataset.jeClosedByModal !== '1';
+    }
     return el.offsetParent !== null;
+  }
+
+  // Algumas telas (ex.: Reembolso Farmacêutico) não anexam o detalhe à
+  // página da listagem via AJAX — a "lupa" navega de verdade pra uma ação
+  // dedicada (verDetalhesPedidoloadDetalhes), cujo HTML não tem lista nem
+  // filtro, só o detalhamento. Nesse caso, X/Esc/clique-fora não pode só
+  // esconder o bloco de novo (_jeCleanup): sobra uma página em branco atrás
+  // do overlay. O sinal é um botão "Retornar"/"Voltar" dentro do próprio
+  // detalhe (não confundir com "Fechar", do padrão grupoTopicos+grupoBotoes
+  // de anexar-no-fim-da-página, onde esconder no lugar é o certo — a lista
+  // já está viva por trás). Clicar nele dispara a navegação nativa de volta.
+  function findReturnAction(detailEl) {
+    const els = detailEl.querySelectorAll('button, input[type="button"], input[type="submit"]');
+    for (let i = 0; i < els.length; i++) {
+      const text = (els[i].textContent || els[i].value || '').trim();
+      if (/^(retornar|voltar)$/i.test(text)) return els[i];
+    }
+    return null;
   }
 
   function buildOverlay() {
@@ -67,6 +97,7 @@ window.JEPessoasDetailModal = (function () {
     if (currentOverlay) closeCurrent();
 
     detailEl.dataset.jeInModal = '1';
+    delete detailEl.dataset.jeClosedByModal;
 
     // âncora pra devolver o bloco ao lugar de origem quando fechar
     const slot = document.createComment('je-detail-slot');
@@ -89,7 +120,17 @@ window.JEPessoasDetailModal = (function () {
     document.documentElement.style.overflow = 'hidden';
     window.requestAnimationFrame(function () { overlay.classList.add('active'); });
 
-    const onKey = function (e) { if (e.key === 'Escape') closeCurrent(); };
+    // Delega pro "Retornar"/"Voltar" nativo quando ele existir dentro do
+    // próprio detalhe — ver findReturnAction() acima. Calculado a cada
+    // fechamento (não só uma vez) porque nada impede o conteúdo de mudar
+    // entre a abertura e o fechamento.
+    const handleClose = function () {
+      const returnBtn = findReturnAction(detailEl);
+      if (returnBtn) { returnBtn.click(); return; }
+      closeCurrent();
+    };
+
+    const onKey = function (e) { if (e.key === 'Escape') handleClose(); };
 
     overlay._jeCleanup = function () {
       document.removeEventListener('keydown', onKey);
@@ -101,6 +142,7 @@ window.JEPessoasDetailModal = (function () {
         detailEl.classList.add('escondido');
       } else {
         detailEl.style.display = 'none';
+        detailEl.dataset.jeClosedByModal = '1';
       }
       try {
         if (slot.parentNode) {
@@ -112,8 +154,8 @@ window.JEPessoasDetailModal = (function () {
       detailEl.dataset.jeInModal = '';
     };
 
-    overlay.querySelector('.je-detail-modal-close').addEventListener('click', closeCurrent);
-    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeCurrent(); });
+    overlay.querySelector('.je-detail-modal-close').addEventListener('click', handleClose);
+    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) handleClose(); });
     document.addEventListener('keydown', onKey);
 
     if (btnRow) {
