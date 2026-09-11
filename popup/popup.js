@@ -6,10 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Preferências de aparência do painel de KPIs (lidas pelo content script em
   // content/modules/settings.js via chrome.storage.local).
-  const DEFAULTS = { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' };
+  const DEFAULTS = { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow', navMenuMode: 'hover' };
   const VALUES = {
     kpiCardStyle: ['flat', 'gradient'],
-    kpiCardEmphasis: ['soft', 'glow']
+    kpiCardEmphasis: ['soft', 'glow'],
+    navMenuMode: ['hover', 'click']
   };
 
   function paint(key, value) {

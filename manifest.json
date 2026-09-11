@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TSE XT",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",
@@ -32,13 +32,18 @@
   "content_scripts": [
     {
       "matches": [
-        "*://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_*",
-        "*://*.tse.jus.br/portalservidor2/EspelhoPontoMesAction_*",
-        "*://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoDiaAction_*",
-        "*://*.tse.jus.br/portalservidor2/EspelhoPontoDiaAction_*"
+        "*://meuespaco.tse.jus.br/portalservidor2/*",
+        "*://*.tse.jus.br/portalservidor2/*"
+      ],
+      "exclude_matches": [
+        "*://meuespaco.tse.jus.br/portalservidor2/Login_autenticar*",
+        "*://*.tse.jus.br/portalservidor2/Login_autenticar*",
+        "*://meuespaco.tse.jus.br/portalservidor2/Login_encerrarSessao*",
+        "*://*.tse.jus.br/portalservidor2/Login_encerrarSessao*"
       ],
       "css": [
-        "content/content.css"
+        "content/content.css",
+        "content/espelho-ponto.css"
       ],
       "js": [
         "content/modules/version.js",
@@ -52,9 +57,11 @@
         "content/modules/quickActions.js",
         "content/modules/navDrawer.js",
         "content/modules/domModernizer.js",
+        "content/modules/tableModernizer.js",
         "content/modules/pointAdjustmentModal.js",
         "content/modules/monthPlanner.js",
         "content/modules/lostHoursAudit.js",
+        "content/modules/detailModal.js",
         "content/content.js"
       ],
       "run_at": "document_start"

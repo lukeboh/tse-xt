@@ -5,9 +5,23 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.5.0';
+  const CURRENT_VERSION = '0.6.0';
 
   const CHANGELOG = [
+    {
+      version: '0.6.0',
+      date: '2026-09-11',
+      title: 'Série 0.6.x consolidada — arquitetura CSS genérica chega a todas as telas do Meu Espaço',
+      features: [
+        'Rollout do design system para além do Espelho de Ponto: as ~30 telas do menu clássico do Meu Espaço passaram a herdar automaticamente topbar, menu de serviços, título de página, tabelas, formulários e botões modernizados — sem precisar de um perfil dedicado por tela (Fases 1 a 7 do roadmap de arquitetura visual, concluído). Cobre título de página genérico, modernizador genérico de tabela (com colunas de nome alinhadas à esquerda), reconhecimento de botão de ação por texto (CONSULTAR/PESQUISAR/SALVAR/CONFIRMAR/GRAVAR/ENVIAR/NOVO) e agrupamento de campo + rótulo + contador de caracteres.',
+        'Espelho de Ponto: cabeçalho da tabela no mesmo padrão das demais telas (com tinta condicional pra não se fundir com a 1ª linha), "Totais:" alinhado à direita, espaçadores do resumo mais finos, fim do "buraco" branco nas últimas linhas; colunas SALDO ACUM. e HORAS EXCED. centralizadas e com tons de verde/vermelho translúcidos que preservam o zebrado e o realce de fim de semana/feriado por baixo (hover aprofunda a cor em vez de apagá-la); filtro de pesquisa alinhado à largura da tabela e botão CONSULTAR alinhado com os demais campos.',
+        'Menu de Serviços (drawer): ícones de categoria trocados de emoji para o mesmo estilo de traço (SVG) do design system, lupa do campo de busca sem sobrepor o placeholder, autorrolagem suave até revelar a categoria aberta por inteiro, e nova preferência no popup da extensão pra escolher entre abrir só com o mouse em cima ou por clique.',
+        'Varredura do subsistema SAEX (Devolução, Gestão de Serviço Extraordinário, Realizar Horas, Homologar, Trabalho Híbrido, Liberação Médica): botões de ação, combos e rótulos de filtro formatados e alinhados, tabelas que formatam mesmo vazias, ícones nativos (rostinho, +/-) trocados pelos do design system, calendários órfãos e botão duplicado corrigidos, checkboxes de periodicidade organizados dentro do card.',
+        'Modais e diálogos: detalhamento de linha de tabela passou a abrir num modal central com desfoque de fundo (sem "piscar" o formato nativo antes de mover); diálogo nativo de mensagem (#mensagem) mais compacto, fecha corretamente ao clicar em FECHAR e não aparece mais vazio em toda página autenticada; botão CONFIRMAR fantasma do diálogo de sessão encerrada removido.',
+        'Tela de login modernizada (glassmorfismo, glow, logos harmonizadas), com garantia explícita de que nenhuma tela muda visualmente com o TSE XT desligado.',
+        'Robustez: correção de crash silencioso em telas com campo de formulário chamado "id", ajustes de breadcrumb por sobreposição de palavras, e recuperação total do código-fonte após perda do disco de trabalho em 10/09 — JavaScript extraído byte-a-byte da memória do Chrome ao vivo (CDP) e CSS reconstruído a partir do histórico de desenvolvimento, com os 50 testes automatizados voltando a passar.'
+      ]
+    },
     {
       version: '0.5.0',
       date: '2026-09-04',

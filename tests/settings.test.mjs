@@ -45,9 +45,10 @@ function load(seed) {
 
 test('defaults() e DEFS', () => {
   const { S } = load();
-  assert.deepEqual(S.defaults(), { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' });
+  assert.deepEqual(S.defaults(), { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow', navMenuMode: 'hover' });
   assert.equal(S.DEFS.kpiCardStyle.attr, 'data-je-kpi-style');
   assert.equal(S.DEFS.kpiCardEmphasis.attr, 'data-je-kpi-emphasis');
+  assert.equal(S.DEFS.navMenuMode.attr, 'data-je-nav-mode');
 });
 
 test('normalize — válido passa, inválido cai no padrão, chave desconhecida devolve cru', () => {
@@ -61,10 +62,11 @@ test('normalize — válido passa, inválido cai no padrão, chave desconhecida 
 test('load — storage vazio aplica os padrões no documento', () => {
   const { S, body, html } = load();
   S.load((norm) => {
-    assert.deepEqual(norm, { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow' });
+    assert.deepEqual(norm, { kpiCardStyle: 'flat', kpiCardEmphasis: 'glow', navMenuMode: 'hover' });
   });
   assert.equal(body.getAttribute('data-je-kpi-style'), 'flat');
   assert.equal(body.getAttribute('data-je-kpi-emphasis'), 'glow');
+  assert.equal(body.getAttribute('data-je-nav-mode'), 'hover');
   assert.equal(html.getAttribute('data-je-kpi-style'), 'flat');
 });
 

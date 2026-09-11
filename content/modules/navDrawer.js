@@ -5,19 +5,37 @@
 window.JEPessoasNavDrawer = (function () {
   'use strict';
 
+  // Ícones de categoria no estilo do TSE XT (traço fino, mesmo desenho dos
+  // demais ícones da extensão: viewBox 24, stroke currentColor). Substituem
+  // os emojis coloridos que destoavam do resto.
+  function jeIcon(paths) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  }
+
   const CATEGORY_ICONS = {
-    'assentamentos': '📁',
-    'banco de horas': '⏱️',
-    'benefícios': '🎁',
-    'capacitação': '🎓',
-    'catálogo': '📖',
-    'declaração': '📑',
-    'declarações': '📑',
-    'financeiro': '💰',
-    'frequência': '📅',
-    'férias': '🌴',
-    'serviço extraordinário': '⚡',
-    'default': '📌'
+    // pasta de assentamentos funcionais
+    'assentamentos': jeIcon('<path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>'),
+    // relógio — banco de horas
+    'banco de horas': jeIcon('<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline>'),
+    // presente — benefícios
+    'benefícios': jeIcon('<rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"></path><line x1="12" y1="8" x2="12" y2="21"></line><path d="M12 8S10.5 4 8 4a2 2 0 0 0 0 4z"></path><path d="M12 8s1.5-4 4-4a2 2 0 0 1 0 4z"></path>'),
+    // capelo — capacitação
+    'capacitação': jeIcon('<path d="M22 10 12 5 2 10l10 5 10-5z"></path><path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"></path><line x1="22" y1="10" x2="22" y2="15"></line>'),
+    // livro aberto — catálogo
+    'catálogo': jeIcon('<path d="M12 6c-1.6-1-3.7-1.5-6-1.5-1.4 0-2.7.2-4 .6v13c1.3-.4 2.6-.6 4-.6 2.3 0 4.4.5 6 1.5"></path><path d="M12 6c1.6-1 3.7-1.5 6-1.5 1.4 0 2.7.2 4 .6v13c-1.3-.4-2.6-.6-4-.6-2.3 0-4.4.5-6 1.5z"></path>'),
+    // documento com linhas — declaração
+    'declaração': jeIcon('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><polyline points="14 3 14 8 19 8"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line>'),
+    'declarações': jeIcon('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><polyline points="14 3 14 8 19 8"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line>'),
+    // cifrão em círculo — financeiro
+    'financeiro': jeIcon('<circle cx="12" cy="12" r="9"></circle><path d="M15 9.5a3 3 0 0 0-3-2c-1.7 0-3 1-3 2.3 0 1.6 1.6 2 3 2.4s3 .8 3 2.4c0 1.3-1.3 2.4-3 2.4a3 3 0 0 1-3-2"></path><line x1="12" y1="6" x2="12" y2="18"></line>'),
+    // calendário — frequência
+    'frequência': jeIcon('<rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>'),
+    // sol — férias
+    'férias': jeIcon('<circle cx="12" cy="12" r="4.5"></circle><line x1="12" y1="2" x2="12" y2="4.5"></line><line x1="12" y1="19.5" x2="12" y2="22"></line><line x1="4.2" y1="4.2" x2="6" y2="6"></line><line x1="18" y1="18" x2="19.8" y2="19.8"></line><line x1="2" y1="12" x2="4.5" y2="12"></line><line x1="19.5" y1="12" x2="22" y2="12"></line><line x1="4.2" y1="19.8" x2="6" y2="18"></line><line x1="18" y1="6" x2="19.8" y2="4.2"></line>'),
+    // raio — serviço extraordinário
+    'serviço extraordinário': jeIcon('<polygon points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"></polygon>'),
+    // grade — default
+    'default': jeIcon('<rect x="4" y="4" width="7" height="7" rx="1"></rect><rect x="13" y="4" width="7" height="7" rx="1"></rect><rect x="13" y="13" width="7" height="7" rx="1"></rect><rect x="4" y="13" width="7" height="7" rx="1"></rect>')
   };
 
   let flatLinks = [];
@@ -179,7 +197,9 @@ window.JEPessoasNavDrawer = (function () {
               <span class="je-drawer-subtitle">Meu Espaço • Tribunal Superior Eleitoral</span>
             </div>
           </div>
-          <button type="button" class="je-drawer-close-btn" id="je-drawer-close" title="Fechar Menu (ESC)">✕</button>
+          <button type="button" class="je-drawer-close-btn" id="je-drawer-close" title="Fechar Menu (ESC)" aria-label="Fechar Menu">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
 
         <div class="je-drawer-search-wrapper">
@@ -217,23 +237,64 @@ window.JEPessoasNavDrawer = (function () {
     // Delegação de evento para expansão mutuamente exclusiva por hover e clique nos links
     const drawerContent = overlay.querySelector('#je-drawer-content');
     if (drawerContent) {
+      // Depois de expandir uma categoria, garante que o card INTEIRO fique
+      // visível na área rolável do drawer. A lista de sub-itens abre com uma
+      // transição de max-height (0.35s) — medir antes disso pega a altura
+      // colapsada e a rolagem sai curta. Então esperamos o transitionend
+      // (com timeout de rede) e aí rolamos o mínimo necessário.
+      const revealCard = (card) => {
+        if (!card) return;
+        const list = card.querySelector('.je-drawer-links-list');
+
+        const scrollNow = () => {
+          const sr = drawerContent.getBoundingClientRect();
+          const cr = card.getBoundingClientRect();
+          const fits = cr.height <= sr.height - 8;
+          let delta = 0;
+          if (fits && cr.bottom > sr.bottom) {
+            delta = (cr.bottom - sr.bottom) + 8;   // sobe só o que falta
+          } else if (cr.top < sr.top || !fits) {
+            delta = (cr.top - sr.top) - 8;          // alinha o topo do card
+          }
+          if (Math.abs(delta) < 2) return;
+          // rolagem SUAVE (não o "pulo" do scrollTop += ...)
+          drawerContent.scrollTo({ top: drawerContent.scrollTop + delta, behavior: 'smooth' });
+        };
+
+        if (list) {
+          let done = false;
+          const onEnd = (e) => {
+            if (e && e.propertyName && e.propertyName !== 'max-height') return;
+            if (done) return;
+            done = true;
+            list.removeEventListener('transitionend', onEnd);
+            scrollNow();
+          };
+          list.addEventListener('transitionend', onEnd);
+          window.setTimeout(onEnd, 430); // fallback se o transitionend não vier
+        } else {
+          window.requestAnimationFrame(scrollNow);
+        }
+      };
+
+      const expandExclusive = (card) => {
+        drawerContent.querySelectorAll('.je-drawer-category-card').forEach((c) => {
+          if (c !== card) c.classList.add('collapsed');
+        });
+        card.classList.remove('collapsed');
+        revealCard(card);
+      };
+
+      // modo do menu (config do popup): 'hover' (padrão) ou 'click'.
+      const navMode = () => (document.documentElement.getAttribute('data-je-nav-mode') === 'click' ? 'click' : 'hover');
+
       // Quando o mouse entra na área de um card de categoria diferente: expande o novo e colapsa o anterior
       drawerContent.addEventListener('mouseover', (e) => {
+        if (navMode() === 'click') return; // no modo clique, hover não expande
         const card = e.target.closest('.je-drawer-category-card');
         if (!card) return;
-
-        // Se o card já está expandido, ignora
-        if (!card.classList.contains('collapsed')) return;
-
-        // Colapsa todas as outras categorias e expande a atual
-        const allCards = drawerContent.querySelectorAll('.je-drawer-category-card');
-        allCards.forEach((c) => {
-          if (c !== card) {
-            c.classList.add('collapsed');
-          }
-        });
-
-        card.classList.remove('collapsed');
+        if (!card.classList.contains('collapsed')) return; // já expandido
+        expandExclusive(card);
       });
 
       drawerContent.addEventListener('click', (e) => {
@@ -242,12 +303,11 @@ window.JEPessoasNavDrawer = (function () {
           const targetCard = header.parentElement;
           const isCollapsed = targetCard.classList.contains('collapsed');
 
-          // Colapsa os demais
-          drawerContent.querySelectorAll('.je-drawer-category-card').forEach((c) => {
-            if (c !== targetCard) c.classList.add('collapsed');
-          });
-
-          targetCard.classList.toggle('collapsed', !isCollapsed);
+          if (isCollapsed) {
+            expandExclusive(targetCard);
+          } else {
+            targetCard.classList.add('collapsed');
+          }
           return;
         }
 
@@ -387,6 +447,7 @@ window.JEPessoasNavDrawer = (function () {
     init: createDrawerDOM,
     open,
     close,
-    toggle
+    toggle,
+    extractMenuData
   };
 })();
