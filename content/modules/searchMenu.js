@@ -26,7 +26,7 @@ window.JEPessoasSearch = (function () {
   function buildSearchIndex() {
     searchItems = [
       {
-        title: '⚡ Ajustar Meu Ponto (Hoje)',
+        title: 'Ajustar Meu Ponto (Hoje)',
         category: 'Ações Rápidas',
         action: () => {
           const now = new Date();
@@ -37,7 +37,7 @@ window.JEPessoasSearch = (function () {
         }
       },
       {
-        title: '⚠️ Auditoria de Horas Perdidas',
+        title: 'Auditoria de Horas Perdidas',
         category: 'Ações Rápidas',
         action: () => {
           if (window.JEPessoasLostHours) {

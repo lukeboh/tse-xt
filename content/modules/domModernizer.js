@@ -16,6 +16,18 @@ window.JEPessoasModernizer = (function () {
     }[tag] || tag));
   }
 
+  // Alternar o tema pelo toggle da página (topbar ou flutuante) NÃO pode
+  // mais ser só uma troca de classe CSS reversível: funções como
+  // modernizeGenericMoldura() MOVEM <label>/<input> nativos pra dentro de
+  // wrappers novos, e mountXT() (content.js) hoje nem roda essas funções
+  // quando o tema está desligado — sem um reload, ligar/desligar em
+  // sequência na mesma página deixaria o DOM num estado híbrido que nem
+  // reflete "ligado" nem "desligado" de verdade. Um reload garante que o
+  // próximo estado seja sempre produzido do zero por mountXT().
+  function reloadAfterThemeToggle() {
+    setTimeout(() => window.location.reload(), 250);
+  }
+
   function applyThemeState(enabled, isExplicitUserToggle = false) {
     if (isExplicitUserToggle) {
       document.body.classList.add('je-theme-transitioning');
@@ -156,9 +168,11 @@ window.JEPessoasModernizer = (function () {
         e.stopPropagation();
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
-        
+
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+          reloadAfterThemeToggle();
+        });
       });
     }
 
@@ -229,28 +243,211 @@ window.JEPessoasModernizer = (function () {
         e.stopPropagation();
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
-        
+
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState });
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+          reloadAfterThemeToggle();
+        });
       });
     }
   }
 
-  function injectPageTitleHeader() {
+  // Título/breadcrumb fixos das duas telas já portadas (roadmap F1) — as
+  // únicas com modernização de formulário/tabela também hardcoded. Todas as
+  // demais páginas caem no caminho genérico abaixo (roadmap F2).
+  const KNOWN_PAGE_TITLES = {
+    espelhoMes: { title: 'Espelho de Ponto', breadcrumbCategory: 'Frequência', breadcrumbActive: 'Consulta Mensal' },
+    espelhoDia: { title: 'Alteração de Ponto', breadcrumbCategory: 'Frequência', breadcrumbActive: 'Alteração de Ponto' }
+  };
+
+  function normalizeText(str) {
+    return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  // Toda página do Meu Espaço tem um <h2> solto com o nome da funcionalidade
+  // (ex.: "Contracheque e Rendimentos"), fora do menu-lateral (que também tem
+  // seu próprio "Menu" em h2) e de qualquer coisa que o próprio TSE XT já
+  // tenha injetado (drawer, etc.). É esse <h2> nativo que vira o título
+  // genérico antes de a regra de CSS escondê-lo.
+  function isInsideInjectedUI(el) {
+    // Não usa .closest() com seletor de classe: <body class="je-xt-enabled">
+    // sempre tem prefixo "je-" quando a extensão está ativa, então bateria
+    // com QUALQUER elemento da página. Só os contêineres que o próprio TSE
+    // XT injeta (drawer, modais, topbar) têm id com esse prefixo — e parar
+    // em document.body evita a falsa positiva do body.
+    for (let node = el; node && node !== document.body; node = node.parentElement) {
+      // node.id nem sempre é string: um <form> expõe seus controles filhos
+      // como propriedades nomeadas, então form.id vira o próprio <input
+      // name="id"> (comum em formulários Struts com campo oculto "id" da
+      // entidade) em vez do atributo id do form — quebrava com
+      // "node.id.indexOf is not a function" (achado ao varrer
+      // CapacitacaoExternaAction, roadmap F7).
+      if (typeof node.id === 'string' && node.id.indexOf('je-') === 0) return true;
+    }
+    return false;
+  }
+
+  // Rótulos de seção genéricos que aparecem como heading em várias telas mas
+  // nunca são o título da página — ex.: "Validade do banco de horas" tem
+  // "Opções de pesquisa:" como <h2> ANTES do título de verdade; a tela de
+  // confirmação por e-mail (2FA) só tem uma saudação "Olá <nome>" como h3,
+  // sem nenhum h2/h3 de título de verdade. Sem esse filtro o extrator
+  // pegaria o rótulo da seção ou o próprio nome do usuário como "título".
+  const NON_TITLE_HEADING_PATTERNS = [/^opcoes de pesquisa\b/, /^ola\b/];
+
+  function isGenericSectionLabel(text) {
+    const normalized = normalizeText(text);
+    return NON_TITLE_HEADING_PATTERNS.some((re) => re.test(normalized));
+  }
+
+  function firstUsableHeading(selector, menuLateral) {
+    const headings = document.querySelectorAll(selector);
+    for (const heading of headings) {
+      const text = heading.textContent.trim();
+      if (!text) continue;
+      if (menuLateral && menuLateral.contains(heading)) continue;
+      if (isInsideInjectedUI(heading)) continue;
+      if (isGenericSectionLabel(text)) continue;
+      return text;
+    }
+    return null;
+  }
+
+  function extractNativePageTitle() {
+    const menuLateral = document.getElementById('menu-lateral');
+    // A maioria das páginas usa <h2> pro título nativo, mas algumas (ex.:
+    // Solicitar Horas Extras/SAEX) não têm h2 nenhum e usam <h3> direto —
+    // só cai pro h3 quando não há h2 aproveitável, pra não pegar um h3
+    // secundário (tipo "Opções de pesquisa") em página que tem os dois.
+    return firstUsableHeading('h2', menuLateral) || firstUsableHeading('h3', menuLateral);
+  }
+
+  // Palavras de "moldura" do portal que aparecem em telas de categorias
+  // completamente diferentes (verbos de despacho Struts, rótulos genéricos)
+  // — não podem contar como palavra em comum entre título e link do menu,
+  // senão "Solicitação de liberação médica" (Frequência) casaria com
+  // "Solicitar Horas Extras" (Serviço Extraordinário) só pelo "solicitar".
+  const BREADCRUMB_STOPWORDS = new Set([
+    'para', 'pelo', 'pela', 'pelos', 'pelas', 'como', 'mais', 'menos',
+    'consulta', 'consultar', 'pesquisa', 'pesquisar', 'solicitar', 'solicitacao',
+    'gestao', 'gerir', 'emitir', 'relatorio', 'requerimento', 'cadastro',
+    'analise', 'minha', 'minhas', 'meus', 'este', 'esta', 'esse', 'essa'
+  ]);
+
+  // Reduz gênero/plural a um radical comum: "farmaceutico"/"farmaceutica" →
+  // "farmaceutic"; "beneficios" → "benefici". Só corta sufixo de palavra
+  // longa (≥6) pra não transformar palavra curta em ruído ("dados" → "dad").
+  function breadcrumbStem(word) {
+    let w = word;
+    if (w.length >= 6 && w.endsWith('s')) w = w.slice(0, -1);
+    if (w.length >= 6 && /[ao]$/.test(w)) w = w.slice(0, -1);
+    return w;
+  }
+
+  function breadcrumbTokens(text) {
+    return normalizeText(text)
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 4 && !BREADCRUMB_STOPWORDS.has(w))
+      .map(breadcrumbStem);
+  }
+
+  // 3ª passada do findBreadcrumbCategory: quando nem a igualdade nem a
+  // substring casam (ex.: h2 "Benefícios Concedidos" vs link "Consulta
+  // Benefícios"; h2 "Banco de Horas - Homologação" vs link "Homologação de
+  // banco de horas" — mesma palavra, ordem trocada; h2 "Assistência
+  // farmacêutica" vs link "Reembolso Farmacêutico" — só muda o gênero),
+  // procura sobreposição de radicais significativos. Aceita a categoria com
+  // o melhor placar, e só se o placar for forte: 2+ radicais em comum, OU 1
+  // radical idêntico e longo (≥8 chars, tipo "benefici", "homologaca").
+  // Radical curto de domínio (banco, horas, dados, ponto) nunca dispara
+  // sozinho, então telas sem palavra distintiva em comum continuam sem
+  // categoria (comportamento atual, aceitável).
+  function findBreadcrumbCategoryByWordOverlap(pageTitle, candidates) {
+    const titleTokens = breadcrumbTokens(pageTitle);
+    if (!titleTokens.length) return null;
+
+    let bestCategory = null;
+    let bestScore = 0;
+    for (const category of candidates) {
+      let categoryScore = 0;
+      for (const link of category.links) {
+        const linkTokens = breadcrumbTokens(link.name);
+        if (!linkTokens.length) continue;
+
+        const shared = titleTokens.filter((tt) => linkTokens.includes(tt));
+        let linkScore = 0;
+        if (shared.length >= 2) linkScore = shared.length;
+        else if (shared.length === 1 && shared[0].length >= 8) linkScore = 1;
+
+        if (linkScore > categoryScore) categoryScore = linkScore;
+      }
+      if (categoryScore > bestScore) {
+        bestScore = categoryScore;
+        bestCategory = category.title;
+      }
+    }
+    return bestCategory;
+  }
+
+  // Acha a categoria do menu de serviços (Frequência, Financeiro, etc.) que
+  // contém o link para a página atual, comparando pelo texto do link com o
+  // título extraído — reaproveita o mesmo parser do drawer (navDrawer.js)
+  // em vez de duplicar a leitura do #menu-lateral.
+  function findBreadcrumbCategory(pageTitle) {
+    if (!pageTitle || !window.JEPessoasNavDrawer || !window.JEPessoasNavDrawer.extractMenuData) return null;
+    try {
+      const categories = window.JEPessoasNavDrawer.extractMenuData();
+      const normTitle = normalizeText(pageTitle);
+      const candidates = categories.filter((category) => {
+        // Categorias de 1 link só (sem submenu real) usam o próprio nome do
+        // link como título — não servem de "categoria pai", senão o
+        // breadcrumb duplicaria o mesmo texto duas vezes.
+        return !(category.links.length === 1 && normalizeText(category.links[0].name) === normalizeText(category.title));
+      });
+
+      // 1ª passada: nome do link igual ao título (caso comum).
+      for (const category of candidates) {
+        if (category.links.some((link) => normalizeText(link.name) === normTitle)) return category.title;
+      }
+
+      // 2ª passada: título nativo às vezes é mais específico que o link do
+      // menu (ex.: h2 "Afastamentos na equipe" vs link "Afastamentos") —
+      // aceita se um contém o outro, com um mínimo de 4 caracteres pra não
+      // casar por acidente com uma palavra curta qualquer.
+      for (const category of candidates) {
+        const match = category.links.some((link) => {
+          const normLink = normalizeText(link.name);
+          if (normLink.length < 4 || normTitle.length < 4) return false;
+          return normTitle.includes(normLink) || normLink.includes(normTitle);
+        });
+        if (match) return category.title;
+      }
+
+      // 3ª passada: sobreposição de palavras significativas (ordem trocada,
+      // gênero/plural diferente, complemento a mais). Ver comentário da
+      // função para os critérios de aceite conservadores.
+      const byOverlap = findBreadcrumbCategoryByWordOverlap(pageTitle, candidates);
+      if (byOverlap) return byOverlap;
+    } catch (e) {}
+    return null;
+  }
+
+  function injectPageTitleHeader(profileId) {
     if (document.querySelector('.je-page-title-banner')) return;
 
-    const isEspelhoDia = window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia');
+    const known = KNOWN_PAGE_TITLES[profileId];
+    const pageTitleText = known ? known.title : (extractNativePageTitle() || 'Meu Espaço');
+    const breadcrumbCategory = known ? known.breadcrumbCategory : findBreadcrumbCategory(pageTitleText);
+    const breadcrumbActiveText = known ? known.breadcrumbActive : pageTitleText;
 
     const mesSelect = document.getElementById('mesSelecionado');
     const anoSelect = document.getElementById('anoSelecionado');
+    const hasReferencePill = !!(mesSelect || anoSelect);
     const mesNome = mesSelect && mesSelect.selectedOptions && mesSelect.selectedOptions[0] ? mesSelect.selectedOptions[0].text : 'Mês Atual';
     const anoNome = anoSelect ? anoSelect.value : new Date().getFullYear();
 
     const titleBanner = document.createElement('div');
     titleBanner.className = 'je-page-title-banner';
-
-    const breadcrumbActiveText = isEspelhoDia ? 'Alteração de Ponto' : 'Consulta Mensal';
-    const pageTitleText = isEspelhoDia ? 'Alteração de Ponto' : 'Espelho de Ponto';
 
     titleBanner.innerHTML = `
       <div class="je-title-content">
@@ -267,21 +464,21 @@ window.JEPessoasModernizer = (function () {
           <div>
             <nav class="je-breadcrumb" aria-label="Navegação">
               <span class="je-breadcrumb-item">Meu Espaço</span>
-              <span class="je-breadcrumb-separator">/</span>
-              <span class="je-breadcrumb-item">Frequência</span>
+              ${breadcrumbCategory ? `<span class="je-breadcrumb-separator">/</span><span class="je-breadcrumb-item">${escapeHTML(breadcrumbCategory)}</span>` : ''}
               <span class="je-breadcrumb-separator">/</span>
               <span class="je-breadcrumb-item active">${escapeHTML(breadcrumbActiveText)}</span>
             </nav>
             <h1 class="je-page-title">${escapeHTML(pageTitleText)}</h1>
           </div>
         </div>
+        ${hasReferencePill ? `
         <div class="je-reference-pill" title="Período de referência consultado">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
           <span>Referência: <strong class="je-ref-value">${escapeHTML(mesNome)}</strong><span class="je-ref-sep"> / </span><strong class="je-ref-value">${escapeHTML(String(anoNome))}</strong></span>
-        </div>
+        </div>` : ''}
       </div>
     `;
 
@@ -550,6 +747,15 @@ window.JEPessoasModernizer = (function () {
 
     // Limpa injeções anteriores para garantir idempotência
     table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+
+    // Desfaz o "preenchimento de linha" (normalização de colspan do resumo do
+    // mês, mais abaixo) — restaura o colspan nativo antes de reprocessar.
+    table.querySelectorAll('td.je-row-span-fill').forEach((td) => {
+      if (td.dataset.jeOrigColspan) td.colSpan = parseInt(td.dataset.jeOrigColspan, 10) || 1;
+      td.classList.remove('je-row-span-fill');
+      delete td.dataset.jeOrigColspan;
+    });
+    table.querySelectorAll('tr.je-espelho-header-tint').forEach((tr) => tr.classList.remove('je-espelho-header-tint'));
 
     // Restaura a célula nativa "HORAS EXCED." do dia corrente (projeção do
     // app) ao conteúdo original antes de reprocessar. Sem isso, uma 2ª
@@ -994,6 +1200,72 @@ window.JEPessoasModernizer = (function () {
       }
     });
 
+    // Normaliza a largura das linhas do "Resumo do mês". Algumas linhas nativas
+    // (Horas Utilizadas do Banco / Resíduo de Horas / Saldo Acumulado do Banco)
+    // vêm com a soma de colspan 1 coluna menor que as demais linhas do corpo —
+    // resquício do HTML do portal. Sem o revestimento isso passa despercebido,
+    // mas com o card pintando o zebrado a coluna faltante vira um "buraco"
+    // branco na ponta direita da linha. Estica a última célula (sempre vazia,
+    // de sobra) de cada linha do resumo até a largura dominante do corpo.
+    try {
+      const allRows = Array.from(table.rows);
+      const isTotaisRow = (tr) => tr.classList.contains('total-horas') && /Totais:/.test(tr.innerText || '');
+      const spanOf = (tr) => Array.from(tr.cells).reduce((s, c) => s + (c.colSpan || 1), 0);
+
+      // largura dominante = soma de colspan mais frequente entre as linhas
+      // "normais" do corpo (exclui a linha "Totais:", que o TSE XT reconstrói
+      // propositalmente mais larga, e os espaçadores de 1 célula só).
+      const freq = {};
+      allRows.forEach((tr) => {
+        if (isTotaisRow(tr) || tr.cells.length <= 1) return;
+        const n = spanOf(tr);
+        freq[n] = (freq[n] || 0) + 1;
+      });
+      let dominant = 0;
+      let bestFreq = -1;
+      Object.keys(freq).forEach((k) => {
+        if (freq[k] > bestFreq) { bestFreq = freq[k]; dominant = parseInt(k, 10); }
+      });
+
+      if (dominant > 0) {
+        allRows.forEach((tr) => {
+          if (isTotaisRow(tr) || tr.cells.length <= 1) return;
+          const deficit = dominant - spanOf(tr);
+          if (deficit <= 0) return;
+          const last = tr.cells[tr.cells.length - 1];
+          // só estica célula "de sobra" (sem texto) — nunca uma célula de dado
+          if (last.textContent.trim()) return;
+          last.dataset.jeOrigColspan = String(last.colSpan || 1);
+          last.colSpan = (last.colSpan || 1) + deficit;
+          last.classList.add('je-row-span-fill');
+        });
+      }
+    } catch (e) { /* não bloqueia o resto da modernização */ }
+
+    // Fundo do cabeçalho conforme a 1ª linha de dados. O cabeçalho e a 1ª
+    // linha não podem ter a mesma tinta (senão viram um bloco só). Se a 1ª
+    // linha for BRANCA, marca o cabeçalho pra receber o azul-clarinho do
+    // padrão (--je-table-zebra, via CSS); se a 1ª linha já tiver cor (cinza
+    // alternado, sábado/domingo/feriado, hoje), o cabeçalho fica neutro.
+    try {
+      const rows = Array.from(table.rows);
+      const headerRow = rows.find((r) => Array.from(r.cells).some((c) => c.tagName === 'TH'));
+      const firstDataRow = headerRow ? rows[rows.indexOf(headerRow) + 1] : null;
+      if (headerRow && firstDataRow) {
+        // fundo pode estar no <tr> (cinza alternado) ou no <td> (fim de
+        // semana) — considera "com cor" se QUALQUER um deles não for claro.
+        const isLightBg = (el) => {
+          const m = String(getComputedStyle(el).backgroundColor || '').match(/rgba?\(([^)]+)\)/);
+          if (!m) return true;
+          const p = m[1].split(',').map((s) => parseFloat(s));
+          const a = p[3] === undefined ? 1 : p[3];
+          return a < 0.06 || (p[0] > 247 && p[1] > 247 && p[2] > 247);
+        };
+        const probes = [firstDataRow, ...Array.from(firstDataRow.cells).filter((c) => c.tagName === 'TD').slice(0, 2)];
+        headerRow.classList.toggle('je-espelho-header-tint', probes.every(isLightBg));
+      }
+    } catch (e) { /* fundo do cabeçalho é só cosmético */ }
+
     // Modernização do Ícone de Hora Extra / Hora Excedente Autorizada (v0.2.0)
     modernizeOvertimeClockIcons(table);
 
@@ -1199,9 +1471,9 @@ window.JEPessoasModernizer = (function () {
       setupJustificativaCharCounter(form);
       modernizeMolduraForm(form);
     });
-
-    modernizeCalendarIcons();
-    highlightUserAndManagerNames();
+    // modernizeCalendarIcons()/highlightUserAndManagerNames() rodam na casca
+    // genérica (content.js), para qualquer página — não precisam mais ser
+    // chamadas aqui.
   }
 
   function modernizeMolduraForm(targetRoot) {
@@ -1332,6 +1604,178 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Acha o limite real de caracteres de um textarea sem inventar um valor:
+  // usa o atributo maxlength nativo se existir, senão tenta ler o texto
+  // legado "Máx. N caracteres" (varia por tela — ex.: 500 na justificativa
+  // do Espelho, 100 no motivo de cancelamento de compensação de horas).
+  // Sem nenhum dos dois sinais, retorna null e o contador genérico não é
+  // adicionado (melhor não mostrar contador do que mostrar um limite errado).
+  function detectNativeMaxLength(ta) {
+    const attr = ta.getAttribute('maxlength');
+    if (attr && /^\d+$/.test(attr)) return parseInt(attr, 10);
+
+    let sibling = ta.nextElementSibling;
+    for (let i = 0; i < 4 && sibling; i++, sibling = sibling.nextElementSibling) {
+      const m = (sibling.textContent || '').match(/(\d+)\s*caracte/i);
+      if (m) return parseInt(m[1], 10);
+    }
+
+    const parentText = ta.parentElement ? ta.parentElement.textContent : '';
+    const m2 = parentText.match(/(\d+)\s*caracte/i);
+    return m2 ? parseInt(m2[1], 10) : null;
+  }
+
+  // Versão genérica do contador de caracteres (roadmap F7 — feedback
+  // visual): setupJustificativaCharCounter() só pega textareas com
+  // "justificativa" no name/id (Espelho/Alteração de Ponto) e sempre usa
+  // 500 como limite. Fora dessas telas, o campo pode ter qualquer
+  // name/id (ex.: "motivoCancelamento") e qualquer limite (ex.: 100) — esta
+  // versão pega QUALQUER textarea, mas só se um limite real for detectado.
+  function setupGenericCharCounters(targetRoot) {
+    const root = targetRoot || document;
+    const textareas = root.querySelectorAll('textarea');
+    textareas.forEach((ta) => {
+      if (ta.dataset.jeCounterSet) return;
+
+      const max = detectNativeMaxLength(ta);
+      if (!max) return;
+
+      ta.dataset.jeCounterSet = 'true';
+      ta.setAttribute('maxlength', String(max));
+
+      const parent = ta.parentElement;
+      if (parent) {
+        Array.from(parent.childNodes).forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE && /caracteres/i.test(node.textContent)) {
+            node.textContent = '';
+          } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'TEXTAREA' && !node.classList.contains('je-char-counter-container') && /caracteres/i.test(node.innerText || '')) {
+            node.style.display = 'none';
+          }
+        });
+      }
+
+      let nextElem = ta.nextElementSibling;
+      while (nextElem && !nextElem.classList.contains('je-char-counter-container')) {
+        if (/caracteres/i.test(nextElem.innerText || '')) {
+          nextElem.style.display = 'none';
+        }
+        nextElem = nextElem.nextElementSibling;
+      }
+
+      const counterContainer = document.createElement('div');
+      counterContainer.className = 'je-char-counter-container';
+
+      const updateCount = () => {
+        const current = ta.value ? ta.value.length : 0;
+        const remaining = Math.max(0, max - current);
+        counterContainer.innerHTML = `
+          <span class="je-char-max">Máx. ${max} caracteres</span>
+          <span class="je-char-rem">Caracteres restantes: <strong class="${remaining < Math.max(10, max * 0.1) ? 'je-char-warning' : ''}">${remaining}</strong> / ${max}</span>
+        `;
+      };
+
+      ta.addEventListener('input', updateCount);
+      ta.addEventListener('keyup', updateCount);
+      ta.addEventListener('change', updateCount);
+      updateCount();
+
+      ta.parentNode.insertBefore(counterContainer, ta.nextSibling);
+    });
+  }
+
+  // Substitui ícones nativos (imagens .png/.jpg de ação/status em tabelas —
+  // ex.: detalhar, editar, autorizar, excluir, aprovado) por SVGs no mesmo
+  // estilo do resto da extensão (roadmap F7 — feedback visual). Mesma
+  // estratégia seletiva do modernizeCalendarIcons(): esconde a imagem
+  // original e insere um substituto que, se a imagem original era
+  // clicável (tinha onclick), repassa o clique pra ela — preserva o
+  // comportamento nativo (inclusive onclick="funcaoDoStruts(...)").
+  const NATIVE_ICON_PATTERNS = [
+    {
+      match: /detalhar/i,
+      color: 'var(--je-primary)',
+      svg: '<circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>'
+    },
+    {
+      match: /iconedit/i,
+      color: 'var(--je-primary)',
+      svg: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>'
+    },
+    {
+      match: /iconcheck/i,
+      color: 'var(--je-success-text)',
+      svg: '<polyline points="20 6 9 17 4 12"></polyline>'
+    },
+    {
+      match: /icondelete/i,
+      color: 'var(--je-danger-text)',
+      svg: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
+    },
+    {
+      match: /polegar-positivo/i,
+      color: 'var(--je-success-text)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10.5 14.5 8 12"></polyline>'
+    },
+    {
+      // "homologado.png" (carinha sorridente nativa) e variações de status
+      // aprovado/deferido em telas do SAEX — vira um check dentro de círculo,
+      // na cor de sucesso, igual ao resto da extensão.
+      match: /homologad|aprovad|deferid/i,
+      color: 'var(--je-success-text)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10.5 14.5 8 12"></polyline>'
+    },
+    {
+      // "mais.png" / "menos.png" / "expandir" / "abrir" — toggles de expandir
+      // linha (coluna DETALHES do SAEX). Vira um +/- fino; o clique nativo é
+      // preservado. Só um SVG por padrão — o de "menos" é tratado no code.
+      match: /(^|\/)(mais|expandir|abrir|plus)[^/]*\.(png|gif|jpg)/i,
+      color: 'var(--je-primary)',
+      svg: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>'
+    },
+    {
+      match: /(^|\/)(menos|recolher|fechar|minus)[^/]*\.(png|gif|jpg)/i,
+      color: 'var(--je-primary)',
+      svg: '<line x1="5" y1="12" x2="19" y2="12"></line>'
+    }
+  ];
+
+  function modernizeNativeIcons() {
+    const images = document.querySelectorAll('#container img');
+    images.forEach((img) => {
+      if (img.dataset.jeIconReplaced) return;
+      if (isInsideInjectedUI(img)) return;
+
+      const src = img.getAttribute('src') || '';
+      const pattern = NATIVE_ICON_PATTERNS.find((p) => p.match.test(src));
+      if (!pattern) return;
+
+      img.dataset.jeIconReplaced = 'true';
+      img.classList.add('je-legacy-icon-hidden');
+
+      const isClickable = img.hasAttribute('onclick');
+      const tooltip = img.getAttribute('title') || img.getAttribute('alt') || '';
+
+      const modernIcon = document.createElement(isClickable ? 'button' : 'span');
+      if (isClickable) modernIcon.type = 'button';
+      modernIcon.className = 'je-native-icon' + (isClickable ? '' : ' je-native-icon-static');
+      if (tooltip) modernIcon.title = tooltip;
+      modernIcon.style.color = pattern.color;
+      modernIcon.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${pattern.svg}</svg>
+      `;
+
+      if (isClickable) {
+        modernIcon.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          img.click();
+        });
+      }
+
+      img.parentNode.insertBefore(modernIcon, img.nextSibling);
+    });
+  }
+
   function setDefaultMotivoEsquecimento(form) {
     const motiveSelects = (form || document).querySelectorAll('select[name*="motivo" i], select[id*="motivo" i], select[name*="justificativa" i], select[name*="ocorrencia" i], #motivo, #motivoSelecionado');
     motiveSelects.forEach((select) => {
@@ -1354,10 +1798,30 @@ window.JEPessoasModernizer = (function () {
   }
 
   function modernizeCalendarIcons() {
+    // Desfaz qualquer wrapper de data "órfão" (embrulhando um input oculto /
+    // sem layout) que uma passada anterior possa ter criado — o botão de
+    // calendário dele aparecia solto no topo da página.
+    document.querySelectorAll('.je-date-input-wrapper').forEach((w) => {
+      const inp = w.querySelector('input');
+      if (inp && ((inp.getAttribute('type') || '').toLowerCase() === 'hidden' || inp.offsetParent === null)) {
+        const btn = w.querySelector('.je-calendar-picker-btn');
+        if (btn) btn.remove();
+        w.replaceWith(inp);
+      }
+    });
+
     const dateInputs = document.querySelectorAll('input[name*="data" i], input[id*="data" i], input.data, input[name*="Data"], input[id*="Data"]');
     dateInputs.forEach((dateInput) => {
       const parent = dateInput.parentElement;
       if (!parent) return;
+
+      // Só campos de data REAIS e visíveis. Struts costuma ter um
+      // <input type="hidden" name="...dataSolicitacao..."> junto — sem este
+      // guarda o modernizador embrulhava o campo oculto e cravava um botão
+      // de calendário "órfão" no topo da página (o campo não tem layout).
+      const t = (dateInput.getAttribute('type') || 'text').toLowerCase();
+      if (t !== 'text' && t !== 'date' && t !== '') return;
+      if (dateInput.offsetParent === null && getComputedStyle(dateInput).position !== 'fixed') return;
 
       const legacyImg = parent.querySelector('img[src*="cal" i], img[src*="calendar" i], img[title*="Calend" i], img[alt*="Calend" i], .ui-datepicker-trigger');
 
@@ -1407,6 +1871,10 @@ window.JEPessoasModernizer = (function () {
     const h3Elements = document.querySelectorAll('#conteudo h3, .form-container h3, #opcoes-consulta h3, .moldura h3');
     h3Elements.forEach((h3) => {
       if (h3.dataset.jeH3Modernized) return;
+      // <h3> DENTRO de um <label> é rótulo de campo de formulário (o portal
+      // às vezes embrulha assim, ex.: <label><h3>UNIDADE TITULAR:</h3></label>
+      // na Devolução) — não é um cabeçalho de nome de servidor/chefe.
+      if (h3.closest('label')) return;
 
       const rawText = h3.innerText.trim();
       if (!rawText || (!rawText.includes(':') && !/Matrícula|Servidor|Responsável|Chefia|Nome/i.test(rawText))) {
@@ -1466,15 +1934,386 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Ícone semântico do botão genérico: lupa só para busca/consulta de
+  // verdade (Consultar/Pesquisar), "+" para Novo, check para as demais
+  // ações positivas (Confirmar/Salvar/Gravar/Enviar/OK) — antes toda ação
+  // reutilizava a lupa, o que ficava sem sentido num botão "Confirmar".
+  function pickModernButtonIcon(text) {
+    const t = (text || '').toUpperCase();
+    if (t.indexOf('CONSULTAR') === 0 || t.indexOf('PESQUISAR') === 0) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+    }
+    if (t.indexOf('NOVO') === 0 || t.indexOf('INCLUIR') === 0 || t.indexOf('ADICIONAR') === 0 || t.indexOf('REGISTRAR') === 0) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+    }
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  }
+
+  // Modernização genérica do botão de busca (roadmap F5/F6): mesma troca
+  // visual do botão legado por um <button> moderno que modernizeForm() já
+  // faz para o Espelho/Alteração de Ponto, mas sem nenhuma das partes
+  // específicas daquelas telas (nome de função Struts, motivo de
+  // esquecimento, moldura de ajuste de ponto etc.) — só reaproveita o
+  // clique nativo do botão legado. input[type=submit] cobre a maioria; a
+  // lista de valores cobre os `input[type=button]` (comum em telas Struts
+  // que despacham via JS). Prefixo (^=) em vez de igualdade porque o texto
+  // costuma vir com complemento (ex.: "Consultar Endereço", não só
+  // "CONSULTAR") — só ações primárias/positivas, nunca
+  // "Cancelar"/"Voltar"/"Excluir". A lista de verbos cresce sob demanda
+  // conforme telas novas aparecem na varredura (roadmap F7): CONSULTAR,
+  // ANTES era uma lista de verbos permitidos (CONSULTAR, SALVAR, DEVOLVER…),
+  // mas o portal tem verbo demais (RELATÓRIO, CADASTRAR, GERAR, EMITIR,
+  // ENCAMINHAR, VALIDAR…) e virava jogo de gato-e-rato. Agora o inverso:
+  // QUALQUER <input type=submit|button> / <button> dentro de um <form> no
+  // #container vira botão do TSE XT, exceto:
+  //   - a nossa própria UI (topbar/FAB/drawer — id começando com "je-");
+  //   - ações destrutivas (EXCLUIR/REMOVER/APAGAR…) — ficam nativas, não
+  //     queremos que pareçam um botão primário inofensivo;
+  //   - textos longos (> 28 chars) — quase nunca são botão de ação.
+  // Verbos neutros (CANCELAR/VOLTAR/LIMPAR/FECHAR…) são modernizados, mas
+  // sempre como .je-btn-secondary (nunca primário). Quando há mais de um
+  // botão no mesmo <form>, só o 1º não-neutro vira primário/azul.
+  const BTN_SKIP_RE = /\b(EXCLUIR|REMOVER|APAGAR|DELETAR|DESATIVAR|INATIVAR)\b/i;
+  const BTN_NEUTRAL_RE = /\b(CANCELAR|VOLTAR|LIMPAR|FECHAR|RETORNAR|DESFAZER)\b/i;
+
+  function modernizeGenericFormButtons() {
+    // NÃO exigir `<form>` como descendente do #container: nas telas Struts do
+    // portal o <form> costuma ENVOLVER o #container (é filho do <body>), então
+    // `#container form ...` não casa com nada. Basta o botão estar no
+    // #container; a checagem `legacyBtn.closest('form')` mais abaixo garante
+    // que ele pertence a algum formulário.
+    const candidates = document.querySelectorAll(
+      '#container input[type="submit"], #container input[type="button"], ' +
+      '#container button:not([type="reset"]), #btnConsultar'
+    );
+    const primaryDoneForForm = new WeakSet();
+    candidates.forEach((legacyBtn) => {
+      if (legacyBtn.classList.contains('je-legacy-btn-consultar')) return;
+      if (/\bje-/.test(legacyBtn.className || '')) return;         // já é um botão nosso
+      if (typeof legacyBtn.id === 'string' && legacyBtn.id.indexOf('je-') === 0) return;
+      if (legacyBtn.closest('[id^="je-"]')) return;                // dentro da UI do TSE XT
+      const rawLabel = (legacyBtn.value || legacyBtn.textContent || '').trim();
+      if (!rawLabel || rawLabel.length > 28) return;
+      if (BTN_SKIP_RE.test(rawLabel)) return;                      // excluir/remover — deixa nativo
+      const isNeutralBtn = BTN_NEUTRAL_RE.test(rawLabel);
+      const form = legacyBtn.closest('form');
+      if (!form) return;
+
+      // offsetParent null = display:none nele ou em algum ancestral — ex.:
+      // o diálogo nativo de mensagem (#mensagem) reaproveita o mesmo par
+      // de botões (CONFIRMAR/FECHAR) pra várias mensagens diferentes, mas
+      // nem toda mensagem usa os dois. Um botão oculto agora não disputa o
+      // posto de primário (senão o único botão realmente visível virava
+      // secundário/cinza à toa), mas AINDA criamos o substituto (só que
+      // já escondido) — a página decide isso de forma assíncrona/tardia
+      // (bem depois da nossa 1ª montagem), então em vez de checar só uma
+      // vez, sincronizamos com um MutationObserver pra sempre refletir o
+      // estado real do nativo, mesmo que mude bem depois.
+      const initiallyHidden = legacyBtn.offsetParent === null;
+      // botão neutro (CANCELAR/VOLTAR/LIMPAR…) nunca é primário e nem
+      // "gasta" o posto de primário do formulário
+      const isPrimary = !initiallyHidden && !isNeutralBtn && !primaryDoneForForm.has(form);
+      if (!initiallyHidden && !isNeutralBtn) primaryDoneForForm.add(form);
+
+      legacyBtn.classList.add('je-legacy-btn-consultar');
+
+      const modernBtn = document.createElement('button');
+      modernBtn.type = 'button';
+      modernBtn.className = isPrimary ? 'je-btn-consultar' : 'je-btn-secondary';
+      const btnText = legacyBtn.value ? escapeHTML(legacyBtn.value.toUpperCase()) : 'CONSULTAR';
+      modernBtn.innerHTML = `
+        ${pickModernButtonIcon(btnText)}
+        <span>${btnText}</span>
+      `;
+      modernBtn.title = legacyBtn.title || btnText;
+      if (initiallyHidden) modernBtn.style.display = 'none';
+
+      const restingHTML = modernBtn.innerHTML;
+      modernBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (modernBtn.dataset.jeBusy === '1') return;   // trava dupla solicitação em backend lento
+        modernBtn.dataset.jeBusy = '1';
+        // Botão-ícone compacto (lupa do CEP): não cabe "ENVIANDO..." e o
+        // clique é sempre AJAX, então só um leve fade.
+        const isIconBtn = modernBtn.classList.contains('je-btn-cep-inline');
+        if (!isIconBtn) modernBtn.innerHTML = `<span>ENVIANDO...</span>`;
+        modernBtn.style.opacity = '0.8';
+        modernBtn.style.pointerEvents = 'none';
+        legacyBtn.click();
+        // Se o clique submeteu o formulário, a página navega e isto some
+        // junto. Mas quando o botão só dispara um AJAX (ex.: "Consultar
+        // Endereço", que preenche o resto do endereço a partir do CEP), não
+        // há navegação — sem este timeout o botão ficava "ENVIANDO..." pra
+        // sempre.
+        setTimeout(() => {
+          modernBtn.dataset.jeBusy = '';
+          modernBtn.style.pointerEvents = '';
+          if (!isIconBtn) modernBtn.innerHTML = restingHTML;
+          modernBtn.style.opacity = '';
+        }, 3000);
+      });
+
+      legacyBtn.parentNode.insertBefore(modernBtn, legacyBtn.nextSibling);
+
+      const syncVisibility = () => {
+        modernBtn.style.display = legacyBtn.offsetParent === null ? 'none' : '';
+      };
+      new MutationObserver(syncVisibility).observe(legacyBtn, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+  }
+
+  // Agrupamento genérico de campos dentro de .moldura (roadmap F7 —
+  // feedback visual): a regra CSS de .moldura (display:flex,
+  // flex-direction:column) assume que cada rótulo+campo já foi agrupado
+  // num wrapper .je-form-group — modernizeMolduraForm() faz isso, mas só
+  // pra Espelho/Alteração de Ponto (procura rótulos/ids específicos
+  // daquela tela). Em qualquer outra página, um <label>/<input> soltos
+  // (padrão comum: "<label>Nome:</label> <input ...> <br> <label>CPF:...")
+  // viram flex items individuais e cada um estica pra 100% da largura —
+  // daí o formulário parecer "um campo por linha, ocupando tudo".
+  // "Controle" de um campo: <input>/<select>/<textarea> cru OU já embrulhado
+  // por outro modernizador (ex.: .je-date-input-wrapper que o
+  // modernizeCalendarIcons() cria antes desta função rodar).
+  function molduraControlOf(el) {
+    if (!el) return null;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return el;
+    if (el.classList && el.classList.contains('je-date-input-wrapper')) return el;
+    if (el.tagName === 'DIV' && el.children.length <= 3 && el.querySelector(':scope > input, :scope > select, :scope > textarea')) return el;
+    return null;
+  }
+
+  // Dica/legenda inline que anda junto do campo: "(dd/mm/aaaa)", "(hh:mm)",
+  // contador de caracteres nativo (#qtdCaracteres / .modeloMascara), o
+  // contador que o TSE XT injeta, e o <img> de calendário nativo (oculto).
+  function isMolduraHint(el) {
+    if (!el) return false;
+    if (el.tagName === 'IMG') return true;
+    if (el.classList && (el.classList.contains('je-char-counter-container') || el.classList.contains('modeloMascara'))) return true;
+    if (el.id === 'qtdCaracteres') return true;
+    const t = (el.textContent || '').trim();
+    if (!t || t.length > 60) return false;
+    return /^\(?\s*(dd|hh)[\/:]/i.test(t) || /caracteres/i.test(t);
+  }
+
+  function modernizeGenericMoldura() {
+    const moldura = document.querySelector('.moldura');
+    if (!moldura || moldura.dataset.jeMolduraModernized) return;
+
+    // Só mexe se detectar o padrão "achatado" (mais de um <label> como
+    // filho direto da .moldura, sem nenhum wrapper) — se já vier agrupado
+    // de outra forma, não reorganiza pra não arriscar quebrar algo.
+    const directLabels = Array.from(moldura.children).filter((c) => c.tagName === 'LABEL');
+    if (directLabels.length < 2) return;
+
+    moldura.dataset.jeMolduraModernized = 'true';
+
+    const row = document.createElement('div');
+    row.className = 'je-form-row';
+    directLabels[0].parentNode.insertBefore(row, directLabels[0]);
+
+    const groupField = (label, fullWidth) => {
+      let control = label.nextElementSibling;
+      while (control && control.tagName === 'BR') control = control.nextElementSibling;
+      control = molduraControlOf(control);
+      if (!control) return false;
+
+      // dicas inline que vinham logo depois do controle (contador de
+      // caracteres, "(dd/mm/aaaa)", "(hh:mm)", <img> de calendário) — captura
+      // ANTES de mover o controle, senão nextElementSibling já muda.
+      const hints = [];
+      let sib = control.nextElementSibling;
+      let guard = 0;
+      while (sib && guard++ < 6) {
+        const next = sib.nextElementSibling;
+        if (sib.tagName === 'BR') { sib = next; continue; }
+        if (isMolduraHint(sib)) { hints.push(sib); sib = next; continue; }
+        break;
+      }
+
+      // <textarea> sempre ganha a linha inteira (não faz sentido dividir
+      // espaço com combos pequenos).
+      const isWide = fullWidth || control.tagName === 'TEXTAREA' || !!control.querySelector?.('textarea');
+      const group = document.createElement('div');
+      group.className = 'je-form-group' + (isWide ? ' je-form-group-full' : '');
+      group.appendChild(label);
+      group.appendChild(control);
+      const hasModernCounter = hints.some((h) => h.classList && h.classList.contains('je-char-counter-container'));
+      hints.forEach((h) => {
+        // contador NATIVO de caracteres (#qtdCaracteres / .modeloMascara com
+        // "caracteres"): fica no DOM (o script nativo escreve nele) mas
+        // escondido quando o TSE XT já pôs o próprio contador.
+        const isNativeCounter = h.id === 'qtdCaracteres' ||
+          (h.classList && h.classList.contains('modeloMascara') && /caracteres/i.test(h.textContent || ''));
+        if (isNativeCounter && hasModernCounter) h.style.display = 'none';
+        group.appendChild(h);
+      });
+
+      row.appendChild(group);
+      return true;
+    };
+
+    directLabels.forEach((label) => groupField(label, false));
+
+    // 2ª passada: rótulos que ficaram para trás (o <label> só apareceu depois,
+    // ou o nó entre ele e o controle não era <br> na 1ª varredura) — ex.:
+    // "Município de Endereço" (dependentes), "Data da Liberação" (liberação
+    // médica, cujo controle já vinha embrulhado em .je-date-input-wrapper).
+    Array.from(moldura.children).forEach((label) => {
+      if (label.tagName === 'LABEL') groupField(label, true);
+    });
+
+    relocateCepLookupButton(row);
+  }
+
+  // Encaixa o botão de consulta de CEP ("Consultar Endereço" etc.) LADO A
+  // LADO com o próprio campo CEP — é dele que o botão preenche o resto do
+  // endereço. Nativamente o botão fica solto no fim da .moldura. Vira um
+  // botão-ícone (lupa) compacto num flex-row junto do input, pra não
+  // empurrar a grade.
+  function relocateCepLookupButton(row) {
+    if (!row) return;
+    const cepField = row.querySelector('input[name*="cep" i], input[id*="cep" i]');
+    const cepGroup = cepField && cepField.closest('.je-form-group');
+    if (!cepGroup || !cepField) return;
+
+    let target = null;
+    document.querySelectorAll('.moldura .je-btn-consultar, .moldura .je-btn-secondary').forEach((b) => {
+      if (target) return;
+      if (/ENDERE|BUSCAR CEP|CONSULTAR CEP/i.test((b.textContent || '').trim())) target = b;
+    });
+    if (!target || target.dataset.jeCepRelocated) return;
+    target.dataset.jeCepRelocated = 'true';
+    target.classList.add('je-btn-cep-inline');
+    target.classList.remove('je-btn-secondary');
+    target.classList.add('je-btn-consultar');
+    target.title = 'Consultar endereço pelo CEP';
+    target.setAttribute('aria-label', 'Consultar endereço pelo CEP');
+    target.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+
+    const inputRow = document.createElement('div');
+    inputRow.className = 'je-cep-input-row';
+    cepField.parentNode.insertBefore(inputRow, cepField);
+    inputRow.appendChild(cepField);
+    inputRow.appendChild(target);
+  }
+
+  // Combo "selecione um item" + botão OK ao lado: dispara o OK
+  // automaticamente ao trocar a opção (padrão "escolha e carregue os dados
+  // do item" — ex.: Alteração de dados dos dependentes). Só age quando o
+  // botão é literalmente "OK" e o <select> é a ÚNICA escolha do bloco e não
+  // tem onchange nativo — pra nunca submeter no meio de um formulário de
+  // vários campos.
+  function setupSelectAutoSubmit() {
+    document.querySelectorAll('input[type="button"][value="OK" i], input[type="submit"][value="OK" i]').forEach((okBtn) => {
+      const scope = okBtn.closest('.opcoes-pesquisa, .campoPesquisa, .moldura, form');
+      if (!scope) return;
+      const selects = scope.querySelectorAll('select');
+      if (selects.length !== 1) return;
+      const select = selects[0];
+      if (select.dataset.jeAutoSubmit || select.getAttribute('onchange')) return;
+      select.dataset.jeAutoSubmit = 'true';
+
+      // Botão moderno que o modernizeGenericFormButtons() inseriu logo
+      // depois do OK nativo — é nele que damos o feedback visual.
+      const modernBtn = (okBtn.nextElementSibling && okBtn.nextElementSibling.matches
+        && okBtn.nextElementSibling.matches('.je-btn-consultar, .je-btn-secondary'))
+        ? okBtn.nextElementSibling
+        : (okBtn.parentElement && okBtn.parentElement.querySelector('.je-btn-consultar, .je-btn-secondary'));
+      const modernResting = modernBtn ? modernBtn.innerHTML : null;
+
+      select.addEventListener('change', () => {
+        if (select.dataset.jeSubmitting === '1') return;      // trava dupla solicitação
+        if (!select.value || select.selectedIndex < 0) return;
+        select.dataset.jeSubmitting = '1';
+        select.style.pointerEvents = 'none';                  // não `disabled`: o value
+        select.style.opacity = '0.7';                         // ainda precisa ser enviado
+        if (modernBtn) {
+          modernBtn.innerHTML = '<span>CONSULTANDO...</span>';
+          modernBtn.style.opacity = '0.75';
+          modernBtn.style.pointerEvents = 'none';
+        }
+        okBtn.click();
+        // Rede de segurança: se por algum motivo não navegar (erro), libera
+        // a escolha de novo em vez de deixar tudo travado.
+        setTimeout(() => {
+          select.dataset.jeSubmitting = '';
+          select.style.pointerEvents = '';
+          select.style.opacity = '';
+          if (modernBtn) {
+            modernBtn.innerHTML = modernResting;
+            modernBtn.style.opacity = '';
+            modernBtn.style.pointerEvents = '';
+          }
+        }, 6000);
+      });
+    });
+  }
+
+  // Tela de login (pré-autenticação, perfil 'login' — ver PAGE_PROFILES em
+  // content.js). Propositalmente NÃO toca em nenhum input/button/onclick
+  // nativo — só marca o <body> com uma classe pra o CSS (.je-login-page em
+  // content.css) embelezar o formulário existente (#box-login,
+  // #login-btnEntrar, #login-btnOdin) puramente por seletor de ID. Sem
+  // isso o CSS genérico esconderia a logo nativa (#topo/#imgSGP) como faz
+  // em qualquer outra tela — aqui não tem topbar substituta, então a classe
+  // também é o que o CSS usa pra manter a logo original visível.
+  function mountLoginPage() {
+    // Sem topbar nesta tela (pré-autenticação), então o toggle "ligar/
+    // desligar TSE XT" não tem onde morar — createPersistentToggle() já
+    // existe (o mesmo usado como fallback quando o tema está OFF em
+    // qualquer outra página), só precisa de uma regra CSS liberando ele
+    // aparecer aqui mesmo com o tema ligado (.je-login-page em content.css).
+    // Igual em toda página, o toggle é a ÚNICA exceção que roda
+    // independente do estado — senão não haveria como ligar de volta.
+    createPersistentToggle();
+    const loginToggleEnabled = document.body.classList.contains('je-xt-enabled');
+    const loginToggleLabel = document.querySelector('#je-persistent-toggle-bar .je-toggle-label');
+    if (loginToggleLabel) {
+      loginToggleLabel.innerHTML = loginToggleEnabled
+        ? '✨ <strong>TSE XT</strong> Ativo'
+        : '🏛️ <strong>TSE XT</strong> Desligado';
+    }
+
+    // Tudo daqui pra baixo só pode mudar a tela com o TSE XT realmente
+    // ligado — a limpeza de texto abaixo é uma mutação de DOM (não só
+    // CSS), então rodar com o tema desligado alterava o espaçamento
+    // nativo mesmo sem nenhum estilo visível, quebrando a regra de que
+    // nenhuma mudança acontece com a extensão desligada.
+    if (!loginToggleEnabled) return;
+
+    document.body.classList.add('je-login-page');
+
+    // Limpeza cosmética: nós de texto com só espaços/&nbsp; soltos dentro
+    // do card de login (usados nativamente só pra espaçamento visual antes
+    // dos links "Redefinir senha"/"Primeira Senha") — remover deixa o
+    // espaçamento do flex/gap do card consistente. Não mexe em elemento
+    // nenhum, só em texto solto.
+    const box = document.getElementById('box-login');
+    if (!box) return;
+    Array.from(box.childNodes).forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent.replace(/[\s ]/g, '')) {
+        node.textContent = '';
+      }
+    });
+  }
+
   return {
     applyThemeState,
+    createPersistentToggle,
     modernizeHeader,
     injectPageTitleHeader,
     injectKPICards,
     buildKpiCardsHTML,
     modernizeTable,
     modernizeForm,
+    modernizeGenericFormButtons,
+    modernizeGenericMoldura,
+    setupSelectAutoSubmit,
+    setupGenericCharCounters,
+    modernizeNativeIcons,
     modernizeCalendarIcons,
-    highlightUserAndManagerNames
+    highlightUserAndManagerNames,
+    mountLoginPage
   };
 })();

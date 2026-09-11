@@ -27,6 +27,15 @@ window.JEPessoasSettings = (function () {
       attr: 'data-je-kpi-emphasis',
       values: ['soft', 'glow'],
       def: 'glow'
+    },
+    // Comportamento das categorias do "Menu de Serviços" (drawer):
+    //   hover — expande a categoria ao passar o mouse (padrão, como sempre foi)
+    //   click — só expande/colapsa clicando no cabeçalho da categoria
+    // Lido em tempo de evento pelo navDrawer.js via este atributo no <html>.
+    'navMenuMode': {
+      attr: 'data-je-nav-mode',
+      values: ['hover', 'click'],
+      def: 'hover'
     }
   };
 

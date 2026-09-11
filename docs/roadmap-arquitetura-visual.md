@@ -1,0 +1,209 @@
+# 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
+
+**Versão do documento:** 1.7.0 (roadmap concluído — F1 a F7 entregues)
+**Data:** 05/09/2026
+
+> Plano de implantação para levar o padrão visual do TSE XT (hoje restrito ao Espelho de Ponto e à Alteração de Ponto) às demais ~50 funcionalidades do menu do Meu Espaço. Diagnóstico da arquitetura atual, evidências e decisões de escopo estão registrados como memória de projeto da sessão que originou este documento. Os IDs `F#` (fase) são estáveis para rastreio em commits. Severidade/risco: 🔴 alto · 🟡 médio · 🟢 baixo.
+
+| ID | Fase | Risco | Depende de | Status |
+| :--- | :--- | :--: | :--- | :--- |
+| F1 | Abrir injeção e criar registro de páginas suportadas | 🔴 | — | ✅ v0.6.1 |
+| F2 | Título de página genérico (extraído do `<h2>` nativo) | 🟡 | F1 | ✅ v0.6.2 |
+| F3 | Modernizador de tabela genérico (por texto de cabeçalho) | 🔴 | F1 | ✅ v0.6.3 |
+| F4 | Reorganização física do `content.css` (design system × página) | 🟢 | F1 | ✅ v0.6.4 |
+| F5 | Piloto: Extrato do Banco de Horas | 🟡 | F1, F2, F3 | ✅ v0.6.5 |
+| F6 | Piloto: tela só-formulário (Contracheque) | 🟢 | F1, F2 | ✅ v0.6.5 |
+| F7 | Expansão incremental para as demais funcionalidades do menu | 🟡 | F5, F6 | ✅ v0.6.9 |
+
+---
+
+## Diagnóstico resumido
+
+Inspeção ao vivo (via CDP, sessão de 04/09/2026) confirmou:
+
+1. **O bloqueio nº 1 é o `manifest.json`**, não o CSS: `content_scripts.matches` só injeta JS+CSS em URLs `EspelhoPontoMesAction_*` e `EspelhoPontoDiaAction_*`. Nenhuma outra tela do menu recebe o `content.css` hoje.
+2. **O bloqueio nº 2 é `content.js`**: `isSupportedPage` só monta a UI se achar `#tblEspelhoPontoMesCorrente` ou `#formEspelhoPontoDia` — um booleano único, não um registro por página.
+3. **A "casca" genérica já funciona em qualquer tela**: `.servidor`/`.matricula`/`.lotacao`/`.ipServidorLogado` (dados do servidor), `#container`/`#topo`/`#menu-lateral`/`#barra-superior`/`.span-*` (grid legado) existem em todo o portal. `navDrawer.js` já lê o `#menu-lateral` nativo em runtime. Command palette, FAB de ações rápidas, toggle de tema e o sistema de modal (`.je-modal-overlay`) são estruturalmente agnósticos de página. O botão principal de busca usa o texto **"CONSULTAR"** tanto no Espelho quanto no Contracheque — convenção real do portal já coberta pelo seletor `input[value="CONSULTAR"]`.
+4. **Dois pontos hardcoded para o Espelho travam qualquer expansão:**
+   - `injectPageTitleHeader()` ([domModernizer.js](../content/modules/domModernizer.js)) é um `if/else` fechado (breadcrumb/título/pill de referência só para Espelho-Mês vs Espelho-Dia).
+   - `modernizeTable()` depende de `#tblEspelhoPontoMesCorrente` e das classes de coluna `h01`–`h17`, geradas pelo iterator Struts **só** daquela tela.
+5. **A estrutura nativa varia muito entre páginas** — confirmado em 3 telas reais:
+   - Extrato do Banco de Horas: `<table>` **sem nenhuma classe**, nem na tabela nem em `<tr>`/`<td>`.
+   - Contracheque (tela de filtro): **sem tabela nenhuma** antes de consultar.
+   - Homologação de Banco de Horas: idem, sem tabela no estado vazio.
+   - Toda página tem um `<h2>` nativo solto com o nome exato da funcionalidade (ex.: `<h2>Contracheque e Rendimentos</h2>`), hoje escondido genericamente pela regra `#container > h2 { display:none }` — dá para ler esse texto antes de escondê-lo.
+
+---
+
+## F1 — ✅ Abrir injeção e criar registro de páginas suportadas (v0.6.1)
+
+- **Era:** `manifest.json` restringia `content_scripts.matches` a `EspelhoPontoMesAction_*`/`EspelhoPontoDiaAction_*`; `content.js` decidia "página suportada" com um único booleano (`isSupportedPage`).
+- **Implementado:** `matches` ampliado para `*://meuespaco.tse.jus.br/portalservidor2/*` (e equivalente `*.tse.jus.br`), com `exclude_matches` para `Login*`/`Logout*`; `content.js` ganhou `PAGE_PROFILES`/`resolveProfileId()` no lugar do booleano — a casca genérica (topbar, drawer, busca, FAB, toggle) monta em qualquer tela com `#container`, enquanto formulário/tabela seguem restritos aos perfis conhecidos.
+- **Validado ao vivo (CDP):** Espelho de Ponto idêntico; Extrato do Banco de Horas ganhou topbar/menu/busca sem título nem KPIs indevidos.
+
+## F2 — ✅ Título de página genérico (v0.6.2)
+
+- **Era:** título/breadcrumb/pill de referência eram texto fixo por `if/else` (Espelho-Mês vs Espelho-Dia).
+- **Implementado:** `injectPageTitleHeader(profileId)` usa um mapa `KNOWN_PAGE_TITLES` para os dois perfis já portados (texto idêntico a antes) e, para qualquer outra página, extrai o título do `<h2>` nativo (`extractNativePageTitle()` — primeiro `<h2>` fora do `#menu-lateral` e fora de qualquer contêiner injetado pelo próprio TSE XT) e infere a categoria do breadcrumb reaproveitando `navDrawer.extractMenuData()` (`findBreadcrumbCategory()` — casa o texto do `<h2>` com o nome de algum link do menu). A pill de referência só renderiza se `#mesSelecionado`/`#anoSelecionado` existirem.
+- **Cuidado registrado:** a exclusão de UI injetada não pode usar `.closest('[class*="je-"]')` — `<body class="je-xt-enabled">` sempre bate com esse seletor e faz a extração falhar para todo mundo (caiu num bug assim na implementação; corrigido checando só `id` com prefixo `je-`, parando a subida em `document.body`).
+- **Validado ao vivo (CDP):** Espelho de Ponto idêntico; Contracheque → "Meu Espaço / Financeiro / Contracheque e Rendimentos"; Extrato do Banco de Horas → "Meu Espaço / Banco de Horas / Extrato do banco de horas".
+
+## F3 — ✅ Modernizador de tabela genérico (v0.6.3)
+
+- **Era:** `modernizeTable()` só entendia a tabela do Espelho (ID fixo + classes de coluna `h01`–`h17`).
+- **Implementado:** novo módulo `tableModernizer.js` (`modernizeGenericTables()`, só roda quando não há perfil de página conhecido). `isDataTable()` distingue tabela de resultados de tabela de layout de formulário pela densidade de `input/select/textarea/button` dentro das células (acima de 25% das células com controle ⇒ é layout, ignora); tabelas aprovadas ganham as classes `je-modernized-table` (reaproveita o visual completo já existente para `.je-modernized-table`/`table.grid`) e `je-generic-data-table` (zebra + suporte a `.je-col-numeric`). `classifyNumericColumns()` marca como numérica qualquer coluna onde ≥80% das células não-vazias batem com número/moeda ou `hh:mm`. `classifyStatusBadges()` troca células de texto puro que batem exatamente com uma palavra-chave conhecida (Sim/Não, Homologado, Pendente, etc.) por um badge colorido, reaproveitando os tokens semânticos de sucesso/alerta/erro.
+- **Critério de pronto:** atingido — a tabela do Extrato do Banco de Horas (nativamente sem nenhuma classe) recebeu zebra, alinhamento numérico nas 4 colunas de hora e o visual completo do design system sem nenhum CSS específico daquela página.
+- **Validado ao vivo (CDP):** Extrato do Banco de Horas — colunas "Horas Adquiridas/Utilizadas/Vencidas/Saldo" corretamente marcadas `.je-col-numeric`, zebra alternando linha a linha; Contracheque (sem tabela) sem erro nenhum; Espelho de Ponto sem nenhuma marca `.je-generic-data-table` (path genérico nunca roda lá, confirmado).
+
+## F4 — ✅ Reorganização física do `content.css` (v0.6.4)
+
+- **Era:** 3985 linhas num arquivo só, sem separação entre design system (tokens/reset/chrome) e específico de página; alguns comentários de seção nomeavam como "Espelho de Ponto" componentes que já eram genéricos.
+- **Implementado:** `content.css` (2247 linhas) ficou só com o design system — tokens, reset de layout legado, topbar, banner de título, drawer, busca rápida, ações rápidas, toggle, popup de calendário e a base compartilhada `table.je-modernized-table`/`table.grid` que o modernizador genérico de tabela (F3) usa. Novo `content/espelho-ponto.css` (1983 linhas) recebeu tudo que depende de estrutura nativa exclusiva do Espelho/Alteração de Ponto: `#tblEspelhoPontoMesCorrente`, `#opcoes-consulta`, `#formEspelhoPontoMes`, classes de coluna `h01`-`h17`, KPIs, coluna de saldo acumulado, auditoria de horas perdidas. Nas duas seções mistas (reset e painel de filtros) e na base da tabela, regras com seletores combinados (ex.: `.moldura, #conteudo > div:nth-child(2) > div.moldura`) foram separadas por arquivo, duplicando a declaração quando necessário — CSS não tem como uma regra "continuar" em outro arquivo.
+- **Manifest:** `content_scripts.css` agora lista os dois arquivos, `content.css` primeiro (design system) e `espelho-ponto.css` depois — ambos carregam em toda página autenticada do Meu Espaço (o manifest não tem carregamento condicional por página), então a separação é só organizacional, sem risco funcional de "faltar" um arquivo em alguma tela.
+- **Verificação:** script que extrai todo par (seletor, propriedade) do CSS original e dos dois novos arquivos e compara os conjuntos — confirmou **zero** declaração perdida (o conjunto original é subconjunto exato do novo); as únicas 6 diferenças "a mais" são um reforço intencional (o hover dos botões da `.moldura` passou a valer pela classe genérica também, não só pelo seletor posicional antigo — aditivo, sem regressão).
+- **Critério de pronto:** atingido — reorganização pura, sem mudança visual (validado ao vivo via CDP no Espelho de Ponto, Alteração de Ponto e Extrato do Banco de Horas).
+
+## F5 — ✅ Piloto: Extrato do Banco de Horas (v0.6.5)
+
+- **Por quê primeiro:** já ganha topbar/menu/busca de graça (F1); testa o modernizador de tabela genérico (F3) numa tabela real e simples (5 colunas, sem paginação).
+- **Resultado:** título/breadcrumb (F2) e tabela genérica (F3) já validados ao vivo nas fases anteriores. O único gap encontrado ao revisar de perto foi o botão de busca "CONSULTAR" — ainda não virava o `<button>` moderno fora do Espelho, porque `modernizeForm()` só roda com perfil conhecido. Corrigido nesta fase (ver F5/F6 abaixo): nova `modernizeGenericFormButtons()`.
+- **Sem perfil de página dedicado:** não foi necessário criar um perfil específico em `PAGE_PROFILES` — o caminho genérico (F1-F3 + o botão novo) já cobre 100% do que essa tela precisa. Perfis dedicados ficam reservados para telas que realmente precisem de lógica de negócio própria (como o Espelho).
+
+## F6 — ✅ Piloto: tela só-formulário (Contracheque e Rendimentos) (v0.6.5)
+
+- **Por quê:** valida que o template tolera telas sem grade de resultados (filtro puro) e reaproveita `.moldura`/`.campoPesquisa`/`input[value="CONSULTAR"]` já genéricos.
+- **Resultado:** confirmado nas fases anteriores (título "Meu Espaço / Financeiro / Contracheque e Rendimentos", sem erro por não ter tabela). Mesmo gap do F5 (botão "CONSULTAR" cru) corrigido pela `modernizeGenericFormButtons()`.
+- **Entregue nesta fase:** `domModernizer.js` ganhou `modernizeGenericFormButtons()` — mesma troca visual de `input[value="CONSULTAR"]`/`input[type="submit"]` por um `<button>` moderno que o Espelho já tinha, mas sem nenhuma parte específica daquelas telas (nome de função Struts, motivo de esquecimento, moldura de ajuste de ponto): o clique só reaproveita `legacyBtn.click()`. `modernizeCalendarIcons()` e `highlightUserAndManagerNames()` (já genéricos, só não eram chamados fora do Espelho) subiram para a casca genérica em `content.js`, rodando em qualquer página. Com isso o trio título+tabela+formulário fica genérico por completo — nenhuma tela nova precisa de código JS dedicado a menos que tenha lógica de negócio própria.
+- **Validado ao vivo (CDP):** botão "CONSULTAR" vira `<button class="je-btn-consultar">` em ambas as telas; Espelho de Ponto sem duplicação (modernizeCalendarIcons/highlightUserAndManagerNames idempotentes, chamadas uma vez só efetivamente).
+
+## F7 — ✅ Expansão incremental para as demais funcionalidades (v0.6.9)
+
+- **Ação:** portar as demais telas do menu uma a uma, priorizando por uso, cada uma como um perfil de página curto (a maior parte do trabalho pesado já foi feito em F1–F4). Registrar aqui cada tela portada e eventuais desvios de padrão encontrados.
+- **Resultado:** as ~30 telas do menu clássico (Struts, com `#container`) foram varridas ao vivo via CDP — **nenhuma precisou de perfil de página dedicado**. O caminho genérico (título, tabela, formulário/botão) se provou suficiente para todo o menu clássico. 6 bugs reais encontrados e corrigidos ao longo da varredura (ver seções de cobertura abaixo), incluindo um crash silencioso que derrubava a montagem inteira em qualquer página com um `<form>` contendo campo `name="id"` — o mais grave do épico inteiro, só descoberto capturando exceções JS via CDP.
+- **3 arquétipos de página mapeados no portal:** (a) clássico Struts com `#container` — cobertura completa; (b) "relatório" sem `#container` (ex.: Consulta AQ) — TSE XT não monta nada, sem quebrar; (c) módulo `/smvc/` com login OAuth próprio (Carteira Funcional, Participação em Conselhos ou Assemelhados — só 2 telas) — TSE XT idem não interfere.
+- **Última verificação (Pasta Funcional Digitalizada):** lista simples de documentos (82 links de download, sem tabela nem formulário de busca) — título/breadcrumb/topbar/drawer/FAB corretos, sem erro JS. Passou limpo, sem necessidade de ajuste.
+- **Critério de pronto:** atingido — expansão via caminho genérico é a estratégia vencedora; perfis de página dedicados (como cogitado originalmente) só seriam necessários para uma tela com lógica de negócio própria (KPIs, cálculos), não para replicar o padrão visual.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.6
+
+Nenhuma das telas abaixo precisou de perfil de página dedicado — o caminho genérico (F1-F6) já cobre título, tabela e formulário sem código específico:
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Extrato do Banco de Horas | Banco de Horas | ✅ | ✅ | ✅ genérica | n/a |
+| Contracheque e Rendimentos | Financeiro | ✅ | ✅ | n/a (sem tabela) | ✅ |
+| Ficha Financeira | Financeiro | ✅ | ✅ | n/a | ✅ "EMITIR FICHA" |
+| Declaração de Nepotismo | Declaração | ✅ | ✅ | n/a (lista vazia) | — |
+| Afastamentos na equipe | Frequência | ✅ | ✅ (após fix) | n/a | ✅ |
+| Teletrabalho | Frequência | ✅ | ✅ | ✅ (vazia até consultar) | ✅ |
+| Consulta Benefícios | Benefícios | ✅ | ❌ (sem overlap léxico) | ✅ genérica | n/a |
+| Consulta situação dos servidores | Frequência | ✅ | ❌ (sem overlap léxico) | ✅ genérica | ✅ + calendário |
+| Dados cadastrais | Assentamentos funcionais | ✅ | ✅ | ✅ genérica (histórico de FC) | n/a |
+| Solicitar Horas Extras (SAEX) | Serviço Extraordinário | ✅ (após fix h3) | ❌ | n/a | ✅ + calendário |
+| Autorização de compensação de horas | Banco de Horas | ✅ | ❌ | ✅ genérica | ✅ + calendário |
+| Capacitação (relatório) | Capacitação | — | — | — | — |
+
+**2 bugs reais encontrados e corrigidos nesta rodada** (`domModernizer.js`):
+1. `findBreadcrumbCategory()` só casava por igualdade exata entre o `<h2>` e o texto do link do menu — falhava quando o título nativo é mais específico (`"Afastamentos na equipe"` vs. link `"Afastamentos"`). Ganhou uma 2ª passada por substring (mínimo 4 caracteres) antes de desistir.
+2. `extractNativePageTitle()` só olhava `<h2>`. A tela do SAEX (Solicitar/Gerir Horas Extras) não tem nenhum `<h2>` de título, só `<h3>` — caía no fallback genérico "Meu Espaço". Ganhou fallback pra `<h3>` quando não há `<h2>` aproveitável.
+
+**Limitação conhecida — resolvida em v0.6.13:** quando o `<h2>` nativo e o texto do link do menu não compartilham nenhuma substring em comum (ex.: `"Benefícios Concedidos"` vs. link `"Consulta Benefícios"`; `"Banco de Horas - Homologação"` vs. `"Homologação de banco de horas"`; `"Assistência farmacêutica"` vs. `"Reembolso Farmacêutico"`), o breadcrumb ficava só com `"Meu Espaço / <título>"`, sem a categoria intermediária. `findBreadcrumbCategory()` ganhou uma 3ª passada por sobreposição de radicais significativos (stemming leve de gênero/plural + lista de palavras de moldura do portal ignoradas — Consulta, Solicitar, Gestão, Relatório…). Aceite conservador: 2+ radicais em comum, ou 1 radical idêntico e longo (≥8 chars); radical curto de domínio (banco, horas, dados, ponto) nunca dispara sozinho. Casos genuinamente sem palavra distintiva em comum (`"Acompanhamento da unidade"` vs. `"Consulta situação dos servidores"`) seguem sem categoria — sem falso positivo.
+
+**Confirmado, não é regressão:** `Capacitação (relatório)` não tem `#container` — é um arquétipo de página diferente (relatório), o F1 já reage bem (não monta nada, não quebra). Ainda não mapeado quantas outras telas do menu compartilham esse arquétipo; fica para a próxima rodada de F7.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.7
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Alteração de dados dos dependentes | Assentamentos funcionais | ✅ | ✅ | n/a | — |
+| Homologação de banco de horas | Banco de Horas | ✅ ("Banco de Horas - Homologação") | ❌ (ordem de palavras invertida) | n/a (vazia até consultar) | ✅ |
+| Validade do banco de horas | Banco de Horas | ✅ (após fix "Opções de pesquisa") | ✅ | ✅ genérica | ✅ |
+| Reembolso Farmacêutico (Assistência farmacêutica) | Benefícios | ✅ | ❌ (farmacêutica/farmacêutico) | ✅ genérica (294 linhas) | ✅ "NOVO" |
+| Trabalho Híbrido | Frequência | ✅ | ✅ | ✅ genérica | ✅ |
+| Resumo Anual de Frequência | Frequência | ✅ | ✅ | ✅ genérica | ✅ |
+| Autorização das liberações médicas | Frequência | ✅ ("Análise dos pedidos de liberação médica") | ❌ | n/a (vazia até consultar) | ✅ + calendário |
+| Gestão de Serviço Extraordinário (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Declaração de Acumulação de Cargos | Declaração | ✅ | ✅ | n/a | ✅ "PESQUISAR" |
+| Carteira Funcional / Pasta Funcional Digitalizada | Assentamentos funcionais | — | — | — | — |
+
+**1 bug real encontrado e corrigido nesta rodada** (`domModernizer.js`): em "Validade do banco de horas" o primeiro `<h2>` da página é **"Opções de pesquisa:"** (rótulo da seção de filtro, não o título) — o título de verdade vem depois, num segundo `<h2>`. `firstUsableHeading()` ganhou uma lista de rótulos genéricos a ignorar (`NON_TITLE_HEADING_PATTERNS`, hoje só `/^opcoes de pesquisa\b/`) — cresce sob demanda se aparecer outro rótulo assim.
+
+**Confirmado, arquétipo novo (não é regressão):** `Carteira Funcional`/`Pasta Funcional Digitalizada` (`/smvc/identificacao/...`) é um módulo à parte, aparentemente uma SPA separada com login OAuth próprio (`autenticaje.tse.jus.br/auth/realms/administrativo/...`) — nem `#container` nem `#menu-lateral` do template clássico existem lá. TSE XT corretamente não monta nada. Terceiro arquétipo de página conhecido (além do clássico Struts com `#container` e do "relatório" tipo Capacitação): **módulo `/smvc/` com auth própria**. Não investigado a fundo — não parece haver ganho em portar o TSE XT pra dentro de uma SPA de terceiros.
+
+**Confirma padrão útil:** o fallback `input[type="submit"]` (além de `input[value="CONSULTAR"]`) já modernizou botões com texto bem diferente sem nenhum código novo — "EMITIR FICHA", "NOVO", "PESQUISAR" todos viraram `<button>` moderno de graça.
+
+### Cobertura verificada ao vivo (CDP) — v0.6.8
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Alteração de dados cadastrais (2FA por e-mail) | Assentamentos funcionais | ✅ (após fix "Olá") | ❌ | n/a | — |
+| Solicitação de compensação de horas | Banco de Horas | ✅ | ❌ | n/a | — + calendário |
+| Histórico de Capacitação | Capacitação | ✅ | ✅ | ✅ genérica (191 linhas) | — |
+| Período Aquisitivo | Capacitação | ✅ | ✅ | n/a (vazia até consultar) | ✅ |
+| Eventos de capacitação por período | Capacitação | ✅ | ✅ | n/a (vazia até consultar) | ✅ |
+| Requerimento de AQ Treinamento ("Registro de certificados") | Capacitação | ✅ (após fix crash) | ❌ | ✅ genérica (54 linhas, após fix) | ✅ "INCLUIR" (após fix) |
+| Solicitação de liberação médica | Frequência | ✅ | ❌ | n/a | — + calendário |
+| Devolver Valor Orçamentário (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Homologar Relatório de Serviços Realizados (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+| Relatório de Serviços Realizados (SAEX) | Serviço Extraordinário | ✅ (fallback h3) | ❌ | n/a | — |
+
+**2 bugs reais encontrados e corrigidos nesta rodada** (`domModernizer.js` + `tableModernizer.js`):
+1. **Crash silencioso** (o mais grave até agora): em "Requerimento de AQ Treinamento" (`CapacitacaoExternaAction`), `isInsideInjectedUI()` lançava `TypeError: node.id.indexOf is not a function` e derrubava a montagem inteira a partir do banner de título em diante (topbar sobrevivia, mas título/tabela/botão/FAB/drawer sumiam) — sem nenhum erro visível pro usuário. Causa: um `<form>` no caminho de ancestrais tem um campo `name="id"`, e formulários expõem controles filhos como propriedades nomeadas, então `form.id` retorna o elemento em vez da string do atributo. Corrigido checando `typeof node.id === 'string'` antes de `.indexOf` — mesmo padrão existia duplicado em `tableModernizer.js`, corrigido nos dois lugares. Achado só porque configurei captura de `Runtime.exceptionThrown` via CDP (script novo `cdp-capture-errors.mjs`) — os sintomas visuais sozinhos (nada quebrado "na tela", só faltando peças) não davam pra diagnosticar a causa raiz.
+2. Tela de confirmação por e-mail (2FA) tem só uma saudação **"Olá LUCIANO SOARES BOHNERT"** como heading — o extrator pegava o nome do próprio usuário como se fosse o título da página. `NON_TITLE_HEADING_PATTERNS` ganhou `/^ola\b/`.
+
+**Cuidado registrado:** a tela de 2FA (`Autenticacao2FatoresAction_carregarTela`) pode reenviar o código de segurança por e-mail a cada `GET`/reload — evitar recarregar essa tela repetidamente durante testes futuros.
+
+Com esta rodada, as ~30 telas do menu clássico (Struts, com `#container`) estão cobertas — restam só 2 telas do módulo `/smvc/` (Carteira Funcional, Participação em Conselhos ou Assemelhados — arquétipo à parte, já confirmado que a extensão não interfere).
+
+### Cobertura verificada ao vivo (CDP) — v0.6.9
+
+| Tela | Categoria | Título | Categoria no breadcrumb | Tabela | Botão |
+| :--- | :--- | :--- | :--: | :--: | :--: |
+| Atualização de dados cadastrais (pós-2FA) | Assentamentos funcionais | ✅ | ✅ | n/a (formulário de edição) | ❌ "SALVAR" não modernizava (fix) |
+
+**1 gap real encontrado e corrigido** (`domModernizer.js`): o formulário de "Atualização de dados cadastrais" usa `input[type="button"]` (não `type="submit"`) com valores `"Consultar Endereço"` e **"SALVAR"** — nenhum batia no seletor genérico de botão (`input[value="CONSULTAR"], input[type="submit"]`), deixando o botão de salvar sem a modernização visual. `modernizeGenericFormButtons()` ganhou mais valores reconhecidos (case-insensitive): `SALVAR`, `PESQUISAR`, `CONFIRMAR`, `GRAVAR`, `ENVIAR`, `NOVO` — sempre ações primárias/positivas, nunca "Cancelar"/"Voltar"/"Excluir". Não revalidado ao vivo nesta tela específica para evitar disparar um novo código de verificação por e-mail (2FA) — mecanismo é o mesmo já comprovado (seletor de atributo, sem lógica nova).
+
+Pendências reais que ainda podem aparecer em telas não cobertas: outros valores de botão primário não listados ficariam sem modernização até serem encontrados e adicionados — mesmo padrão de manutenção incremental usado até aqui. **v0.6.13:** a lista cresceu com ATUALIZAR, REGISTRAR, INCLUIR, ADICIONAR, EMITIR, SOLICITAR (ícone "+" para as de criação — NOVO/INCLUIR/ADICIONAR/REGISTRAR).
+
+**Última verificação — Pasta Funcional Digitalizada** (`AssentamentoFuncionalAction`): lista simples de 82 links de documentos pra download, sem tabela nem formulário de busca. Título "Pasta funcional digitalizada", breadcrumb "Meu Espaço / Assentamentos funcionais / Pasta funcional digitalizada", topbar/drawer/FAB corretos, captura de `Runtime.exceptionThrown` sem nenhum erro. Passou limpo — **fecha a varredura F7 do menu clássico**.
+
+### Achado pós-fechamento (feedback visual do usuário, v0.6.10)
+
+Usuário reportou via captura de tela: no diálogo nativo de mensagem do portal (aparece, por exemplo, como aviso "O código de acesso expirou, foi enviado um novo por e-mail" na tela de 2FA), o botão primário **CONFIRMAR** já virava o `<button>` azul moderno (via `modernizeGenericFormButtons()`), mas o botão secundário **FECHAR** ficava com o estilo nativo escuro — visualmente destoante ao lado do botão modernizado.
+
+Inspeção ao vivo (somente leitura, sem clicar em nada — a aba estava em meio a um desafio de captcha) revelou que o diálogo é um componente **nativo e reutilizável do próprio portal**: `#mensagem` / `.grupoBotoes` / `#btnConfirmarMensagem` / `#btnFecharMensagem`, não algo específico da tela de 2FA — provavelmente aparece em várias outras telas do portal também.
+
+**Correção:** `content.css` ganhou estilo genérico para `.grupoBotoes` (flex/gap) e para botões nativos dentro dele que não viraram o botão primário (`input[type=button]:not(.je-legacy-btn-consultar)`, idem `type=submit`) — mesma paleta cinza/hover já usada no botão secundário da `.moldura`. Não revalidado ao vivo nesta tela específica (evitar reload no meio do fluxo de 2FA/captcha do usuário); mesmo padrão CSS já comprovado funcionando em outro contexto.
+
+**Padrão para o futuro:** sempre que um botão primário é modernizado, checar se há botões-irmãos no mesmo grupo/formulário que ficam destoando — o ideal é sempre estilizar o grupo inteiro, não só a ação reconhecida.
+
+### Ronda de refinamento visual (feedback do usuário, v0.6.11)
+
+Usuário reportou mais 3 problemas via captura de tela, todos corrigidos e validados ao vivo via CDP:
+
+1. **Diálogo `.grupoBotoes`** (mesmo componente do achado anterior): botões viraram centralizados (`justify-content: center`); o ícone do botão CONFIRMAR era uma lupa (semântica de busca), sem sentido pra uma ação de confirmação — `modernizeGenericFormButtons()` ganhou `pickModernButtonIcon()`, que escolhe lupa só pra Consultar/Pesquisar, "+" pra Novo, e check pras demais ações (Confirmar/Salvar/Gravar/Enviar/OK).
+2. **"Autorização de compensação de horas"**: botão "OK" (ao lado de um `<select>`) e "Consultar Endereço" ficavam sem estilo — nenhum batia no seletor exato de texto. `modernizeGenericFormButtons()` passou a usar prefixo (`^=`) em vez de igualdade pros verbos de ação e ganhou "OK" como valor exato; e quando há **mais de um** botão de ação no mesmo `<form>`, o 2º em diante vira `.je-btn-secondary` (cinza) em vez de ficar sem estilo nenhum (nova classe CSS genérica, mesma paleta do secundário da `.moldura`/`.grupoBotoes`).
+3. **Textarea "Justificativa"/"Motivo"**: o campo (`name="compensacaoHoras.motivoCancelamento"` — não continha a palavra "justificativa", por isso o seletor específico não batia) ficava com borda quadrada nativa, e o texto "Máx. 100 caracteres. Caracteres restantes:" era estático, não um contador ao vivo. Novo `setupGenericCharCounters()` detecta o limite real (atributo `maxlength` OU o próprio texto nativo "Máx. N caracteres" — sem inventar um valor) e monta o mesmo widget de contador ao vivo já usado no Espelho/Alteração de Ponto; textarea genérico ganhou o mesmo visual arredondado dos demais campos.
+4. **"Alteração de dados dos dependentes"**: 19 campos (Nome, CPF, Telefone, E-mail, endereço completo etc.) apareciam um por linha em largura total, porque o `.moldura` (reset genérico `display:flex; flex-direction:column`) esperava que rótulo+campo já estivessem agrupados num wrapper — isso só acontecia via função específica do Espelho. Novo `modernizeGenericMoldura()` detecta o padrão "achatado" (`<label>`/`<input>`/`<br>` soltos) e agrupa automaticamente em `.je-form-group` dentro de um `.je-form-row` (flex-wrap), reaproveitando CSS já existente.
+5. **Ícones nativos de ação/status** (tabela "Últimas solicitações"): 5 ícones `.png`/`.jpg` (detalhar, editar, aprovar/autorizar, excluir, "autorizado" com selo de polegar) destoavam do resto da interface. Novo `modernizeNativeIcons()` mapeia por trecho do nome do arquivo (`detalhar`, `iconEdit`, `iconCheck`, `iconDelete`, `polegar-positivo`) pra um SVG equivalente no estilo do design system, preservando o clique (via `img.click()`, mesmo padrão do `modernizeCalendarIcons()`) e o estado desabilitado/somente-status quando não há `onclick` nativo.
+
+Todos os 5 itens validados ao vivo via CDP nas telas reportadas (Autorização de compensação de horas, Alteração de dados dos dependentes) sem regressão no Espelho de Ponto/Alteração de Ponto.
+
+### Correção (feedback do usuário, v0.6.14) — botão CONFIRMAR fantasma no diálogo `.grupoBotoes`
+
+Na tela de logout/sessão expirada (`portalservidor2/Logout`, perfil `login`), o diálogo nativo "Sua sessão foi encerrada" (`#mensagem`/`.grupoBotoes`) mostrava um botão **CONFIRMAR sem ação nenhuma** — o portal mantém esse botão **oculto** nessa mensagem (só usa o FECHAR). Causa: a regra de estilo de `.grupoBotoes input[type=button]` trazia `display: inline-flex !important`, que **sobrescrevia o `display:none`** que o script nativo do portal aplica ao botão. Nas telas autenticadas isso não aparecia porque lá `modernizeGenericFormButtons()` roda, marca o nativo com `.je-legacy-btn-consultar` (`display:none !important`) e cria um substituto moderno com visibilidade sincronizada por `MutationObserver` — mas no perfil `login` só roda `mountLoginPage()`, então o nativo ficava exposto pela regra de CSS.
+
+**Correção:** a regra de `.grupoBotoes input` deixou de declarar `display` (o revestimento visual — fundo, borda, altura, sombra — continua). Sem regra de display, o `display:none` nativo prevalece e o botão segue oculto; `<input type=button>` já centraliza o texto sozinho pelo padding/altura. Princípio: **nunca forçar `display` em elemento nativo que o portal mostra/esconde por conta própria** — o TSE XT só reveste o que o portal decidir exibir.
+
+**Follow-up v0.6.15 → v0.6.16:** o card `#mensagem` foi deixado mais compacto (coluna centrada ícone→texto→botões, `max-width` 340px, `<br>` soltos ocultos) e o ícone nativo "bola com i" (`#iconInformation`) trocado pelo "info" do design system via `content:`. A v0.6.15 caiu no MESMO princípio acima ao pôr `display: flex !important` no próprio `#mensagem` — o `!important` venceu o `display:none` do `jQuery.hide()` nativo e o card não fechava mais no FECHAR. v0.6.16 moveu o `display:flex` pra `#mensagem:not(.escondido)` (a classe `escondido` é a que o `esconderElemento` nativo adiciona) — quando o portal fecha, a regra não casa e o `display:none` inline prevalece. Verificado ao vivo via CDP: abre em flex, FECHAR esconde de vez, reabre/fecha repetidamente. **Padrão reutilizável:** para dar flex/grid a um elemento que o portal togla, escopar em `:not(.escondido)` em vez de forçar no seletor base.
+
+---
+
+## Tarefas transversais
+
+| # | Tarefa | Serve a |
+| :--- | :--- | :--- |
+| T1 | Registro central de perfis de página (`{ matcher, mountGeneric, mountTitle?, mountTable?, mountForm? }`) | F1 |
+| T2 | Extrator de título genérico reutilizável entre perfis | F2 |
+| T3 | Módulo `tableModernizer.js` (novo) desacoplado do Espelho | F3 |
+| T4 | Split de `content.css` sem alterar seletores existentes | F4 |
