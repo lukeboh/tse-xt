@@ -144,6 +144,19 @@ body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr:not([style*="displa
   min-width: 0 !important;
 }
 
+/* Painel harmônico, não tabela: sem filete de <tr> (o portal tem uma
+   regra nativa "tr { border: 1px solid #C0C0C0 }" em duas folhas de
+   estilo próprias) e sem o zebrado azul-clarinho das linhas pares — a
+   regra genérica de tabela de dados (content.css) assume grade de
+   resultados, não faz sentido num formulário. */
+body.je-xt-enabled table.je-reembolso-form-grid tr {
+  border: none !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid tbody tr:nth-child(even) td {
+  background: transparent !important;
+}
+
 body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display: none"],
 body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display:none"] {
   display: none !important;
@@ -335,7 +348,9 @@ body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) 
 
 body.je-xt-enabled .je-reembolso-layout {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px) !important;
+  /* 320-460 -> 420-640 (uns 40% maior): o Resumo precisa de espaço de
+     verdade pro textarea de Observações (até 1000 caracteres). */
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 640px) !important;
   gap: 20px !important;
   align-items: start !important;
 }
@@ -386,6 +401,42 @@ body.je-xt-enabled .je-reembolso-layout-aside .je-char-counter-container strong 
   color: var(--je-primary) !important;
 }
 
+/* Coluna de rótulo (th) rente à direita — inclusive a 1ª linha
+   ("Quantidade de medicamentos:"), que sem o qualificador "tr" abaixo
+   perdia pra table.je-filter-table-card tr:first-child th (cabeçalho de
+   tabela de resultados, 0-3-4 de especificidade contra 0-3-3 daqui).
+   Coluna de valor (td) à esquerda. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr th {
+  text-align: right !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card td {
+  text-align: left !important;
+}
+
+/* Observações vira um <textarea> de várias linhas (setupObservacoesCounter
+   em reembolsoFarmaceutico.js) — precisa dar pra ler um texto de até 1000
+   caracteres sem rolar na horizontal feito o <input> de uma linha só. */
+body.je-xt-enabled .je-reembolso-observacoes-textarea {
+  width: 100% !important;
+  min-height: 140px !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  color: #1e293b !important;
+}
+
+body.je-xt-enabled .je-reembolso-observacoes-textarea:focus {
+  outline: none !important;
+  border-color: var(--je-primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+}
+
 /* Só empilha (Resumo desce pra baixo) quando o espaço realmente acaba —
    card lateral mínimo de 280px não cabendo mais ao lado da coluna
    principal com folga legível. */
@@ -411,7 +462,15 @@ body.je-xt-enabled .je-reembolso-layout-aside .je-char-counter-container strong 
       resto do TSE XT (content.css), aqui só o campo em si.
    -------------------------------------------------------------------------- */
 
+/* setupObservacoesCounter() esconde o <input> nativo (input.style.display
+   = 'none', vira o <textarea> visível acima) — mas table.je-filter-table-
+   card td > input:not(...) { display: block !important } (content.css)
+   ganhava dessa inline style, reexibindo um segundo campo (input de uma
+   linha, com o mesmo valor sincronizado) logo abaixo do textarea. Um
+   seletor por #id tem especificidade de sobra pra vencer qualquer regra
+   por classe, então garante o display:none de vez. */
 body.je-xt-enabled #formReembolsoNovoPedido_observacoes {
+  display: none !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;

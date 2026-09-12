@@ -244,11 +244,35 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
       label.textContent = 'Observações:';
     }
 
+    // Um <input> de uma linha só não dá pra ler um texto de até 1000
+    // caracteres (ou rola na horizontal, ou o texto some pra fora da
+    // caixa). Troca visualmente por um <textarea> de várias linhas; o
+    // <input> original continua no DOM (só oculto) — é ele que o form
+    // nativo envia no submit, então cada digitação no textarea copia o
+    // valor de volta pra ele.
+    var textarea = document.createElement('textarea');
+    textarea.className = 'je-reembolso-observacoes-textarea';
+    textarea.value = input.value;
+    textarea.maxLength = max;
+    textarea.rows = 6;
+    textarea.placeholder = input.placeholder || '';
+    // Evita que setupGenericCharCounters() (domModernizer.js — varre
+    // QUALQUER <textarea> com maxlength detectável) trate este textarea
+    // recém-criado como "novo" numa remontagem (checkStaleAndRetry chama
+    // init() de novo, e essa criação aqui é ela mesma uma mutação que o
+    // observer da página pode pegar) e monte um SEGUNDO contador do lado
+    // do meu. Mesma flag/valor que a função genérica usa pra já
+    // considerar "processado".
+    textarea.dataset.jeCounterSet = 'true';
+    input.style.display = 'none';
+    input.parentNode.insertBefore(textarea, input);
+
     var counterContainer = document.createElement('div');
     counterContainer.className = 'je-char-counter-container';
 
     function updateCount() {
-      var current = input.value ? input.value.length : 0;
+      input.value = textarea.value;
+      var current = textarea.value.length;
       var remaining = Math.max(0, max - current);
       var warn = remaining < Math.max(10, max * 0.1) ? 'je-char-warning' : '';
       counterContainer.innerHTML =
@@ -257,9 +281,9 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
         remaining + '</strong> / ' + max + '</span>';
     }
 
-    input.addEventListener('input', updateCount);
-    input.addEventListener('keyup', updateCount);
-    input.addEventListener('change', updateCount);
+    textarea.addEventListener('input', updateCount);
+    textarea.addEventListener('keyup', updateCount);
+    textarea.addEventListener('change', updateCount);
     updateCount();
 
     input.parentNode.insertBefore(counterContainer, input.nextSibling);

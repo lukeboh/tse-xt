@@ -1704,6 +1704,15 @@ window.JEPessoasModernizer = (function () {
       svg: '<circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line>'
     },
     {
+      // Ícone de ajuda/dúvida (img/ajuda.bmp — bitmap "?" nativo, usado
+      // tanto no cabeçalho de "Informações" quanto em campos avulsos como
+      // #imgAjudaMedicamento). Vira o "help circle" de traço do design
+      // system, no lugar do bitmap cru.
+      match: /ajuda/i,
+      color: 'var(--je-primary)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>'
+    },
+    {
       match: /iconedit/i,
       color: 'var(--je-primary)',
       svg: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>'

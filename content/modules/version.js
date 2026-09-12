@@ -5,9 +5,44 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.17';
+  const CURRENT_VERSION = '0.6.21';
 
   const CHANGELOG = [
+    {
+      version: '0.6.21',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: 1ª linha do Resumo não alinhava à direita',
+      features: [
+        '"Quantidade de medicamentos:" continuava centralizado: sem um seletor com "tr", a regra perdia pra table.je-filter-table-card tr:first-child th (cabeçalho de tabela de resultados, especificidade 0-3-4 contra 0-3-3). As demais linhas (não são tr:first-child) já alinhavam certo.'
+      ]
+    },
+    {
+      version: '0.6.20',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: contador de caracteres duplicado nas Observações',
+      features: [
+        'O input escondido não voltava mais a aparecer (0.6.19), mas o contador em si ainda vinha em dobro: o textarea recém-criado não tinha a própria flag de "processado", e setupGenericCharCounters() (que varre qualquer <textarea> com maxlength detectável) montava um segundo contador do lado do meu numa remontagem disparada pelo MutationObserver da própria página (a criação do textarea é, ela mesma, uma mutação). Marcado com a mesma flag que a função genérica usa pra pular elementos já tratados.'
+      ]
+    },
+    {
+      version: '0.6.19',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: campo Observações duplicado',
+      features: [
+        'O <input> nativo escondido por trás do novo textarea de Observações (0.6.18) reaparecia como um segundo campo (de uma linha, mesmo valor sincronizado, logo abaixo do textarea): a regra genérica "table.je-filter-table-card td > input { display: block !important }" ganhava do display:none aplicado via JS. Fixado com um seletor por #id, que tem especificidade de sobra pra vencer qualquer regra por classe.'
+      ]
+    },
+    {
+      version: '0.6.18',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: Resumo mais largo, Observações vira textarea, formulário sem cara de tabela',
+      features: [
+        'Coluna lateral do Resumo do Pedido uns 40% mais larga (320-460px -> 420-640px). Campo Observações virou um <textarea> de várias linhas — era um <input> de uma linha só, impossível de ler um texto de até 1000 caracteres sem rolar na horizontal; o <input> nativo continua sincronizado por baixo (é ele que o formulário envia no submit).',
+        'Tabela do Resumo: rótulo (th, inclusive o "cabeçalho" de cada linha) alinhado à direita, valor (td) à esquerda.',
+        'Formulário para Novo Pedido: removidas as bordas de <tr> (o portal tem "tr { border: 1px solid #c0c0c0 }" nativo) e o zebrado azul das linhas pares (regra genérica de tabela de RESULTADOS, sem sentido num formulário) — painel harmônico, não mais com cara de tabela.',
+        'Ícone de ajuda (img/ajuda.bmp, bitmap "?" — usado tanto no cabeçalho de "Informações" quanto em #imgAjudaMedicamento) vira o "help circle" de traço do design system.'
+      ]
+    },
     {
       version: '0.6.17',
       date: '2026-09-11',
