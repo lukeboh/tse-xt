@@ -348,9 +348,9 @@ body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) 
 
 body.je-xt-enabled .je-reembolso-layout {
   display: grid !important;
-  /* 320-460 -> 420-640 (uns 40% maior): o Resumo precisa de espaço de
-     verdade pro textarea de Observações (até 1000 caracteres). */
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 640px) !important;
+  /* Resumo com largura preferencial fixa (470px); o Formulário (1fr)
+     ocupa o que sobrar horizontalmente da tela. */
+  grid-template-columns: minmax(0, 1fr) 470px !important;
   gap: 20px !important;
   align-items: start !important;
 }
@@ -375,6 +375,11 @@ body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
   position: sticky !important;
   top: 16px !important;
   align-self: start !important;
+  /* Altura preferencial de 660px; rolagem própria se o conteúdo (ex.:
+     textarea de Observações bem preenchido) precisar de mais espaço —
+     nunca estoura o layout. */
+  height: 660px !important;
+  overflow-y: auto !important;
 }
 
 /* dentro do layout, quem controla largura/espaçamento é o grid — o
@@ -438,9 +443,9 @@ body.je-xt-enabled .je-reembolso-observacoes-textarea:focus {
 }
 
 /* Só empilha (Resumo desce pra baixo) quando o espaço realmente acaba —
-   card lateral mínimo de 280px não cabendo mais ao lado da coluna
-   principal com folga legível. */
-@media (max-width: 900px) {
+   card lateral de 470px não cabendo mais ao lado da coluna principal com
+   folga legível. */
+@media (max-width: 980px) {
   body.je-xt-enabled .je-reembolso-layout {
     display: block !important;
   }
@@ -448,6 +453,8 @@ body.je-xt-enabled .je-reembolso-observacoes-textarea:focus {
   body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
     position: static !important;
     margin-top: 20px !important;
+    height: auto !important;
+    max-height: 660px !important;
   }
 
   body.je-xt-enabled .je-reembolso-layout > table.je-reembolso-layout-list {
@@ -474,4 +481,100 @@ body.je-xt-enabled #formReembolsoNovoPedido_observacoes {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Ícones ao lado do campo (não numa linha embaixo) — embrulho
+      .je-reembolso-input-icon-row criado por setupInlineIcons().
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-reembolso-input-icon-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > input,
+body.je-xt-enabled .je-reembolso-input-icon-row > select {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > .je-native-icon,
+body.je-xt-enabled .je-reembolso-input-icon-row > #imgCalculadora {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+/* link "Calcular Desconto" dentro da linha — mesma altura visual dos
+   ícones ao lado, sem quebrar pra própria linha. */
+body.je-xt-enabled .je-reembolso-input-icon-row > a {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Diálogo "Cálculo do Valor com Desconto" — reaproveita o modal
+      genérico (.je-detail-modal-*, já estilizado em content.css) no
+      lugar da janela de popup nativa (window.open, sem chrome).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-calc-desconto-card {
+  max-width: 380px !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin-bottom: 12px !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row label {
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row input {
+  width: 90px !important;
+  flex: 0 0 auto !important;
+  text-align: right !important;
+  padding: 6px 8px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  box-sizing: border-box !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row input:focus {
+  outline: none !important;
+  border-color: var(--je-primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-result {
+  padding-top: 12px !important;
+  margin-top: 4px !important;
+  border-top: 1px dashed rgba(203, 213, 225, 0.9) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-result input {
+  background: rgba(0, 119, 255, 0.06) !important;
+  font-weight: 700 !important;
+  color: var(--je-primary-dark) !important;
+  border-color: rgba(0, 119, 255, 0.25) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-actions {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
 }

@@ -5,9 +5,35 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.21';
+  const CURRENT_VERSION = '0.6.24';
 
   const CHANGELOG = [
+    {
+      version: '0.6.24',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: calculadora do diálogo continuava sem calcular — a causa era CSP, não o mundo isolado',
+      features: [
+        'O fix do 0.6.23 (onclick/onkeypress inline) não resolveu: um probe direto mostrou que calcular()/ConverteParaNumeroComPonto() nunca chegam a existir em NENHUM mundo depois do <script src> injetado — a CSP da página bloqueia silenciosamente scripts inseridos dinamicamente (a tag aparece em document.scripts, mas o conteúdo nunca roda). A lógica da calculadora (cálculo, validação e formatação de número) foi portada 1:1 pro próprio módulo, operando só em DOM — sem depender de carregar nenhum script externo, funciona direto no mundo isolado do content script como qualquer outra função da extensão.'
+      ]
+    },
+    {
+      version: '0.6.23',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: diálogo da calculadora não calculava de verdade',
+      features: [
+        'O botão Calcular do novo diálogo (0.6.22) sempre devolvia 0: o listener era registrado via addEventListener no content script (mundo isolado) e chamava window.calcular() desse mundo — onde a função não existe, mesmo já carregada no mundo principal da página pelo <script> injetado. Corrigido chamando calcular()/validar_valor_calc()/SubstituiPontoPorVirgula() por atributo onclick/onkeypress/onkeyup, exatamente como o HTML original da calculadora — atributo inline sempre compila e roda no mundo principal do documento, não importa quem escreveu o HTML (o mesmo motivo pelo qual clicar no #lupa nativo já funcionava).'
+      ]
+    },
+    {
+      version: '0.6.22',
+      date: '2026-09-12',
+      title: 'Reembolso Farmacêutico: Resumo com tamanho fixo, ícones ao lado dos campos, calculadora vira diálogo do XT',
+      features: [
+        'Resumo do Pedido com tamanho preferencial de 470x660px (rolagem própria se o conteúdo precisar de mais espaço); o Formulário para Novo Pedido ocupa o restante da largura da tela.',
+        'Ícones (lupa do Medicamento, ajuda do Tipo de Uso, calculadora + link "Calcular Desconto" do Valor Total Pago) ficam ao lado do campo, não numa linha embaixo dele.',
+        '"Calcular Desconto" abria uma janela de popup nativa sem nenhuma cara do TSE XT (window.open, sem barra de título, 360x260) — agora abre um diálogo no mesmo padrão dos demais modais da extensão. A calculadora em si (calcular(), validação e formatação de número) é 100% a mesma, carregada sob demanda do próprio script da página — só o botão "Transportar" foi reescrito (o original usa window.opener, que não existe fora de um popup de verdade).'
+      ]
+    },
     {
       version: '0.6.21',
       date: '2026-09-12',

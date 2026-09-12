@@ -289,6 +289,222 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
     input.parentNode.insertBefore(counterContainer, input.nextSibling);
   }
 
+  // --------------------------------------------------------------------
+  // Ícones (lupa do Medicamento, ajuda do Tipo de Uso, calculadora do
+  // Valor Total Pago) ficam ao lado do respectivo campo, não numa linha
+  // embaixo — embrulha [controle + ícone(s)] numa linha flex. A tabela de
+  // resultados da busca (quando presente) continua um bloco separado
+  // logo abaixo, fora do embrulho.
+  // --------------------------------------------------------------------
+  function wrapInline(control, extras) {
+    if (!control || control.dataset.jeIconWrapped === '1') return;
+    control.dataset.jeIconWrapped = '1';
+    var wrap = document.createElement('div');
+    wrap.className = 'je-reembolso-input-icon-row';
+    control.parentNode.insertBefore(wrap, control);
+    wrap.appendChild(control);
+    extras.forEach(function (el) { if (el) wrap.appendChild(el); });
+  }
+
+  function setupInlineIcons() {
+    // Medicamento + lupa (o <button> que modernizeNativeIcons() insere
+    // logo depois do <img id="lupa"> escondido).
+    var nomeMed = document.querySelector(NOME_MEDICAMENTO_SELECTOR);
+    var lupaImg = document.getElementById('lupa');
+    wrapInline(nomeMed, [lupaImg ? lupaImg.nextElementSibling : null]);
+
+    // Tipo de uso + ícone de ajuda.
+    var ajudaImg = document.getElementById('imgAjudaMedicamento');
+    var tipoUso = document.getElementById('formReembolsoNovoPedido_codigoModoUtilizacao');
+    wrapInline(tipoUso, [ajudaImg ? ajudaImg.nextElementSibling : null]);
+
+    // Valor total pago + ícone calculadora + link "Calcular Desconto"
+    // (que agora abre o modal — ver setupCalculadoraDialog()).
+    var valorInput = document.getElementById('VALOR');
+    var calcImg = document.getElementById('imgCalculadora');
+    var calcLink = valorInput && valorInput.parentElement
+      ? valorInput.parentElement.querySelector('a')
+      : null;
+    wrapInline(valorInput, [calcImg, calcLink]);
+  }
+
+  // --------------------------------------------------------------------
+  // "Calcular Desconto" abre hoje uma JANELA de popup nativa
+  // (window.open, sem chrome, 360x260, ver abrirJanelaCalculadora() na
+  // própria página) — vira um modal in-page no mesmo padrão dos demais
+  // diálogos do TSE XT (.je-detail-modal-*, já estilizado genericamente
+  // em content.css).
+  //
+  // A lógica é uma PORTA 1:1 de reembolsoFarmaceutico/js/calculadora.js
+  // — não dá pra só <script src> injetar o arquivo original e chamar
+  // suas funções: a CSP da página bloqueia silenciosamente scripts
+  // inseridos dinamicamente (a tag chega a aparecer em document.scripts,
+  // mas o conteúdo nunca executa em nenhum mundo — nem calcular() nem os
+  // helpers de número passam a existir em lugar nenhum). Portada aqui,
+  // idêntica ao original, operando só em DOM — sem depender de nenhum
+  // script externo, funciona direto no mundo isolado do content script.
+  // "Transportar" (copiarValor() no original) também é local: a versão
+  // nativa usa window.opener, que não existe fora de um popup de
+  // verdade.
+  // --------------------------------------------------------------------
+  var calcOverlay = null;
+
+  function calcRoundNumber(num, dec) {
+    return Math.round(num * Math.pow(10, dec)) / Math.pow(10, dec);
+  }
+
+  function calcConverteParaNumeroComPonto(valorComVirgula) {
+    var posVirgula = valorComVirgula.lastIndexOf(',');
+    if (posVirgula < 0) return valorComVirgula;
+    return valorComVirgula.substring(0, posVirgula) + '.' + valorComVirgula.substring(posVirgula + 1);
+  }
+
+  function calcLimpaStrings(s) {
+    var digitos = '0123456789,';
+    var temp = '';
+    for (var i = 0; i < s.length; i++) {
+      var d = s.charAt(i);
+      if (digitos.indexOf(d) >= 0) temp += d;
+    }
+    return temp;
+  }
+
+  function calcValidarValorCalc(campo) {
+    campo.value = calcLimpaStrings(campo.value);
+  }
+
+  function calcSubstituiPontoPorVirgula(campo) {
+    var valorComPonto = campo.value;
+    var posPonto = valorComPonto.lastIndexOf('.');
+    if (posPonto < 0) return;
+    if (valorComPonto.length > posPonto + 1) {
+      campo.value = valorComPonto.substring(0, posPonto) + ',' + valorComPonto.substring(posPonto + 1);
+    } else {
+      campo.value = valorComPonto.substring(0, posPonto) + ',';
+    }
+  }
+
+  function calcCalcular(overlay) {
+    var nota = parseFloat(calcConverteParaNumeroComPonto(overlay.querySelector('#VTNOTA').value));
+    var desc = parseFloat(calcConverteParaNumeroComPonto(overlay.querySelector('#VTDESC').value));
+    var med = parseFloat(calcConverteParaNumeroComPonto(overlay.querySelector('#VMEDI').value));
+    var resultEl = overlay.querySelector('#RESULT');
+
+    if (!(nota > 0)) {
+      window.alert('o valor da nota deve ser maior que zero !');
+      resultEl.value = '0';
+      return;
+    }
+    if (!(nota > desc)) {
+      window.alert('O valor do desconto deve ser menor que o valor da nota !');
+      return;
+    }
+    var resultado = calcRoundNumber(med - med * desc / nota, 2) + '';
+    var posPonto = resultado.lastIndexOf('.');
+    resultEl.value = posPonto >= 0
+      ? resultado.substring(0, posPonto) + ',' + resultado.substring(posPonto + 1)
+      : resultado + ',00';
+  }
+
+  function buildCalculadoraOverlay() {
+    var overlay = document.createElement('div');
+    overlay.className = 'je-detail-modal-overlay';
+    overlay.innerHTML =
+      '<div class="je-detail-modal-card je-calc-desconto-card" role="dialog" aria-modal="true" aria-label="Cálculo do valor do medicamento com desconto">' +
+        '<div class="je-detail-modal-header">' +
+          '<span class="je-detail-modal-title">Cálculo do Valor com Desconto</span>' +
+          '<button type="button" class="je-detail-modal-close" aria-label="Fechar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="je-detail-modal-body">' +
+          '<div class="je-calc-desconto-row">' +
+            '<label for="VMEDI">Valor do medicamento:</label>' +
+            '<input id="VMEDI" name="VMEDI" type="text" size="5" maxlength="7">' +
+          '</div>' +
+          '<div class="je-calc-desconto-row">' +
+            '<label for="VTNOTA">Subtotal da nota:</label>' +
+            '<input id="VTNOTA" name="VTNOTA" type="text" size="5" maxlength="7">' +
+          '</div>' +
+          '<div class="je-calc-desconto-row">' +
+            '<label for="VTDESC">Valor total do desconto:</label>' +
+            '<input id="VTDESC" name="VTDESC" type="text" size="5" maxlength="7">' +
+          '</div>' +
+          '<div class="je-calc-desconto-row je-calc-desconto-result">' +
+            '<label for="RESULT">Valor do medicamento com desconto:</label>' +
+            '<input id="RESULT" name="RESULT" type="text" value="0" disabled>' +
+          '</div>' +
+          '<div class="je-calc-desconto-actions">' +
+            '<button type="button" class="je-btn-consultar" id="jeCalcBtnCalcular">Calcular</button>' +
+            '<button type="button" class="je-btn-secondary" id="jeCalcBtnTransportar">Transportar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    return overlay;
+  }
+
+  function closeCalculadoraModal() {
+    if (!calcOverlay) return;
+    var overlay = calcOverlay;
+    calcOverlay = null;
+    overlay.classList.remove('active');
+    document.documentElement.style.overflow = '';
+    window.setTimeout(function () { if (overlay.parentNode) overlay.remove(); }, 220);
+  }
+
+  function openCalculadoraModal() {
+    if (calcOverlay) return;
+    var overlay = buildCalculadoraOverlay();
+    document.body.appendChild(overlay);
+    document.documentElement.style.overflow = 'hidden';
+    window.requestAnimationFrame(function () { overlay.classList.add('active'); });
+    calcOverlay = overlay;
+
+    overlay.querySelectorAll('.je-calc-desconto-row:not(.je-calc-desconto-result) input').forEach(function (input) {
+      input.addEventListener('keypress', function () { calcValidarValorCalc(input); });
+      input.addEventListener('keyup', function () { calcSubstituiPontoPorVirgula(input); });
+    });
+
+    overlay.querySelector('#jeCalcBtnCalcular').addEventListener('click', function () {
+      calcCalcular(overlay);
+    });
+
+    overlay.querySelector('#jeCalcBtnTransportar').addEventListener('click', function () {
+      var valorInput = document.getElementById('VALOR');
+      var result = overlay.querySelector('#RESULT');
+      if (valorInput && result) {
+        valorInput.value = result.value;
+        valorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        valorInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      closeCalculadoraModal();
+    });
+
+    overlay.querySelector('.je-detail-modal-close').addEventListener('click', closeCalculadoraModal);
+    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) closeCalculadoraModal(); });
+    var onKey = function (e) {
+      if (e.key !== 'Escape') return;
+      closeCalculadoraModal();
+      document.removeEventListener('keydown', onKey);
+    };
+    document.addEventListener('keydown', onKey);
+
+    overlay.querySelector('#VMEDI').focus();
+  }
+
+  function setupCalculadoraDialog() {
+    var link = Array.prototype.filter.call(document.querySelectorAll('a'), function (a) {
+      return /abrirJanelaCalculadora/.test(a.getAttribute('onclick') || '');
+    })[0];
+    if (!link || link.dataset.jeCalcDialog === '1') return;
+    link.dataset.jeCalcDialog = '1';
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openCalculadoraModal();
+    }, true);
+  }
+
   function init() {
     if (!isNovoPedidoPage()) return;
     try { setupFormGrid(); } catch (e) { /* não bloqueia o resto */ }
@@ -298,6 +514,8 @@ window.JEPessoasReembolsoFarmaceutico = (function () {
     try { setupResultsScroll(); } catch (e) {}
     try { setupObservacoesCounter(); } catch (e) {}
     try { setupSidebarLayout(); } catch (e) {}
+    try { setupInlineIcons(); } catch (e) {}
+    try { setupCalculadoraDialog(); } catch (e) {}
   }
 
   return { init: init };
