@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.7.0';
+  const CURRENT_VERSION = '0.7.1';
 
   const CHANGELOG = [
+    {
+      version: '0.7.1',
+      date: '2026-09-17',
+      title: 'Licença MIT e documentação atualizada para refletir todo o Meu Espaço',
+      features: [
+        'Adicionado arquivo LICENSE (MIT) para regulamentar o uso e a distribuição do projeto.',
+        'Aviso de aplicação experimental (exibido no 1º uso e a cada atualização): o texto ainda falava só em "controle do ponto" — desde a série 0.6.x a extensão cobre todo o portal Meu Espaço (Reembolso Farmacêutico, Gestão de Serviço Extraordinário e as demais telas do menu clássico). Atualizado.',
+        'README, Política de Privacidade e descrição da Chrome Web Store revisados: escopo ampliado de "Espelho de Ponto" para "todo o Meu Espaço", novas seções para Reembolso Farmacêutico e Gestão de Serviço Extraordinário, roadmap de arquitetura visual marcado como concluído, e remoção de referências a uma preferência de "jornada padrão de 7h/8h" que não existe mais (a jornada é detectada automaticamente).'
+      ]
+    },
     {
       version: '0.7.0',
       date: '2026-09-17',
@@ -148,7 +158,7 @@ window.JEPessoasVersion = (function () {
           <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0a2540;">TSE XT — Aplicação Experimental</h3>
         </div>
         <div style="padding: 20px; font-size: 13.5px; line-height: 1.65; color: #334155;">
-          <p style="margin: 0 0 12px;">O <strong>TSE XT</strong> é uma aplicação <strong>experimental</strong>, com o único objetivo de melhorar a experiência do usuário no controle do ponto.</p>
+          <p style="margin: 0 0 12px;">O <strong>TSE XT</strong> é uma aplicação <strong>experimental</strong>, com o único objetivo de melhorar a experiência do usuário no portal <strong>Meu Espaço</strong> (controle de ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais serviços).</p>
           <p style="margin: 0 0 12px;">Pode conter erros.</p>
           <p style="margin: 0;"><strong>Não representa nenhuma garantia</strong> de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho.</p>
         </div>

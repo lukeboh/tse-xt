@@ -1,13 +1,13 @@
 # 🔒 Política de Privacidade — TSE XT
 
-**Última atualização:** 26 de agosto de 2026  
-**Versão:** 1.0.0  
+**Última atualização:** 17 de setembro de 2026  
+**Versão:** 1.1.0  
 **Repositório:** [https://github.com/lukeboh/tse-xt](https://github.com/lukeboh/tse-xt)
 
 ---
 
 ## 1. Introdução e Compromisso
-O **TSE XT** é uma extensão de navegador desenvolvida para aprimorar a usabilidade, interface visual e cálculos analíticos de frequência nos portais institucionais do **Tribunal Superior Eleitoral (TSE)**. Esta Política de Privacidade estabelece o compromisso com a proteção, sigilo e transparência total dos dados do usuário.
+O **TSE XT** é uma extensão de navegador desenvolvida para aprimorar a usabilidade, a interface visual e, em telas específicas (como o Espelho de Ponto), os cálculos analíticos de frequência no portal **Meu Espaço** do **Tribunal Superior Eleitoral (TSE)**. Esta Política de Privacidade estabelece o compromisso com a proteção, sigilo e transparência total dos dados do usuário.
 
 ---
 
@@ -21,9 +21,9 @@ O TSE XT adota o princípio de **Privacidade por Design (*Privacy by Design*)**:
 
 ## 3. Finalidade das Permissões Utilizadas
 As permissões declaradas no manifesto seguem o **Princípio do Menor Privilégio (*Least Privilege*)**:
-- `storage` (**Armazenamento Local**): Utilizada unicamente para persistir preferências locais de configuração (tema ativo/desligado e jornada padrão de 7h ou 8h) no `chrome.storage.local` do navegador.
+- `storage` (**Armazenamento Local**): Utilizada unicamente para persistir preferências locais de configuração (tema ativo/desligado, estilo e destaque dos cards de KPI, modo de abertura do menu de serviços) no `chrome.storage.local` do navegador.
 - `activeTab`: Utilizada temporariamente apenas quando o usuário clica no botão "Atualizar Página do Portal" no popup, permitindo recarregar a aba ativa para aplicar as preferências selecionadas.
-- `host_permissions` (`*://meuespaco.tse.jus.br/*` e `*://*.tse.jus.br/*`): Restrita exclusivamente aos domínios oficiais do Tribunal para permitir a injeção de estilos e cálculos nas páginas de espelho de ponto.
+- `host_permissions` (`*://meuespaco.tse.jus.br/*` e `*://*.tse.jus.br/*`): Restrita exclusivamente aos domínios oficiais do Tribunal para permitir a injeção de estilos e funcionalidades nas páginas do portal Meu Espaço (Espelho de Ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais telas do menu clássico).
 
 ---
 
