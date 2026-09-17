@@ -53,6 +53,46 @@ test('aggregate — vazio', () => {
   assert.deepEqual({ wk: r.wkSatMin, sh: r.sunHolMin, n: r.auths.length }, { wk: 0, sh: 0, n: 0 });
 });
 
+// Bug reportado pelo usuário (set/2026, mat 30901018): o SAEX às vezes NÃO
+// reaproveita o mesmo Núm. nos dias cobertos pela mesma autorização — atribui
+// um Núm. NOVO a cada dia (185112 sáb 05/09, 185113 sáb 12/09, 185114 sáb
+// 19/09, 185115 sáb 26/09), todos com o MESMO Período/Tipo/Horas/limites
+// (24h, só sábado, 01/09/2026 a 30/09/2026). Dedup só por Núm. contava as 4
+// como autorizações distintas e somava 24×4=96h em vez de 24h.
+const ROW_185112 = ['185112', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '024:00', '31/03/2028', 'Pecúnia', '002:00', '010:00', '000:00', '01/09/2026 a 30/09/2026'];
+const ROW_185113 = ['185113', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '024:00', '31/03/2028', 'Pecúnia', '002:00', '010:00', '000:00', '01/09/2026 a 30/09/2026'];
+const ROW_185114 = ['185114', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '024:00', '31/03/2028', 'Pecúnia', '002:00', '010:00', '000:00', '01/09/2026 a 30/09/2026'];
+const ROW_185115 = ['185115', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '024:00', '31/03/2028', 'Pecúnia', '002:00', '010:00', '000:00', '01/09/2026 a 30/09/2026'];
+const ROW_185092 = ['185092', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '016:00', '31/03/2028', 'Pecúnia', '000:00', '000:00', '010:00', '01/09/2026 a 30/09/2026'];
+const ROW_185093 = ['185093', 'AUTORIZAÇÃO DE PECÚNIA - PORTAL DO SERVIDOR (SAEX)', '016:00', '31/03/2028', 'Pecúnia', '000:00', '000:00', '010:00', '01/09/2026 a 30/09/2026'];
+
+test('aggregate — Núm. novo por dia dentro do mesmo Período conta 1x (bug do KPI inflado)', () => {
+  const byDay = {
+    '05/09/2026': F.parseAuthRows([ROW_185112]),
+    '12/09/2026': F.parseAuthRows([ROW_185113]),
+    '19/09/2026': F.parseAuthRows([ROW_185114]),
+    '26/09/2026': F.parseAuthRows([ROW_185115]),
+    '06/09/2026': F.parseAuthRows([ROW_185092]),
+    '13/09/2026': F.parseAuthRows([ROW_185093])
+  };
+  const r = F.aggregate(byDay);
+  assert.equal(r.auths.length, 2, '2 autorizações distintas (sábados dedup 1x, domingos dedup 1x)');
+  assert.equal(r.wkSatMin, 24 * 60, 'sábados = 24h (não 24×4=96h)');
+  assert.equal(r.sunHolMin, 16 * 60, 'domingos = 16h (não 16×2=32h)');
+});
+
+test('authKey — mesmo Período/Tipo/Horas/limites gera a mesma chave mesmo com Núm. diferente', () => {
+  const [a112] = F.parseAuthRows([ROW_185112]);
+  const [a113] = F.parseAuthRows([ROW_185113]);
+  assert.equal(F.authKey(a112), F.authKey(a113));
+});
+
+test('authKey — Período diferente gera chave diferente (autorizações distintas não colapsam)', () => {
+  const [a112] = F.parseAuthRows([ROW_185112]);
+  const [a092] = F.parseAuthRows([ROW_185092]);
+  assert.notEqual(F.authKey(a112), F.authKey(a092));
+});
+
 // chrome.storage.local em memória, pré-semeado (o mock padrão de helpers.mjs
 // sempre devolve {} do get, então não dá pra testar leitura de cache com ele).
 function mkChrome(seed = {}) {

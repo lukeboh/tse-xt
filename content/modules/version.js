@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.6.0';
+  const CURRENT_VERSION = '0.7.0';
 
   const CHANGELOG = [
+    {
+      version: '0.7.0',
+      date: '2026-09-17',
+      title: 'Série 0.6.x consolidada — Reembolso Farmacêutico refeito, KPI de Gestão de Serviço Extraordinário e ajustes finos de conformidade',
+      features: [
+        'Reembolso Farmacêutico (Novo Pedido) reconstruído: formulário em cartão com grid de campos responsivo em vez de tabela de 1 coluna; busca de medicamento com auto-busca (debounced), filtro local por palavras extras e seleção pela linha inteira; bloco de instruções vira acordeão fechado por padrão; Observações em textarea que cresce até o fim do card; ícones (lupa, ajuda, calculadora) ao lado do campo em vez de embaixo; calculadora, antes um popup nativo cru, vira modal no padrão do TSE XT (lógica portada 1:1 pro mundo isolado, sem depender de script externo bloqueado pela CSP); botão "Calcular Desconto" e o ícone da calculadora unificados numa única ação. Resumo do Pedido vira sidebar sticky, mais largo, com layout que se adapta ao espaço que sobra do formulário (sem faixa em branco desperdiçada). Beneficiário reorganizado com rótulo sempre em cima do campo (radios e select), select de Nome do Beneficiário sempre visível (habilitado/desabilitado em vez de some/aparece) e ocupando a linha toda. Quantidade e Valor Total Pago lado a lado, alinhados. Diversas correções de vazamento de regras genéricas de outras telas (hover e zebrado de linha em tabelas "rótulo:valor", padding de célula solta, anel de foco em radios, cabeçalho de tabela) que causavam desalinhamentos, fundos azuis indevidos e textos em caixa alta onde não deveriam.',
+        'Reembolso Farmacêutico (listagem e modal de detalhamento): modal mais largo (900px, cabe nomes e timestamps sem quebrar linha), rótulo/valor alinhados como no portal original, fecha corretamente (inclusive navegando "Retornar" quando o detalhe é página própria), mais status ganham selo colorido (aprovado, reprovado, em análise, pago, aguardando homologação/documentação etc.) e uma rede de segurança classifica como "em andamento" qualquer status futuro desconhecido na coluna Situação/Status.',
+        'Gestão de Serviço Extraordinário: painel de KPI por servidor (barras de progresso Sábado/Domingo, autorizado vs. realizado, primeiro nome com desambiguação de homônimos), incluindo o mesmo indicador "(+HH:MM) horas que poderiam virar pecúnia" do Espelho de Ponto — buscado em segundo plano a partir do Espelho de cada servidor da unidade. Botão ATUALIZAR de verdade dentro do card de filtro, ícones nativos (inserir/cancelar/excluir/alterar) no traço do design system, título duplicado e filetes/fundos indevidos corrigidos.',
+        'Espelho de Ponto / KPI Hora Extra Pecúnia: indicador "(+HH:MM)" de excedente que só aparece ao atingir 100% do autorizado (evita alarme falso), respeitando o teto legal diário de horas pagáveis em pecúnia (2h dia útil / 10h fim de semana e feriado — Res. 22.901/2008 art. 4º); corrige contagem duplicada de autorização quando o SAEX atribui números distintos ao mesmo período; modal de Autorização de Hora Extra (antes popup nativo) reconstruído no padrão do TSE XT.',
+        'Robustez e consistência: telas de login/sessão-encerrada sem formatação corrigidas (Login_encerrarSessaoMsgPersonalizada e redirecionamentos com URL de Espelho de Ponto na query string); corrigida lupa duplicada ao lado do ícone de relógio de Hora Extra; cores semânticas e raio de pílula (antes hex/px soltos em vários pontos) passam a referenciar os tokens já existentes do design system; script de depuração do Chrome não corrompe mais o perfil de extensões.'
+      ]
+    },
     {
       version: '0.6.0',
       date: '2026-09-11',
@@ -64,7 +76,7 @@ window.JEPessoasVersion = (function () {
         <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(226, 232, 240, 0.7); padding-bottom: 16px;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <div style="display:flex; align-items:center; gap:8px;">
-              <span style="background: linear-gradient(135deg, #0056b3, #0077ff); color: #fff; font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: 999px;">v${item.version}</span>
+              <span style="background: linear-gradient(135deg, #0056b3, #0077ff); color: #fff; font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: var(--je-radius-full, 999px);">v${item.version}</span>
               <strong style="font-size: 14px; color: #0a2540;">${item.title}</strong>
             </div>
             <span style="font-size: 11.5px; color: #64748b;">${item.date}</span>

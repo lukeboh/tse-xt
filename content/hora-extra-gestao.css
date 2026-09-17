@@ -1,0 +1,256 @@
+/* ==========================================================================
+   TSE XT - Gestão de Serviço Extraordinário (visão do chefe)
+   Painel de KPI por servidor, ao lado do filtro de Unidade/Mês — ver
+   heGestaoKpi.js (mount()). Reaproveita os gradientes do KPI 4 (Hora Extra
+   Pecúnia) do Espelho de Ponto pra manter a mesma linguagem visual entre as
+   duas telas (Sábado = azul #0a2540→#0056b3, Domingo = roxo
+   #7c3aed→#a78bfa) — ver domModernizer.js, buildKpiCardsHTML().
+   ========================================================================== */
+
+body.je-xt-enabled .je-hegestao-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* O card de filtro mantém a largura natural (conteúdo dos 2 combos) — só o
+   painel de KPI cresce pra preencher o resto do espaço à direita. */
+body.je-xt-enabled .je-hegestao-filter-row > table.je-filter-table-card {
+  flex: 0 0 auto;
+}
+
+body.je-xt-enabled .je-hegestao-panel {
+  flex: 1 1 340px;
+  min-width: 300px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: var(--je-backdrop-blur);
+  -webkit-backdrop-filter: var(--je-backdrop-blur);
+  border: 1px solid var(--je-glass-border);
+  border-radius: var(--je-radius-md);
+  box-shadow: var(--je-shadow-tactile);
+  padding: 10px 16px 4px;
+  margin: 0 0 16px 0;
+  box-sizing: border-box;
+}
+
+body.je-xt-enabled .je-hegestao-empty {
+  font-family: var(--je-font);
+  font-size: 12.5px;
+  color: #64748b;
+  padding: 8px 2px 14px;
+}
+
+body.je-xt-enabled .je-hegestao-panel-body {
+  display: flex;
+  flex-direction: column;
+}
+
+body.je-xt-enabled .je-hegestao-servidor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.45);
+}
+
+body.je-xt-enabled .je-hegestao-servidor-row:last-child {
+  border-bottom: none;
+}
+
+body.je-xt-enabled .je-hegestao-servidor-name {
+  flex: 0 0 110px;
+  font-family: var(--je-font);
+  font-size: 12px;
+  font-weight: 700;
+  color: #0a2540;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* As 2 barras (Sábado/Domingo) lado a lado, não empilhadas — empilhadas
+   dobravam a altura de cada linha e o painel inteiro ficava alto demais
+   pra caber ao lado do card de filtro sem rolagem. */
+body.je-xt-enabled .je-hegestao-servidor-bars {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  min-width: 0;
+}
+
+body.je-xt-enabled .je-hegestao-bar-block {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--je-font);
+  font-size: 10.5px;
+}
+
+body.je-xt-enabled .je-hegestao-bar-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+body.je-xt-enabled .je-hegestao-bar-label {
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* nowrap — feito/autorizado ("6:39 / 24:00") nunca quebra entre os 2
+   números, senão o denominador podia parecer vir ANTES do numerador
+   (achado real: cabia numa 2ª linha sozinho e a leitura ficava confusa). */
+body.je-xt-enabled .je-hegestao-bar-fraction {
+  white-space: nowrap;
+}
+
+/* float:none é o fix de verdade aqui, não só a cor. O CSS nativo do portal
+   tem `span { float: left }` global (não só dentro de tabela, onde outras
+   regras já neutralizam isso) — .je-hegestao-bar-fraction não é flex, então
+   esse <span> herdava o float e escapava pra ANTES do <strong> irmão
+   (visualmente "/24:00" antes de "06:39", mesmo com a ordem certa no DOM e
+   o espaço em volta da barra já corrigidos). */
+body.je-xt-enabled .je-hegestao-bar-denom {
+  float: none !important;
+  color: #94a3b8;
+}
+
+body.je-xt-enabled .je-hegestao-bar-track {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  background: rgba(0, 102, 204, 0.08);
+  border-radius: var(--je-radius-full, 999px);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+body.je-xt-enabled .je-hegestao-bar-fill {
+  height: 100%;
+  border-radius: var(--je-radius-full, 999px);
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Barra a 100% do autorizado com excedente ainda sem virar pecúnia (ver
+   heGestaoExcedenteFetch.js + barBlock em heGestaoKpi.js) — mesmo glow do
+   KPI 4 do Espelho de Ponto (jeExcedentePecuniaGlow, @keyframes definido em
+   espelho-ponto.css — carregado em toda página, então já está disponível
+   aqui) na cor do próprio bloco via --je-pec-glow-rgb. Reaproveitado tal
+   qual, sem duplicar a animação, pra manter "o mesmo jeito, com a mesma
+   formatação" entre as duas telas (pedido do usuário). */
+body.je-xt-enabled .je-hegestao-bar-track-alert {
+  animation: jeExcedentePecuniaGlow 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled .je-hegestao-bar-track-alert {
+    animation: none;
+    box-shadow: 0 0 0 1.5px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.65), 0 0 8px 0 rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.6);
+  }
+}
+
+/* Card de filtro um pouco mais largo — dá lugar aos chips de saldo grandes
+   (abaixo) sem apertar os 2 combos ao lado. Só nesta tela (classe própria,
+   .je-hegestao-filtro, marcada por mountSaldoChips()) — não mexe na largura
+   do .je-filter-table-card genérico usado noutras telas (Reembolso
+   Farmacêutico etc.). */
+body.je-xt-enabled table.je-filter-table-card.je-hegestao-filtro {
+  min-width: 560px;
+}
+
+/* Substitui os <h4> nativos "Saldo X: R$ Y" (rótulo+valor grudados) por
+   rótulo pequeno + chip grande — ver mountSaldoChips() em heGestaoKpi.js.
+   NUNCA display:flex aqui: um <td> flex sai do algoritmo de layout de
+   tabela e não sincroniza mais a própria altura com os <td> irmãos da
+   mesma <tr> (achado real — ficava 1px mais baixo que eles), abrindo uma
+   fresta onde o border-bottom da linha de cima aparecia só por baixo desta
+   célula. Mantém display:table-cell (padrão) — o espaçamento entre os 2
+   blocos vem de margin, não de gap num pai flex. */
+body.je-xt-enabled table.je-filter-table-card td.je-hegestao-saldo-cell {
+  text-align: left !important;
+  vertical-align: middle !important;
+  white-space: normal !important;
+  padding: 12px 18px !important;
+}
+
+body.je-xt-enabled .je-hegestao-saldo-block + .je-hegestao-saldo-block {
+  margin-top: 10px;
+}
+
+/* Rótulo e chip lado a lado (não empilhados) — mesma linha, rótulo à
+   esquerda e o valor em destaque alinhado à direita dela. */
+body.je-xt-enabled .je-hegestao-saldo-block {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+body.je-xt-enabled .je-hegestao-saldo-label {
+  flex-shrink: 0;
+  font-family: var(--je-font);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+body.je-xt-enabled .je-hegestao-saldo-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-family: var(--je-font);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: #0a2540;
+  background: rgba(0, 119, 255, 0.08);
+  border: 1px solid rgba(0, 119, 255, 0.16);
+  border-radius: var(--je-radius-full, 999px);
+  padding: 6px 16px;
+  white-space: nowrap;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+/* Saldo diferente de R$ 0,00 — mesmo glow respirável dos cards de KPI do
+   Espelho de Ponto (jeKpiGlowPulse, ver espelho-ponto.css/@keyframes),
+   pra chamar atenção só quando há valor de verdade a olhar. */
+body.je-xt-enabled .je-hegestao-saldo-chip[data-filled="true"] {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%);
+  border-color: rgba(0, 140, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 119, 255, 0.22), 0 0 14px -2px rgba(0, 170, 255, 0.28);
+  animation: jeKpiGlowPulse 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.je-xt-enabled .je-hegestao-saldo-chip[data-filled="true"] {
+    animation: none;
+    box-shadow: 0 0 0 1px rgba(0, 140, 255, 0.35), 0 0 20px 0 rgba(0, 170, 255, 0.4);
+  }
+}
+
+/* Abaixo de ~900px o filtro e o painel empilham em vez de ficarem lado a
+   lado (mesmo teto de responsividade do Resumo do Reembolso Farmacêutico,
+   ver reembolso-farmaceutico.css). */
+@media (max-width: 900px) {
+  body.je-xt-enabled .je-hegestao-filter-row > table.je-filter-table-card,
+  body.je-xt-enabled .je-hegestao-panel {
+    flex: 1 1 100%;
+  }
+
+  body.je-xt-enabled .je-hegestao-servidor-row {
+    flex-wrap: wrap;
+  }
+
+  body.je-xt-enabled .je-hegestao-servidor-name {
+    flex: 1 1 100%;
+  }
+}

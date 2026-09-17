@@ -20,10 +20,33 @@ window.JEPessoasTableModernizer = (function () {
   // Conservador de propósito: cobre os status mais comuns do português
   // administrativo do TSE; cresce sob demanda ao portar novas telas (F7).
   const STATUS_KEYWORDS = {
-    success: ['sim', 'ativo', 'homologado', 'aprovado', 'deferido', 'concluído', 'concluido', 'regular'],
-    warning: ['pendente', 'aguardando', 'parcial'],
-    danger: ['não', 'nao', 'inativo', 'indeferido', 'reprovado', 'cancelado', 'negado', 'irregular']
+    success: [
+      'sim', 'ativo', 'homologado', 'aprovado', 'deferido', 'concluído', 'concluido', 'regular',
+      'pago', 'encaminhado para pagamento'
+    ],
+    warning: [
+      'pendente', 'aguardando', 'parcial', 'em análise', 'em analise',
+      'aguardando documentação', 'aguardando documentacao', 'aguardando homologação',
+      'aguardando homologacao', 'em andamento',
+      // Reembolso Farmacêutico (achado ao vivo, 0.6.47): grafia real do
+      // portal SEM cedilha em "homologacao", mas COM em "seção" — mantida
+      // tal qual aparece, o match é por texto exato.
+      'em homologacao pela seção de benefícios'
+    ],
+    danger: [
+      'não', 'nao', 'inativo', 'indeferido', 'reprovado', 'cancelado', 'negado', 'irregular',
+      'rejeitado',
+      // Reembolso Farmacêutico: "cancelado" sozinho já é danger, mas esta
+      // variante de frase completa não batia no match exato — sem ela,
+      // ficava sem selo (achado real: várias linhas com este status).
+      'cancelado por falta de documentação'
+    ]
   };
+
+  // Cabeçalho de uma coluna de status/situação — usado só pelo FALLBACK de
+  // classifyStatusBadges() abaixo, pra não expandir o match exato pro resto
+  // da tabela (risco de badge em texto curto que não é status nenhum).
+  const STATUS_COLUMN_HEADER_RE = /situa[çc][ãa]o|\bstatus\b/i;
 
   // Mesma lógica de exclusão usada em domModernizer.js (extractNativePageTitle):
   // não usar .closest('[class*="je-"]') porque <body class="je-xt-enabled">
@@ -69,9 +92,19 @@ window.JEPessoasTableModernizer = (function () {
     const cells = table.querySelectorAll('td, th');
     if (cells.length === 0) return false;
 
+    // `button:not(.je-native-icon)` — modernizeNativeIcons() (domModernizer.js)
+    // troca ícones de AÇÃO (editar/cancelar/excluir, antes um <img> cru) por
+    // um <button>; numa tabela com 2-3 ícones de ação por linha (comum em
+    // grids de aprovação) isso inflava a densidade de "controles de
+    // formulário" o bastante pra ultrapassar 25% e a tabela ser tratada como
+    // layout de formulário em vez de dado (achado na Gestão de Serviço
+    // Extraordinário: #tbServidoresAutorizados, com 3 ícones/linha, parava
+    // de ganhar zebra/cabeçalho). Um botão de ÍCONE não é sinal de
+    // formulário — só <input>/<select>/<textarea> (ou um <button> de
+    // verdade, não injetado por nós) contam.
     let controlCells = 0;
     cells.forEach((cell) => {
-      if (cell.querySelector('input, select, textarea, button')) controlCells++;
+      if (cell.querySelector('input, select, textarea, button:not(.je-native-icon)')) controlCells++;
     });
     if (controlCells / cells.length > 0.25) return false;
 
@@ -148,12 +181,35 @@ window.JEPessoasTableModernizer = (function () {
   // Envolve em um badge colorido só células com texto puro (sem markup
   // interno) que batem EXATAMENTE com uma palavra-chave conhecida — evita
   // mexer em células com links, ícones ou frases mais longas.
+  //
+  // Exceção: dentro da coluna cujo CABEÇALHO é "Situação"/"Status" (achada
+  // por STATUS_COLUMN_HEADER_RE), uma célula que não bate com NENHUMA
+  // palavra-chave conhecida ainda ganha o selo "em andamento" (warning) em
+  // vez de ficar sem nada — é uma coluna de status por definição, então um
+  // texto novo ali é quase certamente um status que o portal introduziu
+  // depois desta lista ter sido escrita (achado real: "EM HOMOLOGACAO PELA
+  // SEÇÃO DE BENEFÍCIOS" no Reembolso Farmacêutico, 0.6.47) — melhor supor
+  // "ainda em andamento" (nem confirmado nem recusado) do que deixar mudo.
+  // Escopado só a esta coluna: expandir esse fallback pra tabela toda
+  // arriscaria badge em texto curto que não é status nenhum.
   function classifyStatusBadges(table) {
+    const headerRow = table.rows[0];
+    let statusColIndex = -1;
+    if (headerRow) {
+      Array.from(headerRow.cells).forEach((th, i) => {
+        if (statusColIndex === -1 && STATUS_COLUMN_HEADER_RE.test((th.textContent || '').trim())) statusColIndex = i;
+      });
+    }
+
     const cells = table.querySelectorAll('td');
     cells.forEach((cell) => {
       if (cell.querySelector('*')) return;
       const text = cell.textContent.trim();
-      if (!text || text.length > 24) return;
+      // 40 (era 24): dá margem pra status de duas/três palavras comuns no
+      // domínio administrativo do TSE ("ENCAMINHADO PARA PAGAMENTO",
+      // "AGUARDANDO DOCUMENTAÇÃO") — ainda é exact-match contra
+      // STATUS_KEYWORDS, então não vira badge em frase livre por acaso.
+      if (!text || text.length > 40) return;
 
       const normalized = text.toLowerCase();
       let variant = null;
@@ -162,6 +218,10 @@ window.JEPessoasTableModernizer = (function () {
           variant = key;
           break;
         }
+      }
+
+      if (!variant && statusColIndex !== -1 && cell.cellIndex === statusColIndex) {
+        variant = 'warning';
       }
       if (!variant) return;
 

@@ -700,13 +700,20 @@ body.je-xt-enabled div.caixaTexto table.je-filter-table-card {
 }
 
 /* <legend> do fieldset e o <h3>/<h4> "Opções de pesquisa" que costuma vir
-   solto logo antes do painel — viram o rótulo/cabeçalho do card. */
+   solto logo antes do painel — viram o rótulo/cabeçalho do card. Os 2
+   últimos seletores (tabela genérica) cobrem cabeçalhos de LISTAGEM soltos
+   antes de um grid de resultados já modernizado (ex.: "Solicitações da
+   Unidade Titular"/"Servidores com Autorização" na Gestão de Serviço
+   Extraordinário) — mesma legenda de resultado do .moldura/.box-oc abaixo,
+   por isso sem a lupa (ver exclusão no ::before mais adiante). */
 body.je-xt-enabled #conteudo fieldset > legend,
 body.je-xt-enabled h3:has(+ .opcoes-pesquisa),
 body.je-xt-enabled h4:has(+ .opcoes-pesquisa),
 body.je-xt-enabled h3:has(+ .box-oc),
 body.je-xt-enabled h3:has(+ .moldura),
-body.je-xt-enabled h4:has(+ .moldura) {
+body.je-xt-enabled h4:has(+ .moldura),
+body.je-xt-enabled h3:has(+ table.je-generic-data-table),
+body.je-xt-enabled h3:has(+ table.je-modernized-table) {
   font-family: var(--je-font) !important;
   font-size: 12.5px !important;
   font-weight: 700 !important;
@@ -748,6 +755,28 @@ body.je-xt-enabled #content > h2 {
   display: none !important;
 }
 
+/* Mesma ideia acima, mas pro caso em que o título nativo veio de um <h3>
+   (telas sem h2, ex.: Gestão de Serviço Extraordinário/SAEX — ver
+   extractNativePageTitle() em domModernizer.js). Não dá pra esconder todo
+   <h3> solto igual ao h2 acima: várias telas usam h3 como cabeçalho de
+   SEÇÃO legítimo (ex.: "Solicitações da Unidade Titular", "Servidores com
+   Autorização", na mesma página) — por isso só o elemento realmente
+   consumido como título é marcado (firstUsableHeading) e só ele some. */
+body.je-xt-enabled .je-native-page-title-source {
+  display: none !important;
+}
+
+/* <br> soltos que o portal usa pra espaçar ANTES/DEPOIS do <h3> nativo
+   (comum no SAEX: "<br><h3>Título</h3><br>") continuavam ocupando linha
+   inteira mesmo com o h3 escondido acima — sobrava um vão vertical grande
+   e sem função entre o banner de título injetado e o conteúdo real da
+   página (medido: ~48px, quase 3x a distância padrão de 16px entre
+   topbar e banner). */
+body.je-xt-enabled br:has(+ .je-native-page-title-source),
+body.je-xt-enabled .je-native-page-title-source + br {
+  display: none !important;
+}
+
 body.je-xt-enabled .opcoes-pesquisa .campoPesquisa,
 body.je-xt-enabled .campoPesquisa {
   display: flex !important;
@@ -775,6 +804,21 @@ body.je-xt-enabled .opcoes-pesquisa > br,
 body.je-xt-enabled .box-oc > br,
 body.je-xt-enabled .campoPesquisa > br {
   display: none !important;
+}
+
+/* .campoPesquisa cujo único conteúdo é um botão de ação (PESQUISAR/NOVO
+   etc. — sem rótulo, ex.: Reembolso Farmacêutico) não tem "rótulo em
+   cima, controle embaixo" pra preencher os 58px: o <input> legado some
+   (display:none) e sobra só o <button>, que por causa do
+   justify-content: flex-start acima fica grudado no TOPO da coluna, uns
+   20px acima da faixa onde os demais campos têm seu input/select (que
+   ocupam a metade de baixo, com o rótulo por cima). Aqui a coluna
+   inteira vira justify-content: flex-end pra o botão cair na mesma
+   faixa. Não se aplica a .campoPesquisa com <label> (aí o padrão
+   flex-start é o certo, igual aos demais campos). */
+body.je-xt-enabled .campoPesquisa:has(> .je-btn-consultar):not(:has(label)),
+body.je-xt-enabled .campoPesquisa:has(> .je-btn-secondary):not(:has(label)) {
+  justify-content: flex-end !important;
 }
 
 /* Grupo de CHECKBOXES dentro de um .campoPesquisa (ex.: "Periodicidade do
@@ -1159,7 +1203,7 @@ body.je-xt-enabled .moldura h4 {
 }
 
 .je-char-counter-container strong.je-char-warning {
-  color: #ec4899 !important;
+  color: var(--je-danger-accent) !important;
 }
 
 /* Botões da Moldura (Salvar / Cancelar / Voltar / Incluir / Limpar) sem Espaço Vazio */
@@ -1883,7 +1927,7 @@ body.je-xt-enabled.je-login-page .je-persistent-toggle-bar {
   width: 42px;
   height: 22px;
   background: #94a3b8;
-  border-radius: 999px;
+  border-radius: var(--je-radius-full, 999px);
   transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
@@ -2425,7 +2469,7 @@ body.je-xt-enabled #je-drawer-search:focus,
 .je-badge-restrito {
   font-size: 9.5px;
   font-weight: 700;
-  color: #a16207;
+  color: var(--je-warning-text);
   background: rgba(250, 204, 21, 0.12);
   padding: 1px 5px;
   border-radius: 4px;
@@ -2586,13 +2630,21 @@ body.je-xt-enabled table.je-filter-table-card tr:first-child th {
 
 /* Zera o fundo nativo do <tr> (o portal costuma pôr um cinza alternado na
    linha) — senão ele aparece por baixo do <td> semitransparente e o
-   zebrado azul do TSE XT vira um cinza esverdeado. */
+   zebrado azul do TSE XT vira um cinza esverdeado. Zera também a BORDA
+   nativa do <tr> (o portal tem `tr { border: 1px solid #c0c0c0 }` — mesma
+   causa raiz já corrigida em 0.6.10 pro formulário do Reembolso
+   Farmacêutico, aqui generalizada): como é borda do <tr>, não do <td>,
+   nenhuma das regras de border-bottom por célula abaixo conseguia
+   removê-la — sobrava um filete cinza entre linhas mesmo com
+   `border-bottom: none` nos <td>. Só o <td> controla a linha divisória
+   entre linhas de dado a partir daqui. */
 body.je-xt-enabled table.je-generic-data-table tr,
 body.je-xt-enabled table.je-generic-data-table tbody,
 body.je-xt-enabled table.je-filter-table-card tr,
 body.je-xt-enabled table.je-filter-table-card tbody {
   background: transparent !important;
   background-color: transparent !important;
+  border: none !important;
 }
 
 body.je-xt-enabled table.je-generic-data-table td,
@@ -2610,6 +2662,14 @@ body.je-xt-enabled table.je-filter-table-card tbody tr:last-child td {
   border-bottom: none !important;
 }
 
+/* A linha do botão ATUALIZAR (.je-filter-card-action-row) não é dado — a
+   linha ANTERIOR a ela também não deve ganhar um filete de separação, senão
+   sobra uma borda solta acima do botão sem nenhuma outra linha de dado
+   depois pra justificar (só faz sentido entre 2 linhas de conteúdo). */
+body.je-xt-enabled table.je-filter-table-card tbody tr:has(+ tr.je-filter-card-action-row) td {
+  border-bottom: none !important;
+}
+
 /* Zebrado: linha ímpar branca; linha par com um tom de azul MUITO claro
    derivado da cor principal (#0077ff a ~9%). */
 body.je-xt-enabled table.je-generic-data-table tbody tr:nth-child(even) td,
@@ -2617,11 +2677,30 @@ body.je-xt-enabled table.je-filter-table-card tbody tr:nth-child(even) td {
   background: rgba(0, 119, 255, 0.09) !important;
 }
 
+/* Linha extra que modernizeFilterCardRefreshIcon() (domModernizer.js) anexa
+   pra abrigar o botão ATUALIZAR — é só um botão, não uma linha de dado, e
+   fica com cara de bug se calhar de cair numa posição PAR do zebrado
+   (fundo azulado atrás do botão). Sempre transparente, ignorando a
+   paridade. Precisa do `tbody` no seletor pra empatar em especificidade
+   com a regra de zebrado logo acima (0,3,5) e vencer por ordem — sem ele
+   ficava em (0,3,4), mais fraco, e o zebrado continuava aparecendo. */
+body.je-xt-enabled table.je-filter-table-card tbody tr.je-filter-card-action-row td {
+  background: transparent !important;
+}
+
 /* Hover: azul um pouco mais forte que o zebrado. `:not(:first-child)`
    evita reagir na linha de cabeçalho quando a tabela não tem <thead>. */
 body.je-xt-enabled table.je-generic-data-table tbody tr:not(:first-child):hover td,
 body.je-xt-enabled table.je-filter-table-card tbody tr:not(:first-child):hover td {
   background: rgba(0, 119, 255, 0.16) !important;
+}
+
+/* A linha do botão ATUALIZAR não é dado nenhum pra "iluminar" no hover — o
+   próprio botão já tem seu hover (gradiente mais escuro). Mesma
+   especificidade da regra acima (perde só por ordem se viesse antes dela;
+   aqui vem depois, então vence). */
+body.je-xt-enabled table.je-filter-table-card tbody tr.je-filter-card-action-row:hover td {
+  background: transparent !important;
 }
 
 /* --- Alinhamento por tipo de conteúdo --- */
@@ -2750,7 +2829,7 @@ body.je-xt-enabled #conteudo label h3 {
 }
 
 body.je-xt-enabled table.je-filter-table-card td > select,
-body.je-xt-enabled table.je-filter-table-card td > input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+body.je-xt-enabled table.je-filter-table-card td > input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.je-legacy-btn-consultar) {
   float: none !important;
   clear: none !important;
   position: static !important;
@@ -2776,6 +2855,17 @@ body.je-xt-enabled table.je-filter-table-card td > h3 {
 }
 body.je-xt-enabled table.je-filter-table-card td > h3:last-child {
   margin-bottom: 0 !important;
+}
+
+/* Linha extra que modernizeFilterCardRefreshIcon() (domModernizer.js) cria
+   dentro do card pra abrigar o botão ATUALIZAR (movido de um <img> solto
+   logo abaixo do card, ex.: Gestão de Serviço Extraordinário). Centralizado
+   e sem o filete de linha nativo (é a última linha do card). */
+body.je-xt-enabled table.je-filter-table-card td:has(> .je-btn-consultar) {
+  text-align: center !important;
+  vertical-align: middle !important;
+  border-bottom: none !important;
+  padding: 4px 12px 14px !important;
 }
 
 /* Botão de ação colado num campo de texto (ex.: "Valor a devolver" +
@@ -2873,7 +2963,11 @@ body.je-xt-enabled .je-detail-modal-overlay.active {
 
 body.je-xt-enabled .je-detail-modal-card {
   width: 100% !important;
-  max-width: 640px !important;
+  /* 640 -> 900: nomes de servidor e "dd/mm/aaaa - hh:mm:ss" das tabelas de
+     detalhamento (Reembolso Farmacêutico e afins) quebravam linha à toa
+     num card estreito — a folga extra deixa a maioria numa linha só sem
+     precisar mexer no layout automático da tabela. */
+  max-width: 900px !important;
   max-height: calc(100vh - 56px) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2940,6 +3034,60 @@ body.je-xt-enabled .je-detail-modal-body {
   line-height: 1.6 !important;
 }
 
+/* .grupoTopicos que detailModal.js decidiu NÃO tratar como detalhe (tem
+   campo de entrada de dados de verdade — é seção de um formulário ativo,
+   não visualização read-only de um registro já existente; ver
+   je-detail-form-exempt em detailModal.js) continua na página normal, mas
+   sem nenhum cartão em volta — a moldura crua do <div class="grupoTopicos">
+   nativo. Cartão glass genérico, no mesmo padrão dos demais painéis do TSE
+   XT, reutilizável por qualquer tela (não é específico do Reembolso
+   Farmacêutico, que tem seu próprio CSS pro grid interno dos campos). */
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt {
+  background: var(--je-glass-card) !important;
+  backdrop-filter: var(--je-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
+  border: 1px solid var(--je-glass-border) !important;
+  border-radius: var(--je-radius-md) !important;
+  box-shadow: var(--je-shadow-tactile) !important;
+  padding: 20px 24px !important;
+  margin: 0 0 20px 0 !important;
+  max-width: var(--je-card-max) !important;
+  float: none !important;
+}
+
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt > h4 {
+  /* <h4> nativo tem float:left (CSS antigo do portal) — sem isto o
+     cabeçalho fica flutuando por cima do que vem embaixo em vez de empurrar
+     o conteúdo. */
+  float: none !important;
+  display: block !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--je-primary-dark) !important;
+  margin: 0 0 16px 0 !important;
+}
+
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt > ul {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* O portal tem uma regra nativa genérica "th { background: #ccc }" (sem
+   !important) em duas folhas de estilo próprias — o padrão unificado de
+   tabela (content.css, mais abaixo) só neutraliza isso na tr:first-child
+   (cabeçalho de tabela de RESULTADOS, onde só a 1ª linha tem <th>). Nas
+   tabelas "rótulo: valor" destes cartões (cada linha é um <th> de rótulo),
+   só a 1ª linha ficava sem o cinza — as demais (ex.: "Valor referência
+   para reembolso:", "Observações:" no Resumo do Pedido) continuavam
+   cinzas. */
+body.je-xt-enabled .grupoTopicos.je-detail-form-exempt th {
+  background: transparent !important;
+}
+
 /* O bloco de detalhe realocado: neutraliza o position:absolute nativo e a
    moldura crua; deixa as duplas rótulo/valor legíveis em coluna. */
 body.je-xt-enabled .je-detail-in-modal {
@@ -2975,6 +3123,17 @@ body.je-xt-enabled .je-detail-in-modal > ul > li:last-child {
   border-bottom: none !important;
 }
 
+/* <li> que carrega uma tabela inteira em vez de um par rótulo/valor simples
+   (ex.: Reembolso Farmacêutico — cada item do "Detalhamento" é a própria
+   <table> de dados do pedido). Forçar essas no grid de 2 colunas acima
+   espremia a tabela na coluna minmax(120px,34%): como o <table> não
+   encolhe abaixo do seu conteúdo (colgroup com largura fixa em px), ela
+   estourava a célula e ficava praticamente invisível, empurrada pra fora
+   do card. Aqui o <li> volta a ser um bloco normal de largura cheia. */
+body.je-xt-enabled .je-detail-in-modal > ul > li:has(> table) {
+  display: block !important;
+}
+
 body.je-xt-enabled .je-detail-in-modal label {
   float: none !important;
   margin: 0 !important;
@@ -3007,10 +3166,53 @@ body.je-xt-enabled .je-detail-in-modal > br {
   content: "" !important;
 }
 
-/* tabela de atividades dentro do detalhe (#tbAtividades) — deixa fluida */
+/* tabela de atividades dentro do detalhe (#tbAtividades) — deixa fluida.
+   table-layout: fixed foi tentado aqui e piorou: o portal define largura
+   fixa em px por <colgroup> (ex.: 248/""/208/148, soma > largura do
+   modal); em fixed layout o navegador HONRA essas larguras ao pé da
+   letra e a coluna sem largura (a "") fica espremida a quase zero —
+   texto virava uma letra por linha. Em auto (o padrão, sem declarar
+   table-layout), o algoritmo de 2 passagens usa a largura do
+   <colgroup> só como sugestão e quebra no limite de palavra dentro do
+   espaço real disponível — a mesma proteção contra overflow do <li>
+   acima, sem esse efeito colateral. */
 body.je-xt-enabled .je-detail-in-modal table {
   width: 100% !important;
   margin: 8px 0 0 0 !important;
+}
+
+body.je-xt-enabled .je-detail-in-modal table th,
+body.je-xt-enabled .je-detail-in-modal table td {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+/* Alinhamento original do portal pras tabelas "rótulo: valor" do
+   detalhamento (Reembolso Farmacêutico e afins): rótulo (o <th>, ex.
+   "MEDICAMENTO") rente à direita, colado no valor; valor (o <td>, a
+   última coluna de cada par) à esquerda — sem isto o <th> cai no
+   center do user-agent e destoa do padrão nativo.
+   As 3 variantes com .je-generic-data-table/.je-modernized-table/.grid
+   são necessárias: cada linha "rótulo: valor" desse detalhamento é a
+   tr:first-child da sua própria mini-tabela (ex.: cada medicamento tem a
+   sua), então bate na regra genérica de cabeçalho de tabela de dados
+   (table.je-generic-data-table tr:first-child th, centralizado,
+   especificidade 0-2-4) — mais específica que "table th" sozinho
+   (0-2-3) e vencia mesmo com !important dos dois lados. */
+body.je-xt-enabled .je-detail-in-modal table th,
+body.je-xt-enabled .je-detail-in-modal table.je-generic-data-table th,
+body.je-xt-enabled .je-detail-in-modal table.je-generic-data-table thead th,
+body.je-xt-enabled .je-detail-in-modal table.je-generic-data-table tr:first-child th,
+body.je-xt-enabled .je-detail-in-modal table.je-filter-table-card th,
+body.je-xt-enabled .je-detail-in-modal table.je-filter-table-card thead th,
+body.je-xt-enabled .je-detail-in-modal table.je-filter-table-card tr:first-child th,
+body.je-xt-enabled .je-detail-in-modal table.je-modernized-table th,
+body.je-xt-enabled .je-detail-in-modal table.grid th {
+  text-align: right !important;
+}
+
+body.je-xt-enabled .je-detail-in-modal table td {
+  text-align: left !important;
 }
 body.je-xt-enabled .je-detail-in-modal textarea {
   width: 100% !important;
@@ -3174,7 +3376,7 @@ body.je-xt-disabled .je-fab-container {
 
 .je-fab-container.active .je-fab-main {
   transform: rotate(45deg) !important;
-  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+  background: linear-gradient(135deg, var(--je-danger-accent) 0%, var(--je-danger-text) 100%) !important;
   box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35) !important;
 }
 

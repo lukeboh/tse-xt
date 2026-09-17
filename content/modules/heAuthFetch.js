@@ -7,9 +7,11 @@
  * — uma tabela com as autorizações de serviço extraordinário que cobrem aquele dia:
  *   Núm. | Descrição | Horas Autorizadas | Validade | Tipo | Lim. Úteis | Lim. Sáb. | Lim. Dom. | Período
  *
- * Este módulo consulta os dias com ícone no mês, deduplica as autorizações por
- * Núm., classifica cada uma como Semana/Sábado (+50%) ou Domingo/Feriado (+100%)
- * e soma as "Horas Autorizadas". Resultado cacheado por matrícula + mês.
+ * Este módulo consulta os dias com ícone no mês, deduplica as autorizações
+ * (por Período — ver authKey(), o SAEX às vezes atribui um Núm. NOVO a cada
+ * dia coberto pela mesma autorização), classifica cada uma como Semana/
+ * Sábado (+50%) ou Domingo/Feriado (+100%) e soma as "Horas Autorizadas".
+ * Resultado cacheado por matrícula + mês.
  *
  * Única fonte da hora extra autorizada do KPI — não há ajuste manual da meta
  * (o servidor não define a própria autorização; o que vale é o que o SAEX
@@ -83,11 +85,33 @@ window.JEPessoasHEAuthFetch = (function () {
     return 'wkSat';
   }
 
-  // authsByDay: { 'DD/MM/AAAA': [ {num,...}, ... ] } -> agrega deduplicando por num
+  // Chave de deduplicação de uma autorização entre dias diferentes.
+  //
+  // O SAEX NEM SEMPRE reaproveita o mesmo "Núm." nos dias cobertos pela
+  // mesma autorização: em alguns meses um único Núm. aparece repetido em
+  // vários dias (dedup por num funciona), mas em outros o backend atribui
+  // um Núm. NOVO e sequencial a cada dia (ex.: 185112/185113/185114/185115
+  // pros 4 sábados de um mês), todos com o MESMO "Período" (e mesma Horas
+  // Autorizadas/Tipo/limites) — dedup só por Núm. falhava em somar 24h por
+  // sábado em vez de contar a autorização 1x, inflando o KPI (24h vira
+  // 24×4=96h). "Período" (a data de início/fim do lote) é o campo que de
+  // fato identifica "esta é a mesma autorização" nos dois casos — usa ele
+  // como chave primária (com tipo/horas/limites juntos, por segurança
+  // contra 2 autorizações distintas que por acaso cubram o mesmo período),
+  // com fallback pro Núm. só se a linha vier sem Período.
+  function authKey(a) {
+    if (a.periodo) return a.periodo + '|' + a.tipo + '|' + a.horasMin + '|' + a.limUteisMin + '|' + a.limSabMin + '|' + a.limDomMin;
+    return 'num:' + a.num;
+  }
+
+  // authsByDay: { 'DD/MM/AAAA': [ {num,...}, ... ] } -> agrega deduplicando por authKey()
   function aggregate(authsByDay) {
     const seen = {};
     Object.keys(authsByDay || {}).forEach((d) => {
-      (authsByDay[d] || []).forEach((a) => { if (a.num && !seen[a.num]) seen[a.num] = a; });
+      (authsByDay[d] || []).forEach((a) => {
+        const key = authKey(a);
+        if (key && !seen[key]) seen[key] = a;
+      });
     });
     const auths = Object.values(seen);
     let wkSatMin = 0;
@@ -232,8 +256,10 @@ window.JEPessoasHEAuthFetch = (function () {
     getMonthKey,
     parseAuthRows,
     classifyAuth,
+    authKey,
     aggregate,
     getForCurrentMonth,
+    fetchDayDetail,
     toMin
   };
 })();

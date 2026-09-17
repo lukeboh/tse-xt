@@ -74,6 +74,11 @@ window.JEPessoasKPI = (function () {
     let accumulatedBankBalance = '00:00';
     let pecuniaWeekdaySatMinutes = 0;
     let pecuniaSundayHolidayMinutes = 0;
+    // Parcela do excedente que HOJE entra no banco de horas por falta de
+    // autorização suficiente pra virar pecúnia (ver balanceCalc.netExcedenteMin)
+    // — separada por tipo de dia, mesmo agrupamento da autorização do SAEX.
+    let excedenteSemPecuniaWeekdaySatMinutes = 0;
+    let excedenteSemPecuniaSundayHolidayMinutes = 0;
     let daysWithRecords = 0;
     let totalWorkingDaysMonth = 0;
     let remainingWorkingDaysMonth = 0;
@@ -174,7 +179,7 @@ window.JEPessoasKPI = (function () {
           if (!isFuture) {
             // Fonte única de verdade, compartilhada com a coluna "SALDO ACUM." (domModernizer).
             const dispensedNonHoliday = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
-            const { delta: dailyDelta } = window.JEPessoasBalance.computeDailyDelta({
+            const { delta: dailyDelta, bucket: dailyBucket, netExcedenteMin } = window.JEPessoasBalance.computeDailyDelta({
               dayOfWeek,
               isClosedMonth,
               isHolidayOrRecess,
@@ -193,6 +198,15 @@ window.JEPessoasKPI = (function () {
               } else {
                 pecuniaWeekdaySatMinutes += pecuniaMin;
               }
+            }
+
+            // Excedente que HOJE vira banco de horas por falta de autorização —
+            // mesmo agrupamento (bucket) que o delta usa, garantindo que a soma
+            // bata com o tipo de dia mostrado no card.
+            if (dailyBucket === 'sunday') {
+              excedenteSemPecuniaSundayHolidayMinutes += netExcedenteMin || 0;
+            } else {
+              excedenteSemPecuniaWeekdaySatMinutes += netExcedenteMin || 0;
             }
 
             runningAccumulatedBalance += dailyDelta;
@@ -425,6 +439,13 @@ window.JEPessoasKPI = (function () {
       pecuniaSundayHoliday: formatMinutesToTime(pecuniaSundayHolidayMinutes),
       pecuniaTotalMinutes: pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes,
       pecuniaTotalFormatted: formatMinutesToTime(pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes),
+
+      // Excedente que hoje vira banco de horas por falta de autorização —
+      // "quanto poderia virar pecúnia se houvesse autorização", por tipo de dia.
+      excedenteSemPecuniaWeekdaySatMinutes,
+      excedenteSemPecuniaSundayHolidayMinutes,
+      excedenteSemPecuniaWeekdaySatFormatted: formatMinutesToTime(excedenteSemPecuniaWeekdaySatMinutes),
+      excedenteSemPecuniaSundayHolidayFormatted: formatMinutesToTime(excedenteSemPecuniaSundayHolidayMinutes),
       authTotalMin: authWeekdaySatMin + authSundayHolidayMin,
       // Arredondada em horas cheias (ex.: "40h") — o total agregado do card
       // não precisa da precisão de minutos dos blocos individuais.

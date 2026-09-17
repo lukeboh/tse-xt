@@ -426,6 +426,65 @@ body.je-xt-enabled[data-je-kpi-emphasis="glow"] .je-kpi-card:hover::after {
   }
 }
 
+/* "(+HH:MM)" no bloco de pecúnia do KPI 4 — excedente que hoje entra no
+   banco de horas por falta de autorização (ver pecBlock, domModernizer.js).
+   cursor:help + o ícone de "i" (mesmo svg do cabeçalho do modal de
+   changelog, ver version.js) sinalizam que o title tem a explicação
+   completa (texto longo demais pro espaço apertado do card) — feedback do
+   usuário trocou o sublinhado pontilhado (convenção pouco óbvia) por esse
+   ícone padrão do design system. Cor de alerta padrão do XT (rosa,
+   --je-danger-text) — o texto é aviso, usa a MESMA semântica de "atenção"
+   do resto do sistema, independente da cor do bloco (que é só decorativa,
+   do gradiente da barra); o svg herda a cor via stroke="currentColor".
+   display:inline (não inline-flex) de propósito — feedback do usuário: o
+   ícone centralizado por flex (align-items:center) ficava alguns pixels
+   mais alto que o texto ao redor, porque o cross-axis do flex centraliza
+   pela altura do CONTAINER, não pela baseline do texto vizinho.
+   vertical-align no svg é a técnica certa pra alinhar ícone-com-texto
+   inline. */
+.je-kpi-excedente-hint {
+  margin-left: 3px;
+  color: var(--je-danger-text);
+  font-weight: 700;
+  cursor: help;
+  white-space: nowrap;
+}
+
+.je-kpi-excedente-hint svg {
+  margin-left: 2px;
+  vertical-align: -1px;
+}
+
+/* Trilho da barra em destaque: autorizado 100% atingido E ainda sobra
+   excedente que poderia virar pecúnia com mais autorização. NA COR DO
+   PRÓPRIO BLOCO (--je-pec-glow-rgb, setado inline por pecBlock() a partir
+   do parâmetro `color`) — feedback do usuário: um âmbar genérico não tinha
+   nada a ver com a barra roxa que estava destacando.
+   NÃO aumenta a espessura do trilho: uma 1ª tentativa triplicando a altura
+   (6px -> 18px) ficou desproporcional ao lado da barra irmã de 6px no
+   mesmo card compacto — lia como "o componente quebrou/inchou", não como
+   destaque. O glow (halo fino ao redor, sem alterar a caixa do elemento)
+   já cumpre o papel de chamar atenção sem distorcer a barra. */
+.je-kpi-pec-track-alert {
+  animation: jeExcedentePecuniaGlow 1.6s ease-in-out infinite;
+}
+
+@keyframes jeExcedentePecuniaGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.45), 0 0 5px -1px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.8), 0 0 10px 0px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .je-kpi-pec-track-alert {
+    animation: none;
+    box-shadow: 0 0 0 1.5px rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.65), 0 0 8px 0 rgba(var(--je-pec-glow-rgb, 124, 58, 237), 0.6);
+  }
+}
+
 
 /* ==========================================================================
    Ícone de Hora Extra: Exibido APENAS no modo XT Ativo (v0.1.15)
@@ -644,7 +703,7 @@ body.je-xt-enabled .je-occ-acima-teto {
   background: rgba(236, 72, 153, 0.14) !important;
   color: #be185d !important;
   border: 1px solid rgba(236, 72, 153, 0.4) !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
   font-size: 10px !important;
   font-weight: 800 !important;
   letter-spacing: 0.2px !important;
@@ -966,15 +1025,15 @@ body.je-xt-enabled .je-overtime-clock-btn:active {
 
 body.je-xt-enabled .je-btn-ajustar-pendente {
   background: rgba(236, 72, 153, 0.12) !important;
-  color: #db2777 !important;
+  color: var(--je-danger-text) !important;
   border: 1px solid rgba(236, 72, 153, 0.35) !important;
   animation: jePulseWarning 2.2s infinite ease-in-out !important;
 }
 
 body.je-xt-enabled .je-btn-ajustar-pendente:hover {
-  background: #db2777 !important;
+  background: var(--je-danger-text) !important;
   color: #ffffff !important;
-  border-color: #db2777 !important;
+  border-color: var(--je-danger-text) !important;
   box-shadow: 0 4px 14px rgba(219, 39, 119, 0.45) !important;
   transform: translateY(-1.5px) scale(1.1) !important;
 }
@@ -1246,7 +1305,7 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
 }
 
 .je-card-char-rem strong.je-char-warning {
-  color: #db2777 !important;
+  color: var(--je-danger-text) !important;
 }
 
 .je-card-row-4 {
@@ -1424,15 +1483,15 @@ body.je-xt-enabled .je-btn-ajustar-pendente:hover {
   border: 1px solid #f9a8d4 !important;
   border-radius: 6px !important;
   background: #fdf2f8 !important;
-  color: #ec4899 !important;
+  color: var(--je-danger-accent) !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
 }
 
 .je-btn-delete-mark:hover {
-  background: #ec4899 !important;
+  background: var(--je-danger-accent) !important;
   color: #ffffff !important;
-  border-color: #db2777 !important;
+  border-color: var(--je-danger-text) !important;
   transform: scale(1.08) !important;
 }
 
@@ -1510,7 +1569,7 @@ body.je-xt-enabled .je-app-calc-tag {
   letter-spacing: 0.3px !important;
   color: #ffffff !important;
   background: var(--je-primary) !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
   padding: 2px 6px !important;
 }
 
@@ -1620,7 +1679,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 
 .je-audit-btn-ghost {
   border-color: transparent !important;
-  color: #db2777 !important;
+  color: var(--je-danger-text) !important;
 }
 
 .je-audit-progress {
@@ -1630,7 +1689,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 
 .je-audit-progress-bar {
   height: 8px !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
   background: rgba(10, 37, 64, 0.1) !important;
   overflow: hidden !important;
 }
@@ -1638,7 +1697,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 .je-audit-progress-fill {
   height: 100% !important;
   width: 0% !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
   background: linear-gradient(90deg, #0056b3, #00c6ff) !important;
   transition: width 0.25s ease !important;
 }
@@ -1801,7 +1860,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
 
 .je-audit-none {
   text-align: center !important;
-  color: #059669 !important;
+  color: var(--je-success-text) !important;
   font-weight: 600 !important;
   padding: 18px !important;
 }
@@ -1810,7 +1869,7 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   font-size: 10.5px !important;
   font-weight: 700 !important;
   padding: 2px 7px !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
 }
 
 .je-audit-badge-hib {
@@ -1864,12 +1923,12 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   letter-spacing: 0.3px !important;
   text-transform: uppercase !important;
   padding: 1px 5px !important;
-  border-radius: 999px !important;
+  border-radius: var(--je-radius-full, 999px) !important;
 }
 
 .je-audit-tag-exato {
   background: rgba(16, 185, 129, 0.15) !important;
-  color: #059669 !important;
+  color: var(--je-success-text) !important;
 }
 
 .je-audit-tag-est {
@@ -2303,6 +2362,206 @@ body.je-xt-enabled #legislacao-correspondente p::before {
 
 body.je-xt-enabled #legislacao-correspondente p:hover {
   color: var(--je-primary-dark) !important;
+}
+
+/* ==========================================================================
+   Modal "Autorização de Hora Extra" (heAuthDetailModal.js) — clique no
+   ícone de relógio do Espelho de Ponto abria uma janela de popup nativa
+   (window.open, sem chrome) pra uma tabela crua; vira um modal no padrão
+   do TSE XT (.je-detail-modal-*, content.css), com cada autorização do dia
+   organizada num cartão próprio.
+   ========================================================================== */
+
+body.je-xt-enabled .je-heauth-modal-card {
+  max-width: 460px !important;
+}
+
+body.je-xt-enabled .je-heauth-subtitle {
+  font-family: var(--je-font) !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin: 0 0 14px 0 !important;
+}
+
+body.je-xt-enabled .je-heauth-dow {
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+}
+
+/* Aparece só quando há mais de 1 autorização cobrindo o mesmo dia. */
+body.je-xt-enabled .je-heauth-total {
+  font-family: var(--je-font) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: var(--je-primary-dark) !important;
+  background: rgba(0, 119, 255, 0.07) !important;
+  border: 1px solid rgba(0, 119, 255, 0.18) !important;
+  border-radius: var(--je-radius-sm) !important;
+  padding: 8px 12px !important;
+  margin: -4px 0 14px 0 !important;
+}
+
+/* Um cartão por autorização — se o dia tiver mais de uma, empilha com
+   espaço entre elas (nunca lado a lado: a leitura vertical acompanha a
+   ordem natural "qual autorização, quantas horas, em que período"). */
+body.je-xt-enabled .je-heauth-card {
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-md) !important;
+  padding: 16px !important;
+  margin-bottom: 12px !important;
+  background: rgba(248, 250, 252, 0.6) !important;
+}
+
+body.je-xt-enabled .je-heauth-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+body.je-xt-enabled .je-heauth-card-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+body.je-xt-enabled .je-heauth-num {
+  font-family: var(--je-font) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #64748b !important;
+  letter-spacing: 0.3px !important;
+}
+
+body.je-xt-enabled .je-heauth-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-family: var(--je-font) !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  padding: 4px 9px !important;
+  border-radius: var(--je-radius-full) !important;
+  white-space: nowrap !important;
+}
+
+/* Semana/Sábado (+50%) na cor primária do projeto; Domingo/Feriado (+100%
+   — a taxa mais alta) em âmbar, pra se destacar visualmente do outro
+   bloco à primeira vista, sem precisar ler o texto. */
+body.je-xt-enabled .je-heauth-badge-wksat {
+  background: rgba(0, 119, 255, 0.1) !important;
+  color: var(--je-primary-dark) !important;
+}
+
+body.je-xt-enabled .je-heauth-badge-sunhol {
+  background: var(--je-warning-bg) !important;
+  color: var(--je-warning-text) !important;
+}
+
+body.je-xt-enabled .je-heauth-desc {
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  margin-bottom: 10px !important;
+}
+
+body.je-xt-enabled .je-heauth-hours-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 18px !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px dashed rgba(203, 213, 225, 0.9) !important;
+}
+
+/* Número de horas autorizadas é a informação mais importante do cartão —
+   maior e mais forte que o resto, mesmo tratamento de destaque usado nos
+   valores grandes dos KPIs do topo da tela. */
+body.je-xt-enabled .je-heauth-hours {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+body.je-xt-enabled .je-heauth-hours-value {
+  font-family: var(--je-font) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  line-height: 1 !important;
+}
+
+body.je-xt-enabled .je-heauth-hours-label {
+  font-family: var(--je-font) !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  color: #94a3b8 !important;
+}
+
+body.je-xt-enabled .je-heauth-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+body.je-xt-enabled .je-heauth-field label {
+  font-family: var(--je-font) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  color: #94a3b8 !important;
+}
+
+body.je-xt-enabled .je-heauth-field span {
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+body.je-xt-enabled .je-heauth-field-full {
+  margin-bottom: 12px !important;
+}
+
+/* Os 3 limites (dias úteis / sábado / domingo-feriado) lado a lado — mesmo
+   layout "3 blocos" usado noutros lugares do TSE XT pra números
+   relacionados (ex.: rodapé do Espelho de Ponto). */
+body.je-xt-enabled .je-heauth-limits {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+}
+
+body.je-xt-enabled .je-heauth-limit {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+  text-align: center !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(203, 213, 225, 0.7) !important;
+  border-radius: var(--je-radius-sm) !important;
+  padding: 8px 6px !important;
+}
+
+body.je-xt-enabled .je-heauth-limit label {
+  font-family: var(--je-font) !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2px !important;
+  color: #94a3b8 !important;
+}
+
+body.je-xt-enabled .je-heauth-limit span {
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #334155 !important;
 }
 
 

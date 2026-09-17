@@ -15,6 +15,23 @@
   // portadas (F5-F7).
   const PAGE_PROFILES = [
     {
+      // Tela de login (pré-autenticação) — Logout e Login_verTelaInicial*
+      // mostram o mesmo formulário nativo (#box-login), então casamos pelo
+      // próprio elemento em vez de enumerar toda variação de URL possível.
+      // Nunca detectar por URL sozinha aqui: mais seguro depender só de o
+      // formulário de login realmente existir na página.
+      // PRECISA vir ANTES dos perfis abaixo (find() para no 1º match): a
+      // sessão expirada redireciona pra Login_verTelaInicialSemLogout com
+      // a URL de destino original na query string (?url=/EspelhoPontoDia
+      // Action_consultar.action) — o href.includes(...) dos perfis
+      // espelhoMes/espelhoDia batia nessa query string mesmo sendo a tela
+      // de login, pulando mountLoginPage() e aplicando a casca genérica
+      // (com título/breadcrumb do Espelho) por cima do formulário nativo
+      // cru.
+      id: 'login',
+      isMatch: () => !!document.getElementById('box-login'),
+    },
+    {
       id: 'espelhoMes',
       isMatch: () => window.location.href.includes('EspelhoPontoMesAction') || !!document.getElementById('tblEspelhoPontoMesCorrente'),
     },
@@ -23,13 +40,13 @@
       isMatch: () => window.location.href.includes('EspelhoPontoDiaAction') || !!document.getElementById('formEspelhoPontoDia'),
     },
     {
-      // Tela de login (pré-autenticação) — Logout e Login_verTelaInicial*
-      // mostram o mesmo formulário nativo (#box-login), então casamos pelo
-      // próprio elemento em vez de enumerar toda variação de URL possível.
-      // Nunca detectar por URL sozinha aqui: mais seguro depender só de o
-      // formulário de login realmente existir na página.
-      id: 'login',
-      isMatch: () => !!document.getElementById('box-login'),
+      // Gestão de Serviço Extraordinário (visão do chefe) — tem lógica de
+      // negócio própria (o painel de KPI por servidor, ver heGestaoKpi.js),
+      // mas o formulário/tabela em si já ficam bons só com os modernizadores
+      // genéricos (roadmap F5/F6) — por isso NÃO entra no branch
+      // modernizeForm()/modernizeTable() abaixo, que é hardcoded pro Espelho.
+      id: 'heGestaoChefes',
+      isMatch: () => window.location.href.includes('HoraExtraGestao_visaoChefes') || !!document.getElementById('tbServidoresAutorizados'),
     },
   ];
 
@@ -85,9 +102,15 @@
     // no <html>/<body>). Assíncrono, mas os cards só são injetados depois.
     if (window.JEPessoasSettings) window.JEPessoasSettings.load();
 
-    // Só monta em páginas autenticadas do Meu Espaço com o shell padrão do
-    // portal (div#container) — o manifest já exclui Login/Logout, isto é só
-    // uma rede de segurança extra para telas fora do layout conhecido.
+    // Só monta em páginas com o shell padrão do portal (div#container) —
+    // o manifest só exclui Login_autenticar* (o POST que processa a
+    // autenticação em si), isto é uma rede de segurança extra pras demais
+    // telas fora do layout conhecido. Login_encerrarSessao* chegou a estar
+    // excluído aqui também, mas isso bloqueava por engano
+    // Login_encerrarSessaoMsgPersonalizada.action — uma tela de LOGIN
+    // estável (mensagem "sessão encerrada" + formulário), não uma ação
+    // transitória; o botão "Sair" de verdade nem usa essa URL (vai pra
+    // /Logout, nunca excluído).
     if (!document.getElementById('container')) {
       reveal();
       return;
@@ -96,6 +119,7 @@
     const profileId = resolveProfileId();
     const isEspelhoMes = profileId === 'espelhoMes';
     const isEspelhoDia = profileId === 'espelhoDia';
+    const isHeGestao = profileId === 'heGestaoChefes';
 
     // Carrega preferências salvas ou padrão (7h para JE/TSE, XT Ativo)
     chrome.storage?.local?.get({ targetHours: 7, xtThemeEnabled: true }, (items) => {
@@ -169,12 +193,14 @@
               // Espelho/Alteração de Ponto ainda são hardcoded (exigem as
               // classes de coluna h01-h17, motivo de esquecimento, moldura
               // de ajuste de ponto etc., que só essas duas telas têm) — só
-              // rodam quando a página bate com um perfil conhecido.
-              // Qualquer outra tela cai nos modernizadores genéricos
-              // (roadmap F3/F5/F6): o botão de busca vira o mesmo <button>
-              // moderno sem depender de função Struts nenhuma, e a tabela é
-              // decorada por texto de cabeçalho em vez de classe nativa.
-              if (profileId) {
+              // rodam quando a página bate com um desses dois perfis.
+              // Qualquer outra tela (incluindo perfis com lógica de negócio
+              // própria mas sem tabela especial, ex.: heGestaoChefes) cai
+              // nos modernizadores genéricos (roadmap F3/F5/F6): o botão de
+              // busca vira o mesmo <button> moderno sem depender de função
+              // Struts nenhuma, e a tabela é decorada por texto de
+              // cabeçalho em vez de classe nativa.
+              if (isEspelhoMes || isEspelhoDia) {
                 window.JEPessoasModernizer.modernizeForm();
                 window.JEPessoasModernizer.modernizeTable(targetHours);
               } else {
@@ -183,7 +209,18 @@
                 window.JEPessoasModernizer.setupSelectAutoSubmit();
                 if (window.JEPessoasTableModernizer) window.JEPessoasTableModernizer.modernizeGenericTables();
               }
+
+              // Depende da classificação acima (table.je-filter-table-card é
+              // atribuída por modernizeGenericTables(), não é nativa do
+              // portal) — por isso roda só depois do if/else, nunca antes.
+              window.JEPessoasModernizer.modernizeFilterCardRefreshIcon();
             }
+          }
+
+          // Painel de KPI por servidor (Gestão de Serviço Extraordinário) —
+          // depende da tabela #tbServidoresAutorizados já modernizada acima.
+          if (isHeGestao && window.JEPessoasHeGestaoKpi) {
+            window.JEPessoasHeGestaoKpi.mount();
           }
 
           // Extrai e Injeta KPIs (Apenas para Espelho de Ponto Mensal)
@@ -227,6 +264,8 @@
           if (window.JEPessoasNavDrawer) window.JEPessoasNavDrawer.init();
           if (window.JEPessoasPointModal) window.JEPessoasPointModal.init();
           if (window.JEPessoasDetailModal) window.JEPessoasDetailModal.init();
+          if (window.JEPessoasHEAuthModal) window.JEPessoasHEAuthModal.init();
+          if (window.JEPessoasReembolsoFarmaceutico) window.JEPessoasReembolsoFarmaceutico.init();
           if (isEspelhoMes && window.JEPessoasLostHours) window.JEPessoasLostHours.init();
 
           // Aviso de aplicação experimental (1º uso e a cada atualização de versão)
