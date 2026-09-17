@@ -55,14 +55,106 @@
     return profile ? profile.id : null;
   }
 
+  // Splash de carregamento (ver #je-boot-splash em content.css): cobre a
+  // tela escondida por je-xt-boot com a marca do TSE XT + barra de
+  // progresso, em vez de deixar branco enquanto a página autenticada
+  // (às vezes lenta no backend Struts) termina de montar. Criado direto
+  // em <html> porque roda em document_start, antes de <body> existir —
+  // é escondido via CSS (display:none) na tela de login e com o tema
+  // desligado, então não precisa de nenhuma checagem de perfil aqui.
+  let splashStartTime = 0;
+  function injectBootSplash() {
+    try {
+      if (document.getElementById('je-boot-splash')) return;
+      splashStartTime = Date.now();
+      const splash = document.createElement('div');
+      splash.id = 'je-boot-splash';
+      splash.setAttribute('aria-hidden', 'true');
+      // Ícone real da extensão em alta resolução (icons/base.png, 512x512,
+      // listado em web_accessible_resources) em vez de um SVG genérico —
+      // pedido explícito do usuário pra reforçar a marca no splash. Usa a
+      // versão base (não a já reduzida icon-128.png) pra ficar nítido em
+      // qualquer densidade de tela, já que aqui é exibido bem pequeno.
+      const iconUrl = chrome.runtime.getURL('icons/base.png');
+      // .je-boot-backdrop e .je-boot-glow são só decoração (glow azul
+      // crescendo do centro, na linguagem visual de glassmorfismo já usada
+      // no resto da extensão — ver content.css); .je-boot-content (ícone,
+      // título, barra) entra com fade+scale um instante depois.
+      splash.innerHTML = `
+        <div class="je-boot-backdrop"></div>
+        <div class="je-boot-glow"></div>
+        <div class="je-boot-content">
+          <div class="je-boot-logo">
+            <img src="${iconUrl}" alt="" width="40" height="40" />
+          </div>
+          <div class="je-boot-title">TSE <span>XT</span></div>
+          <div class="je-boot-tagline">Preparando sua área de trabalho&hellip;</div>
+          <div class="je-boot-progress-track"><div class="je-boot-progress-fill"></div></div>
+        </div>
+      `;
+      document.documentElement.appendChild(splash);
+    } catch (e) {}
+  }
+
+  // Ativação explícita do splash para cobrir transições ativas (ex.: clique de login)
+  function showSplash(tagline) {
+    let splash = document.getElementById('je-boot-splash');
+    if (!splash) {
+      injectBootSplash();
+      splash = document.getElementById('je-boot-splash');
+    }
+    if (splash) {
+      splash.classList.remove('je-boot-complete', 'je-boot-hide');
+      if (tagline) {
+        const tagEl = splash.querySelector('.je-boot-tagline');
+        if (tagEl) tagEl.textContent = tagline;
+      }
+      splash.style.display = 'flex';
+    }
+    document.documentElement.classList.add('je-logging-in', 'je-xt-boot');
+    document.documentElement.style.backgroundColor = '#0a2540';
+    if (document.body) document.body.classList.add('je-logging-in');
+  }
+
+  // Exporta para outros módulos (ex.: acionar o splash no clique do login)
+  window.JEPessoasBoot = { injectBootSplash, showSplash };
+
   // Anti-FOUC: revela a página (remove je-xt-boot) uma única vez. Chamada ao
   // fim da montagem estrutural e por uma válvula de segurança abaixo, para
   // nunca deixar a tela escondida caso algo falhe.
   let revealed = false;
-  function reveal() {
+  const MIN_SPLASH_DISPLAY_MS = 650;
+  function reveal(forceImmediate = false) {
     if (revealed) return;
     revealed = true;
-    document.documentElement.classList.remove('je-xt-boot');
+    const splash = document.getElementById('je-boot-splash');
+
+    const executeDissolve = () => {
+      if (splash) {
+        // Completa a barra até 100% e dissolve o splash (opacidade + blur +
+        // leve zoom, ver .je-boot-hide em content.css) por cima do conteúdo
+        // real, que já é revelado no mesmo instante — evita tanto o corte
+        // abrupto da animação de progresso quanto atrasar artificialmente
+        // páginas que carregam rápido.
+        splash.classList.add('je-boot-complete', 'je-boot-hide');
+        // Na tela de login NÃO remove o elemento do DOM para que ele possa ser
+        // reexibido instantaneamente quando o usuário clicar para logar.
+        const isLogin = !!document.getElementById('box-login');
+        if (!isLogin) {
+          setTimeout(() => splash.remove(), 400);
+        }
+      }
+      document.documentElement.classList.remove('je-xt-boot');
+      document.documentElement.style.backgroundColor = '';
+    };
+
+    if (forceImmediate || !splash) {
+      executeDissolve();
+    } else {
+      const elapsed = Date.now() - splashStartTime;
+      const remaining = Math.max(0, MIN_SPLASH_DISPLAY_MS - elapsed);
+      setTimeout(executeDissolve, remaining);
+    }
   }
 
   // Injeção síncrona ultra-rápida de estado no <html> ao nível de document_start
@@ -74,16 +166,23 @@
     if (localStorage.getItem('je_xt_theme_enabled') !== 'false') {
       document.documentElement.classList.add('je-xt-enabled', 'je-xt-boot');
       document.documentElement.classList.remove('je-xt-disabled');
+      document.documentElement.style.backgroundColor = '#0a2540';
+      injectBootSplash();
     } else {
       document.documentElement.classList.add('je-xt-disabled');
       document.documentElement.classList.remove('je-xt-enabled');
     }
   } catch (e) {}
 
-  // Válvula de segurança: nunca deixa a página escondida por mais de ~1.2s,
-  // mesmo se a montagem falhar ou a URL não for uma página suportada.
-  // Melhor um flash raro do que travar a tela do usuário.
-  setTimeout(reveal, 1200);
+  // Válvula de segurança: nunca deixa a página escondida por mais de ~1.8s,
+  // mesmo se a montagem falhar ou a URL não for uma página suportada (ou
+  // uma tela transitória sem #container, ver o "return" sem reveal() em
+  // init() abaixo). Melhor um flash raro do que travar a tela do usuário.
+  // Levemente maior que antes (1.2s→1.8s): HAR real do fluxo "Acesso
+  // Extranet" (SSO) mostrou uma tela intermediária que fica visível por
+  // ~1-2s antes de redirecionar adiante — a folga extra ajuda o splash a
+  // continuar cobrindo esse trecho em vez de revelar cedo demais.
+  setTimeout(() => reveal(true), 1800);
 
   function init() {
     if (!document.body) return;
@@ -102,17 +201,20 @@
     // no <html>/<body>). Assíncrono, mas os cards só são injetados depois.
     if (window.JEPessoasSettings) window.JEPessoasSettings.load();
 
-    // Só monta em páginas com o shell padrão do portal (div#container) —
-    // o manifest só exclui Login_autenticar* (o POST que processa a
-    // autenticação em si), isto é uma rede de segurança extra pras demais
-    // telas fora do layout conhecido. Login_encerrarSessao* chegou a estar
-    // excluído aqui também, mas isso bloqueava por engano
-    // Login_encerrarSessaoMsgPersonalizada.action — uma tela de LOGIN
-    // estável (mensagem "sessão encerrada" + formulário), não uma ação
-    // transitória; o botão "Sair" de verdade nem usa essa URL (vai pra
-    // /Logout, nunca excluído).
+    // Páginas fora do shell padrão do portal (sem div#container) não têm
+    // o que modernizar — mas NÃO revela na hora: telas transitórias do
+    // fluxo de login (ex.: o retorno do SSO/RH-SSO em
+    // .../jsp/rhsso/login-rhsso.jsp, sem #container) só ficam na tela por
+    // um instante antes de redirecionar adiante, e revelar cedo demais
+    // aqui deixava o usuário vendo a página nativa (ou em branco) daquele
+    // instante em vez do splash continuar cobrindo. Só sai daqui sem
+    // montar nada — quem revela é a válvula de segurança abaixo (ou uma
+    // nova chamada de init() se essa mesma página navegar via SPA, o que
+    // não é o caso aqui). Confirmado com HAR real: o tempo realmente
+    // gasto no fluxo de "Acesso Extranet" (SSO) é majoritariamente TTFB
+    // do backend (até a resposta começar a chegar) — isso nenhum content
+    // script alcança, não tem documento pra rodar ainda.
     if (!document.getElementById('container')) {
-      reveal();
       return;
     }
 

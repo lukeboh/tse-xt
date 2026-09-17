@@ -2431,6 +2431,7 @@ window.JEPessoasModernizer = (function () {
     // nenhuma mudança acontece com a extensão desligada.
     if (!loginToggleEnabled) return;
 
+    document.documentElement.classList.add('je-login-page');
     document.body.classList.add('je-login-page');
 
     // Limpeza cosmética: nós de texto com só espaços/&nbsp; soltos dentro
@@ -2445,6 +2446,52 @@ window.JEPessoasModernizer = (function () {
         node.textContent = '';
       }
     });
+
+    // Ativação imediata do Boot Splash no momento do envio do login ou no clique
+    // em Acesso Extranet (SSO): enquanto a rede e o backend Struts processam a
+    // autenticação (levando de ~2s a 4s de espera), o Chrome mantém a página
+    // atual desenhada (Paint Holding). Ativar o splash agora faz com que ele cubra
+    // a tela imediatamente, eliminando o vácuo ou corte seco antes da transição.
+    function triggerLoginSplash(msg) {
+      document.documentElement.classList.add('je-logging-in', 'je-xt-boot');
+      document.body.classList.add('je-logging-in');
+      document.documentElement.style.backgroundColor = '#0a2540';
+      if (window.JEPessoasBoot && window.JEPessoasBoot.showSplash) {
+        window.JEPessoasBoot.showSplash(msg || 'Autenticando suas credenciais…');
+      } else {
+        let splash = document.getElementById('je-boot-splash');
+        if (!splash && window.JEPessoasBoot && window.JEPessoasBoot.injectBootSplash) {
+          window.JEPessoasBoot.injectBootSplash();
+          splash = document.getElementById('je-boot-splash');
+        }
+        if (splash) {
+          splash.classList.remove('je-boot-complete', 'je-boot-hide');
+          splash.style.display = 'flex';
+        }
+      }
+    }
+
+    const btnEntrar = document.getElementById('login-btnEntrar');
+    if (btnEntrar) {
+      btnEntrar.addEventListener('click', () => triggerLoginSplash('Autenticando suas credenciais…'), true);
+    }
+
+    const btnOdin = document.getElementById('login-btnOdin');
+    if (btnOdin) {
+      btnOdin.addEventListener('click', () => triggerLoginSplash('Conectando via Acesso Extranet…'), true);
+    }
+
+    const senhaInput = document.getElementById('formulario_login_servidor_senha');
+    if (senhaInput) {
+      senhaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') triggerLoginSplash('Autenticando suas credenciais…');
+      }, true);
+    }
+
+    const loginForm = document.querySelector('form[action*="Login_autenticar"]') || (btnEntrar && btnEntrar.closest('form'));
+    if (loginForm) {
+      loginForm.addEventListener('submit', () => triggerLoginSplash('Autenticando suas credenciais…'), true);
+    }
   }
 
   // Botão de "atualizar" solto (<img onclick="atualizarTela()">) logo depois

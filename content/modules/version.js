@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.7.1';
+  const CURRENT_VERSION = '0.7.2';
 
   const CHANGELOG = [
+    {
+      version: '0.7.2',
+      date: '2026-09-17',
+      title: 'Splash de Carregamento (Boot Splash) e transição suave na autenticação',
+      features: [
+        'Boot Splash com Glassmorfismo: substitui a tela em branco do anti-FOUC por uma tela de carregamento com glow radial azul crescente (1100ms) e o logo oficial em alta resolução (icons/base.png).',
+        'Dissolução cinematográfica (reveal): ao concluir a montagem dos componentes modernizados do TSE XT, o splash se dissolve suavemente (opacidade, desfoque de 14px e leve zoom de 4% em 380ms) revelando a página pronta.',
+        'Fluidez e segurança nos fluxos de login: cobre a transição após submissão de credenciais ou autenticação via "Acesso Extranet" (SSO/RH-SSO), com proteção contra corte precoce em telas transitórias e válvula de segurança de 1.6s.',
+        'Atualização do manifest: inclusão de web_accessible_resources para disponibilizar o logo base.png de forma segura para os domínios do TSE.'
+      ]
+    },
     {
       version: '0.7.1',
       date: '2026-09-17',
