@@ -18,9 +18,10 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 ## ✨ Principais Recursos
 
-### Design System e arquitetura genérica
-- **Glassmorfismo Tátil 2026**: acrílico fosco translúcido (`backdrop-filter: blur(20px)`), relevo tátil e halo de foco luminoso azul institucional (*TSE Blue*), em layout widescreen fluido.
-- **Modernização automática das ~30 telas do menu clássico**: título de página, tabelas de dados/formulário, reconhecimento de botão de ação por texto (CONSULTAR/PESQUISAR/SALVAR/CONFIRMAR/GRAVAR/ENVIAR/NOVO), ícones nativos (pixelados) trocados pelo traço do design system, calendário com o mesmo popup nativo reposicionado ao lado do campo.
+### Design System, Boot Splash e arquitetura genérica
+- **Boot Splash Instantâneo (80ms)**: tela de carregamento elegante em azul profundo institucional (`#0a2540`) com glow radial expansivo e o logo oficial em alta resolução (`icons/base.png`). Elimina o clarão branco (anti-FOUC) e cobre com fluidez a transição nos dois métodos de logon (Matrícula/Senha e "Acesso Extranet" via Keycloak/RH-SSO), dissolvendo-se suavemente ao revelar a página montada.
+- **Glassmorfismo Tátil**: acrílico fosco translúcido (`backdrop-filter: blur(20px)`), relevo tátil e halo de foco luminoso azul institucional (*TSE Blue*), em layout widescreen fluido.
+- **Modernização automática das ~30 telas do menu clássico**: título de página com breadcrumb contextual, tabelas com zebrado e alinhamento numérico à direita, reconhecimento semântico de botão de ação por texto (CONSULTAR/PESQUISAR/SALVAR/CONFIRMAR/GRAVAR/ENVIAR/NOVO), ícones nativos trocados pelo traço do design system.
 - **Navegação em Drawer Lateral (Alt + M)**: menu retrátil com busca rápida e dezenas de serviços organizados em categorias com ícones visuais e badges de permissão.
 - **Command Palette Global (Ctrl + K)**: pesquisa instantânea por atalhos, módulos e páginas internas.
 - **Interruptor ON / OFF Independente**: botão flutuante persistente para alternar a qualquer momento entre o visual moderno XT e o layout clássico original, para conferência.
@@ -36,10 +37,10 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 ### Reembolso Farmacêutico
 - Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo; busca de medicamento com auto-busca (debounced) e filtro local por palavras extras.
 - Calculadora de desconto (antes um popup nativo sem estilo) e modal de detalhamento de pedido no padrão do TSE XT.
-- Resumo do Pedido em sidebar que se adapta à largura do formulário; badges de status coloridos na listagem (inclusive um fallback para status futuros ainda não catalogados).
+- Resumo do Pedido em sidebar sticky que se adapta à largura do formulário; badges de status coloridos na listagem (inclusive fallback para status futuros ainda não catalogados).
 
 ### Gestão de Serviço Extraordinário
-- Painel de KPI por servidor autorizado no período, com barras de progresso Sábado/Domingo (autorizado × realizado) e o mesmo indicador "horas que poderiam virar pecúnia" do Espelho de Ponto, buscado em segundo plano.
+- Painel de KPI por servidor autorizado no período, com barras de progresso Sábado/Domingo (autorizado × realizado), desambiguação inteligente de homônimos e o mesmo indicador "horas que poderiam virar pecúnia" do Espelho de Ponto, apurado em segundo plano respeitando os limites normativos (Res. 22.901/2008).
 
 ---
 
@@ -50,6 +51,20 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 3. Clique em **Carregar sem compactação** (*Load unpacked*).
 4. Selecione a pasta deste projeto (`tse-xt`).
 5. Acesse o [Meu Espaço](https://meuespaco.tse.jus.br/portalservidor2/) e aproveite — a modernização se aplica a qualquer tela do portal, não só ao Espelho de Ponto.
+
+---
+
+## 📸 Capturas de Tela (Chrome Web Store Assets)
+
+| [Espelho de Ponto (Modernizado)](docs/tela-exemplo.png) | [Modo Original (TSE XT Desligado)](docs/tela-exemplo-off.png) |
+|:---:|:---:|
+| ![Espelho de Ponto](docs/tela-exemplo.png) | ![Modo Original](docs/tela-exemplo-off.png) |
+| *Espelho com Glassmorfismo e 5 KPIs* | *Layout clássico original para auditoria* |
+
+| [Gestão de Serviço Extraordinário](docs/tela-gestao-he.png) | [Reembolso Farmacêutico](docs/tela-reembolso-farmaceutico.png) |
+|:---:|:---:|
+| ![Gestão de Serviço Extraordinário](docs/tela-gestao-he.png) | ![Reembolso Farmacêutico](docs/tela-reembolso-farmaceutico.png) |
+| *Painel de chefia com barras Sáb/Dom e horas pecúnia* | *Novo pedido em grid, auto-busca e resumo sticky* |
 
 ---
 

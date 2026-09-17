@@ -1,25 +1,30 @@
 # Descrição da Chrome Web Store — TSE XT
 
 > Fonte de verdade da descrição publicada na loja. Atualizar aqui a cada release relevante e copiar para o Developer Dashboard.
-> Versão de referência: **0.7.1**
+> Versão de referência: **1.0.0**
 
 ---
 
-✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE
+✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.0)
 
-O TSE XT é uma extensão moderna desenvolvida para aprimorar a experiência visual e a usabilidade de **todo o portal Meu Espaço** do Tribunal Superior Eleitoral (TSE) — não só as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto), mas as dezenas de telas do menu clássico, com integrações dedicadas para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
+O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade de **todo o portal Meu Espaço** do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto) até as dezenas de telas do menu clássico, com painéis dedicados para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
 
-Com um design refinado em Glassmorfismo Tátil, a extensão transforma tabelas e interfaces legadas em painéis modernos e consistentes: no Espelho de Ponto, calcula previsões de saída, saldo acumulado dia a dia e progresso mensal — inclusive com os acréscimos de fim de semana e feriado — com total precisão, e ainda audita o histórico completo do ponto em busca de horas que nunca viraram pecúnia nem banco de horas.
+Com design em Glassmorfismo Tátil, o TSE XT elimina telas em branco, calcula previsões de jornada em tempo real, audita saldos dia a dia e automatiza formulários complexos com total privacidade (100% no seu navegador).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌟 PRINCIPAIS FUNCIONALIDADES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🏢 1. MODERNIZAÇÃO AUTOMÁTICA DE TODO O MEU ESPAÇO
-• Dezenas de telas do menu clássico (Assentamentos Funcionais, Carteira Funcional, Banco de Horas, Contracheque e muitas outras) ganham automaticamente o mesmo visual moderno — título de página, tabelas, formulários e botões reconhecidos por texto/semântica — sem precisar de nenhuma configuração por tela.
-• Ícones nativos pixelados (lupa, calendário, editar, excluir, incluir) são trocados pelo mesmo traço de linha do design system em qualquer tela onde aparecem.
+🚀 1. BOOT SPLASH INSTANTÂNEO & TRANSIÇÃO SUAVE DE LOGIN
+• Carregamento cinematográfico em azul institucional (#0a2540) com glow radiante e o logo oficial em alta definição.
+• Resposta visual em 80ms: ao enviar credenciais ou clicar em "Acesso Extranet" (Keycloak/RH-SSO), o splash cobre a transição imediatamente, eliminando o clarão branco do anti-FOUC e telas intermediárias sem estilo.
+• Dissolução suave (reveal): ao concluir a montagem dos componentes, o splash se dissolve suavemente (desfoque de 14px e leve zoom), revelando a página pronta para o trabalho.
 
-📊 2. PAINEL DE 5 KPIS PARA PLANEJAR O MÊS (ESPELHO DE PONTO)
+🏢 2. MODERNIZAÇÃO AUTOMÁTICA DE TODO O MEU ESPAÇO
+• Dezenas de telas do menu clássico (Assentamentos Funcionais, Carteira Funcional, Banco de Horas, Contracheque, Férias e muitas outras) ganham automaticamente o mesmo visual moderno: título dinâmico com breadcrumb temático, tabelas com zebrado inteligente, colunas numéricas alinhadas à direita e botões de ação semânticos (CONSULTAR, PESQUISAR, SALVAR, ENVIAR, NOVO).
+• Ícones nativos pixelados são substituídos pelo mesmo traço elegante de linha do design system em qualquer tela onde aparecem.
+
+📊 3. PAINEL DE 5 KPIS PARA PLANEJAR O MÊS (ESPELHO DE PONTO)
 Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer contas manuais:
 • ⏱️ Saída de Hoje: Previsão exata do horário de término da jornada diária (7h em turno único, 8h com intervalo de almoço, 5h no recesso), com o horário para zerar o saldo do mês saindo hoje.
 • 💰 Saldo do Mês: Um número único, devedor ou credor, líquido de pecúnia e já com a projeção de hoje — com mini-planejador "planejar ›": quanto fazer por dia útil para zerar o mês, ou o fechamento projetado para um esforço diário informado.
@@ -27,48 +32,51 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • ⚡ Hora Extra (Pecúnia): Executado × Autorizado direto do SAEX, sem digitar nada, separado em "Semana/Sábado (+50%)" e "Domingo/Feriado (+100%)", com barra de progresso, teto legal de 60h/mês e indicador do excedente que poderia virar pecúnia caso a autorização fosse maior.
 • 🎯 Meta do Mês: Acompanhamento em tempo real da jornada ordinária do mês com barra de progresso visual (gradiente esmeralda ao superar 100%).
 
-🔎 3. AUDITORIA DE HORAS PERDIDAS (ESPELHO DE PONTO)
+🔎 4. AUDITORIA DE HORAS PERDIDAS (ESPELHO DE PONTO)
 • Varre o Espelho de Ponto desde 2009 e quantifica, mês a mês, as horas trabalhadas que nunca viraram pecúnia nem banco de horas — separadas em quatro categorias explicadas em linguagem clara, cada uma com a origem do número e o artigo da norma que a fundamenta.
 • Gráfico cronológico das perdas por ano, tabela ordenável por qualquer coluna e clique na linha para abrir o mês correspondente.
 • Resultado persistido por matrícula: reabre com a última varredura e atualiza só o que mudou (ou refaça tudo com Full Update).
 • Meses de trabalho híbrido/teletrabalho não entram como perda — a norma suprime o serviço extraordinário nesse regime, então o excedente é estrutural, não um direito perdido.
 
-📈 4. COLUNAS ANALÍTICAS NA TABELA DE FREQUÊNCIA (ESPELHO DE PONTO)
+📈 5. COLUNAS ANALÍTICAS NA TABELA DE FREQUÊNCIA (ESPELHO DE PONTO)
 • SALDO ACUM.: acompanhe a evolução dia a dia do seu saldo diretamente na tabela, com badges de acréscimo +50% (sábado) e +100% (domingo/feriado) e coloração imediata (verde para crédito, rosa para débito, neutro para zero).
 • HORAS EXCED. (meses fechados): quando o mês é homologado e a coluna nativa passa a se chamar "HORAS AJUST.", o TSE XT injeta uma coluna própria com o saldo líquido real de cada dia (total trabalhado − jornada esperada), mantendo a leitura consistente com os meses abertos.
 • Dia corrente: antes de a coluna oficial "HORAS EXCED." ser processada à noite, o TSE XT já projeta o saldo do dia a partir do total trabalhado, com selo próprio.
 • Cálculo rigoroso que desconsidera valores já pagos em Pecúnia, garantindo que horas indenizadas não distorçam o saldo a compensar.
 • Detecção automática de regime e de jornada (7h/8h/5h no recesso), com selos de teto legal de hora extra por dia (art. 4º) diretamente na tabela.
 
-📝 5. AJUSTE DE PONTO INLINE E AUTORIZAÇÃO DE HORA EXTRA (ESPELHO DE PONTO)
+📝 6. AJUSTE DE PONTO INLINE E AUTORIZAÇÃO DE HORA EXTRA (ESPELHO DE PONTO)
 • Formulário modal glassmorphic na própria tela do espelho para incluir marcações, sem navegar por várias páginas; listagem e exclusão individual das marcações do dia via rotinas oficiais do sistema. Disponível somente na visão de chefia (visualizando o ponto de outro servidor).
 • Detalhe de cada autorização de hora extra do dia (antes um popup nativo sem estilo) num modal com cartões organizados por autorização.
 
-💊 6. REEMBOLSO FARMACÊUTICO
-• Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo; busca de medicamento com auto-busca (sem precisar clicar em nada) e filtro local por palavras extras.
-• Calculadora de desconto e detalhamento de pedido num modal no padrão do TSE XT, no lugar do popup nativo sem estilo.
-• Badges de status coloridos na listagem de pedidos, com fallback automático para status que o portal ainda vier a introduzir.
+💊 7. REEMBOLSO FARMACÊUTICO RECONSTRUÍDO
+• Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo; busca de medicamento com auto-busca (debounced, sem precisar clicar na lupa) e filtro local por palavras extras.
+• Calculadora de desconto e detalhamento de pedido em modais nativos do design system do TSE XT, eliminando popups soltos e requisições bloqueadas por CSP.
+• Sidebar de Resumo do Pedido dinâmica e sticky, que acompanha a rolagem e se adapta à largura disponível.
+• Badges de status coloridos na listagem de pedidos, com rede de segurança para novos status futuros.
 
-📋 7. GESTÃO DE SERVIÇO EXTRAORDINÁRIO (VISÃO DE CHEFIA)
-• Painel de KPI por servidor autorizado no período, com barras de progresso de Sábado e Domingo (autorizado × realizado) e o mesmo indicador de excedente que poderia virar pecúnia do Espelho de Ponto.
+📋 8. GESTÃO DE SERVIÇO EXTRAORDINÁRIO (VISÃO DE CHEFIA)
+• Painel de KPIs por servidor autorizado no período, com barras de progresso comparando Sábado (+50%) e Domingo (+100%) entre o autorizado e o realizado.
+• Desambiguação inteligente de nomes de servidores (primeiro nome com inicial/sobrenome automático em homônimos).
+• Indicador em segundo plano de horas que poderiam virar pecúnia (+HH:MM), lido automaticamente do espelho de cada servidor da unidade respeitando os tetos legais diários (Res. 22.901/2008).
 
-⚡ 8. NAVEGAÇÃO RÁPIDA & COMMAND PALETTE (Ctrl + K)
+⚡ 9. NAVEGAÇÃO RÁPIDA & COMMAND PALETTE (Ctrl + K)
 • Pressione Ctrl + K (ou Cmd + K) para abrir uma busca global instantânea por atalhos, opções do menu, filtros de meses e ações do sistema.
 • Navegação ágil com teclado e execução imediata de rotinas.
 
-📁 9. DRAWER LATERAL DE SERVIÇOS (Alt + M)
+📁 10. DRAWER LATERAL DE SERVIÇOS (Alt + M)
 • Menu moderno retrátil em acrílico translúcido com dezenas de serviços organizados por categorias temáticas com ícones visuais e badges (Chefia / Restrito).
 • Elimina sobreposições e cortes de tela no layout legado.
 
-🔄 10. AUTO-CONSULTA INSTANTÂNEA
+🔄 11. AUTO-CONSULTA INSTANTÂNEA
 • Ao alterar qualquer seletor no formulário de pesquisa (Unidade, Servidor, Ano ou Mês), a consulta é disparada automaticamente, dispensando cliques repetitivos no botão "Consultar".
 
-📑 11. AÇÕES RÁPIDAS & EXPORTAÇÃO EXCEL
+📑 12. AÇÕES RÁPIDAS & EXPORTAÇÃO EXCEL
 • Botão flutuante (FAB) com atalhos de alta produtividade.
 • Exportação completa do espelho de ponto para planilha CSV/Excel com codificação UTF-8 (acentuação perfeita) e proteção integrada contra injeção de fórmulas.
 • Atalho rápido para rolar a página diretamente para a linha do dia atual com destaque luminoso.
 
-🎨 12. APARÊNCIA PERSONALIZÁVEL, CARREGAMENTO SEM FLASH E INTERRUPTOR ON/OFF
+🎨 13. APARÊNCIA PERSONALIZÁVEL, CARREGAMENTO SEM FLASH E INTERRUPTOR ON/OFF
 • Preferências de aparência na janela da extensão: preenchimento dos cards (Clássico ou Gradiente) e destaque (Suave ou Glow azul animado), aplicadas na hora em todas as telas.
 • Página só é revelada depois que o TSE XT termina de montar a interface — sem flash do layout nativo original.
 • Interruptor visual persistente: alterna instantaneamente entre o visual moderno XT e o layout clássico original do portal para fins de conferência, a qualquer momento, com um clique.
@@ -94,3 +102,22 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 💡 NOTA DE ISENÇÃO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 O TSE XT é uma ferramenta experimental de produtividade e aprimoramento de interface, com o único objetivo de facilitar a rotina de trabalho. Pode conter erros e não representa nenhuma garantia de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho — um aviso nesse sentido é exibido no primeiro uso e a cada atualização. Os dados oficiais de frequência e homologação pertencem e são geridos exclusivamente pelos sistemas institucionais do Tribunal Superior Eleitoral.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🖼️ ASSETS PREPARADOS PARA O CHROME WEB STORE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Todos os prints atendem às especificações técnicas obrigatórias do portal de desenvolvedor do Google Chrome (1280x800 px, PNG 24-bit Truecolor, colorType 2, sem canal alfa, dados anonimizados):
+
+1. `docs/tela-exemplo.png`:
+   • Título: "Espelho de Ponto — Dashboard com 5 KPIs e Auditoria"
+   • Foco: Glassmorfismo, 5 KPIs, colunas analíticas e badges de teto legal.
+2. `docs/tela-gestao-he.png`:
+   • Título: "Gestão de Serviço Extraordinário — Visão de Chefia"
+   • Foco: Barras de progresso Sábado/Domingo, saldo e apuração em segundo plano de horas pecúnia.
+3. `docs/tela-reembolso-farmaceutico.png`:
+   • Título: "Reembolso Farmacêutico — Novo Pedido em Grid Fluido"
+   • Foco: Busca debounced com validação, anexos, calculadora modal e resumo sticky.
+4. `docs/tela-exemplo-off.png`:
+   • Título: "Conferência Instantânea — Interruptor ON/OFF"
+   • Foco: Transparência total e alternância rápida entre TSE XT e o layout clássico.
+

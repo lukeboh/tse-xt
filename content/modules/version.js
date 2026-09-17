@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.7.2';
+  const CURRENT_VERSION = '1.0.0';
 
   const CHANGELOG = [
+    {
+      version: '1.0.0',
+      date: '2026-09-17',
+      title: 'Marco 1.0 — Consolidação completa do Meu Espaço, Painel de Serviço Extraordinário e Boot Splash',
+      features: [
+        'Marco 1.0: maturidade e estabilidade do TSE XT para todo o portal Meu Espaço do Tribunal Superior Eleitoral.',
+        'Modernização integral de ~30 telas do menu clássico: padronização visual em Glassmorfismo Tátil, tabelas genéricas com zebra e alinhamento numérico, botões semânticos e formulários responsivos.',
+        'Painel de Gestão de Serviço Extraordinário: visão de chefia com barras de progresso (Sábado/Domingo), apuração de excedente e estimativa de horas que poderiam virar pecúnia em segundo plano.',
+        'Reembolso Farmacêutico reconstruído: formulário moderno em grid fluido, busca com auto-busca (debounced), calculadora modal e sidebar de resumo em tempo real.',
+        'Boot Splash instantâneo (80ms): tela de carregamento elegante em azul profundo (#0a2540) com glow radiante e transição suave nos dois métodos de logon (Matrícula/Senha e Acesso Extranet SSO).'
+      ]
+    },
     {
       version: '0.7.2',
       date: '2026-09-17',
