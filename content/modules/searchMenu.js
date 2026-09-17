@@ -11,20 +11,88 @@ window.JEPessoasSearch = (function () {
   let modalResults = null;
   let selectedIndex = 0;
 
-  function executePageScript(scriptCode) {
-    if (!scriptCode) return;
-    try {
-      const script = document.createElement('script');
-      script.textContent = scriptCode;
-      (document.head || document.documentElement).appendChild(script);
-      script.remove();
-    } catch (err) {
-      console.error('Erro ao executar script da página:', err);
+  function submitEspelhoMes(targetMes, targetAno) {
+    const mesSelect = document.getElementById('mesSelecionado');
+    const anoSelect = document.getElementById('anoSelecionado');
+    const form = document.getElementById('formEspelhoPontoMes') || document.querySelector('form[action*="EspelhoPontoMes"]');
+
+    if (mesSelect && anoSelect && form) {
+      if (targetMes != null) mesSelect.value = String(targetMes);
+      if (targetAno != null) anoSelect.value = String(targetAno);
+
+      mesSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      anoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const endpoint = '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
+      form.action = endpoint;
+      form.setAttribute('action', endpoint);
+
+      const btn = form.querySelector('.je-btn-consultar, #btnConsultar, input[type="submit"]');
+      if (btn) {
+        btn.click();
+      } else {
+        form.submit();
+      }
+    } else {
+      window.location.href = '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
     }
   }
 
   function buildSearchIndex() {
     searchItems = [
+      {
+        title: 'Espelho de Ponto',
+        category: 'Navegação',
+        action: () => {
+          submitEspelhoMes();
+        }
+      },
+      {
+        title: 'Espelho de Ponto - Mês Atual',
+        category: 'Navegação',
+        action: () => {
+          const now = new Date();
+          submitEspelhoMes(now.getMonth() + 1, now.getFullYear());
+        }
+      },
+      {
+        title: 'Consultar Mês Anterior',
+        category: 'Filtro',
+        action: () => {
+          const mesSelect = document.getElementById('mesSelecionado');
+          const anoSelect = document.getElementById('anoSelecionado');
+          if (mesSelect) {
+            let curMes = parseInt(mesSelect.value, 10);
+            let curAno = anoSelect ? parseInt(anoSelect.value, 10) : new Date().getFullYear();
+            if (curMes > 1) {
+              submitEspelhoMes(curMes - 1, curAno);
+            } else {
+              submitEspelhoMes(12, curAno - 1);
+            }
+          } else {
+            submitEspelhoMes();
+          }
+        }
+      },
+      {
+        title: 'Consultar Próximo Mês',
+        category: 'Filtro',
+        action: () => {
+          const mesSelect = document.getElementById('mesSelecionado');
+          const anoSelect = document.getElementById('anoSelecionado');
+          if (mesSelect) {
+            let curMes = parseInt(mesSelect.value, 10);
+            let curAno = anoSelect ? parseInt(anoSelect.value, 10) : new Date().getFullYear();
+            if (curMes < 12) {
+              submitEspelhoMes(curMes + 1, curAno);
+            } else {
+              submitEspelhoMes(1, curAno + 1);
+            }
+          } else {
+            submitEspelhoMes();
+          }
+        }
+      },
       {
         title: 'Ajustar Meu Ponto (Hoje)',
         category: 'Ações Rápidas',
@@ -53,20 +121,6 @@ window.JEPessoasSearch = (function () {
         }
       },
       {
-        title: 'Espelho de Ponto - Mês Atual',
-        category: 'Navegação',
-        action: () => {
-          const now = new Date();
-          const mesSelect = document.getElementById('mesSelecionado');
-          const anoSelect = document.getElementById('anoSelecionado');
-          if (mesSelect && anoSelect) {
-            mesSelect.value = String(now.getMonth() + 1);
-            anoSelect.value = String(now.getFullYear());
-            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
-          }
-        }
-      },
-      {
         title: 'Rolar até o Dia de Hoje',
         category: 'Ações Rápidas',
         action: () => {
@@ -75,42 +129,6 @@ window.JEPessoasSearch = (function () {
             todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             todayRow.style.outline = '2px solid var(--je-primary-light)';
             setTimeout(() => { todayRow.style.outline = ''; }, 2000);
-          }
-        }
-      },
-      {
-        title: 'Consultar Mês Anterior',
-        category: 'Filtro',
-        action: () => {
-          const mesSelect = document.getElementById('mesSelecionado');
-          if (mesSelect) {
-            let cur = parseInt(mesSelect.value, 10);
-            if (cur > 1) {
-              mesSelect.value = String(cur - 1);
-            } else {
-              mesSelect.value = '12';
-              const anoSelect = document.getElementById('anoSelecionado');
-              if (anoSelect) anoSelect.value = String(parseInt(anoSelect.value, 10) - 1);
-            }
-            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
-          }
-        }
-      },
-      {
-        title: 'Consultar Próximo Mês',
-        category: 'Filtro',
-        action: () => {
-          const mesSelect = document.getElementById('mesSelecionado');
-          if (mesSelect) {
-            let cur = parseInt(mesSelect.value, 10);
-            if (cur < 12) {
-              mesSelect.value = String(cur + 1);
-            } else {
-              mesSelect.value = '1';
-              const anoSelect = document.getElementById('anoSelecionado');
-              if (anoSelect) anoSelect.value = String(parseInt(anoSelect.value, 10) + 1);
-            }
-            executePageScript('if (typeof formEspelhoPontoMes_consultar === "function") { formEspelhoPontoMes_consultar(); } else { window.location.reload(); }');
           }
         }
       },
@@ -130,7 +148,32 @@ window.JEPessoasSearch = (function () {
       }
     ];
 
-    // Adiciona links existentes no menu superior / rodapé do portal (filtrando javascript: URLs)
+    // 1. Extrai itens e serviços do Menu do Drawer com URLs normalizadas
+    if (window.JEPessoasNavDrawer && typeof window.JEPessoasNavDrawer.extractMenuData === 'function') {
+      try {
+        const categories = window.JEPessoasNavDrawer.extractMenuData();
+        categories.forEach((cat) => {
+          (cat.links || []).forEach((link) => {
+            if (!link.name || link.name.length < 2) return;
+            if (!searchItems.some((item) => item.title.toLowerCase() === link.name.toLowerCase())) {
+              searchItems.push({
+                title: link.name,
+                category: cat.title ? `Menu • ${cat.title}` : 'Menu Meu Espaço',
+                action: () => {
+                  if (link.element && typeof link.element.click === 'function' && (!link.href || link.href === '#' || link.href.startsWith('javascript:'))) {
+                    link.element.click();
+                  } else if (link.href && link.href !== '#' && !link.href.startsWith('javascript:')) {
+                    window.location.href = link.href;
+                  }
+                }
+              });
+            }
+          });
+        });
+      } catch (e) {}
+    }
+
+    // 2. Adiciona links restantes do portal (filtrando javascript: URLs)
     document.querySelectorAll('a[href]').forEach((link) => {
       const text = link.innerText.trim();
       const href = link.getAttribute('href');
@@ -140,7 +183,7 @@ window.JEPessoasSearch = (function () {
             title: text,
             category: 'Menu Meu Espaço',
             action: () => {
-              window.location.href = href;
+              window.location.href = link.href || href;
             }
           });
         }

@@ -98,6 +98,9 @@
 
   // Ativação explícita do splash para cobrir transições ativas (ex.: clique de login)
   function showSplash(tagline) {
+    try {
+      sessionStorage.setItem('je_logging_in', '1');
+    } catch (e) {}
     let splash = document.getElementById('je-boot-splash');
     if (!splash) {
       injectBootSplash();
@@ -113,7 +116,7 @@
       // Reinicia as animações CSS para florescimento imediato
       const glow = splash.querySelector('.je-boot-glow');
       const content = splash.querySelector('.je-boot-content');
-      const bar = splash.querySelector('.je-boot-bar-progress');
+      const bar = splash.querySelector('.je-boot-bar-progress, .je-boot-progress-fill');
       if (glow) {
         glow.style.animation = 'none';
         void glow.offsetHeight;
@@ -147,27 +150,29 @@
     if (revealed) return;
     revealed = true;
     const splash = document.getElementById('je-boot-splash');
+    let isLoginBoot = false;
+    try {
+      isLoginBoot = sessionStorage.getItem('je_logging_in') === '1';
+    } catch (e) {}
 
     const executeDissolve = () => {
       if (splash) {
-        // Completa a barra até 100% e dissolve o splash (opacidade + blur +
-        // leve zoom, ver .je-boot-hide em content.css) por cima do conteúdo
-        // real, que já é revelado no mesmo instante — evita tanto o corte
-        // abrupto da animação de progresso quanto atrasar artificialmente
-        // páginas que carregam rápido.
+        // Completa a barra até 100% e dissolve o splash por cima do conteúdo
         splash.classList.add('je-boot-complete', 'je-boot-hide');
-        // Na tela de login NÃO remove o elemento do DOM para que ele possa ser
-        // reexibido instantaneamente quando o usuário clicar para logar.
         const isLogin = !!document.getElementById('box-login');
         if (!isLogin) {
           setTimeout(() => splash.remove(), 400);
         }
       }
-      document.documentElement.classList.remove('je-xt-boot');
+      document.documentElement.classList.remove('je-xt-boot', 'je-logging-in');
       document.documentElement.style.backgroundColor = '';
+      try {
+        sessionStorage.removeItem('je_logging_in');
+      } catch (e) {}
     };
 
-    if (forceImmediate || !splash) {
+    // Em trocas normais de tela (fora do login inicial), a revelação é instantânea (0ms)
+    if (forceImmediate || !splash || !isLoginBoot) {
       executeDissolve();
     } else {
       const elapsed = Date.now() - splashStartTime;
@@ -177,16 +182,19 @@
   }
 
   // Injeção síncrona ultra-rápida de estado no <html> ao nível de document_start
-  // (antes do DOM carregar). Com o tema ativo, também esconde a página inteira
-  // (je-xt-boot, ver content.css) até a montagem terminar — o usuário nunca
-  // chega a ver o layout nativo do portal por um instante antes da
-  // transformação do TSE XT (topbar, KPIs, tabela modernizada).
+  // (antes do DOM carregar). Com o tema ativo, esconde a página (je-xt-boot) até a
+  // montagem terminar. O Splash com tela azul #0a2540 SÓ é ativado no momento do
+  // logon inicial (je_logging_in === '1'). Em trocas normais de tela, a navegação é direta.
   try {
     if (localStorage.getItem('je_xt_theme_enabled') !== 'false') {
       document.documentElement.classList.add('je-xt-enabled', 'je-xt-boot');
       document.documentElement.classList.remove('je-xt-disabled');
-      document.documentElement.style.backgroundColor = '#0a2540';
-      injectBootSplash();
+
+      if (sessionStorage.getItem('je_logging_in') === '1') {
+        document.documentElement.classList.add('je-logging-in');
+        document.documentElement.style.backgroundColor = '#0a2540';
+        injectBootSplash();
+      }
     } else {
       document.documentElement.classList.add('je-xt-disabled');
       document.documentElement.classList.remove('je-xt-enabled');

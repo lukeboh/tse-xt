@@ -18,21 +18,20 @@
    document_start (antes do primeiro paint) quando o TSE XT está ativo, e só
    remove a classe depois que a topbar, o formulário e a tabela já foram
    modernizados — assim o usuário nunca chega a ver o layout nativo por um
-   instante antes da transformação. Uma válvula de segurança em content.js
-   garante a revelação mesmo se a montagem falhar. */
-html.je-xt-boot,
-html.je-logging-in {
+   instante antes da transformação. Em navegações normais, a visibilidade é
+   oculta sem pintar o fundo de azul escuro. Fundo #0a2540 é exclusivo do login (.je-logging-in). */
+html.je-xt-boot:not(.je-logging-in) {
+  visibility: hidden !important;
+}
+
+html.je-logging-in,
+html.je-logging-in body,
+body.je-logging-in {
   background-color: #0a2540 !important;
 }
 
 html.je-xt-boot #container {
   visibility: hidden !important;
-}
-
-html.je-xt-boot body,
-html.je-logging-in body,
-body.je-logging-in {
-  background-color: #0a2540 !important;
 }
 
 :root {
@@ -121,7 +120,6 @@ body.je-logging-in {
   visibility: visible !important;
 }
 
-html.je-xt-boot #je-boot-splash,
 html.je-logging-in #je-boot-splash,
 body.je-logging-in #je-boot-splash,
 body.je-logging-in ~ #je-boot-splash {
