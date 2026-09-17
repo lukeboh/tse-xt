@@ -16,7 +16,7 @@ window.JEPessoasVersion = (function () {
         'Marco 1.0: maturidade e estabilidade do TSE XT para todo o portal Meu Espaço do Tribunal Superior Eleitoral.',
         'Modernização integral de ~30 telas do menu clássico: padronização visual em Glassmorfismo Tátil, tabelas genéricas com zebra e alinhamento numérico, botões semânticos e formulários responsivos.',
         'Painel de Gestão de Serviço Extraordinário: visão de chefia com barras de progresso (Sábado/Domingo), apuração de excedente e estimativa de horas que poderiam virar pecúnia em segundo plano.',
-        'Reembolso Farmacêutico reconstruído: formulário moderno em grid fluido, busca com auto-busca (debounced), calculadora modal e sidebar de resumo em tempo real.',
+        'Reembolso Farmacêutico reconstruído: formulário moderno em grid fluido, busca inteligente e mais esperta de medicamentos (debounced em 800ms, arquitetura híbrida que busca a 1ª palavra no backend e refina localmente termos compostos por dosagem/apresentação tipo "Exodus 15 mg", mantendo foco/cursor e seleção por clique na linha), calculadora modal e sidebar de resumo em tempo real.',
         'Boot Splash instantâneo (80ms): tela de carregamento elegante em azul profundo (#0a2540) com glow radiante e transição suave nos dois métodos de logon (Matrícula/Senha e Acesso Extranet SSO).'
       ]
     },

@@ -50,7 +50,11 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Detalhe de cada autorização de hora extra do dia (antes um popup nativo sem estilo) num modal com cartões organizados por autorização.
 
 💊 7. REEMBOLSO FARMACÊUTICO RECONSTRUÍDO
-• Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo; busca de medicamento com auto-busca (debounced, sem precisar clicar na lupa) e filtro local por palavras extras.
+• Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo e instruções em acordeão recolhível.
+• Busca inteligente e mais esperta de medicamentos: auto-busca enquanto digita (debounced em 800ms), sem precisar clicar na lupa.
+• Arquitetura híbrida com refino esperto: envia a 1ª palavra para o backend Struts e refina localmente e instantaneamente em memória termos compostos por dosagem, apresentação e exigência de laudo — pesquisar *"Exodus 15 mg"* localiza direto o item exato em vez de retornar vazio no sistema clássico.
+• Digitação contínua e sem interrupções: preserva o texto digitado via sessionStorage e restaura o foco e o cursor após o carregamento da lista de apresentações, proporcionando a experiência fluida de uma SPA moderna.
+• Seleção de apresentação por clique em qualquer parte da linha (sem precisar mirar no radio button minúsculo) e contêiner com rolagem própria para listas extensas de apresentações.
 • Calculadora de desconto e detalhamento de pedido em modais nativos do design system do TSE XT, eliminando popups soltos e requisições bloqueadas por CSP.
 • Sidebar de Resumo do Pedido dinâmica e sticky, que acompanha a rolagem e se adapta à largura disponível.
 • Badges de status coloridos na listagem de pedidos, com rede de segurança para novos status futuros.

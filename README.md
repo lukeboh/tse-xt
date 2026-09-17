@@ -35,9 +35,11 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 - **Auto-Consulta Instantânea** e **exportação** completa para Excel/CSV.
 
 ### Reembolso Farmacêutico
-- Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo; busca de medicamento com auto-busca (debounced) e filtro local por palavras extras.
-- Calculadora de desconto (antes um popup nativo sem estilo) e modal de detalhamento de pedido no padrão do TSE XT.
-- Resumo do Pedido em sidebar sticky que se adapta à largura do formulário; badges de status coloridos na listagem (inclusive fallback para status futuros ainda não catalogados).
+- **Formulário de Novo Pedido reconstruído** em cartão com grid de campos responsivo e instruções em acordeão recolhível.
+- **Busca inteligente e mais esperta de medicamentos**: auto-busca automática enquanto digita (debounced em 800ms, sem exigir clique na lupa), com arquitetura híbrida que envia a 1ª palavra ao backend Struts e refina localmente e instantaneamente em memória termos compostos por dosagem, apresentação e laudo (ex.: pesquisar *"Exodus 15 mg"* traz a dosagem exata sem retornar vazio).
+- **Digitação contínua**: preserva o texto digitado, cursor e foco mesmo após a recarga da lista de apresentações pelo Struts, além de permitir seleção da apresentação com 1 clique em qualquer parte da linha.
+- **Calculadora de desconto** (antes um popup nativo sem estilo) e modal de detalhamento de pedido no padrão do TSE XT.
+- **Resumo do Pedido em sidebar sticky** que se adapta à largura do formulário; badges de status coloridos na listagem (inclusive fallback para status futuros ainda não catalogados).
 
 ### Gestão de Serviço Extraordinário
 - Painel de KPI por servidor autorizado no período, com barras de progresso Sábado/Domingo (autorizado × realizado), desambiguação inteligente de homônimos e o mesmo indicador "horas que poderiam virar pecúnia" do Espelho de Ponto, apurado em segundo plano respeitando os limites normativos (Res. 22.901/2008).
