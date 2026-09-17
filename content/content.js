@@ -110,6 +110,25 @@
         if (tagEl) tagEl.textContent = tagline;
       }
       splash.style.display = 'flex';
+      // Reinicia as animações CSS para florescimento imediato
+      const glow = splash.querySelector('.je-boot-glow');
+      const content = splash.querySelector('.je-boot-content');
+      const bar = splash.querySelector('.je-boot-bar-progress');
+      if (glow) {
+        glow.style.animation = 'none';
+        void glow.offsetHeight;
+        glow.style.animation = '';
+      }
+      if (content) {
+        content.style.animation = 'none';
+        void content.offsetHeight;
+        content.style.animation = '';
+      }
+      if (bar) {
+        bar.style.animation = 'none';
+        void bar.offsetHeight;
+        bar.style.animation = '';
+      }
     }
     document.documentElement.classList.add('je-logging-in', 'je-xt-boot');
     document.documentElement.style.backgroundColor = '#0a2540';
