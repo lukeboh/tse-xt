@@ -121,3 +121,19 @@ Todos os prints atendem às especificações técnicas obrigatórias do portal d
    • Título: "Conferência Instantânea — Interruptor ON/OFF"
    • Foco: Transparência total e alternância rápida entre TSE XT e o layout clássico.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 BLOCOS PROMOCIONAIS DA LOJA (CHROME STORE PROMO TILES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Artefatos de divulgação em PNG 24-bit Truecolor (sem alfa), no padrão visual oficial do TSE XT:
+
+1. `docs/promo-pequeno-440x280.png`:
+   • Formato: 440 x 280 px (PNG 24 bits, colorType: 2, sem alfa).
+   • Tipo: Bloco promocional pequeno (Small Promo Tile).
+   • Elementos: Logo oficial em relevo tátil, tipografia TSE XT v1.0, tagline e badges compactas ("5 KPIs", "Design Tátil", "100% Local").
+
+2. `docs/promo-letreiro-1400x560.png`:
+   • Formato: 1400 x 560 px (PNG 24 bits, colorType: 2, sem alfa).
+   • Tipo: Bloco promocional de letreiro (Marquee Promo Tile / Hero Banner).
+   • Elementos: Banner panorâmico widescreen, selo "Marco 1.0", apresentação de valor, cards flutuantes em Glassmorfismo (Dashboard de 5 KPIs, Topbar e Painel de Chefia de HE).
+
+

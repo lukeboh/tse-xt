@@ -66,6 +66,13 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 | ![Gestão de Serviço Extraordinário](docs/tela-gestao-he.png) | ![Reembolso Farmacêutico](docs/tela-reembolso-farmaceutico.png) |
 | *Painel de chefia com barras Sáb/Dom e horas pecúnia* | *Novo pedido em grid, auto-busca e resumo sticky* |
 
+### Blocos Promocionais da Loja
+
+- **Bloco Promocional de Letreiro (1400x560)**:
+  ![Letreiro Promocional](docs/promo-letreiro-1400x560.png)
+- **Bloco Promocional Pequeno (440x280)**:
+  <img src="docs/promo-pequeno-440x280.png" width="440" height="280" alt="Bloco Promocional Pequeno">
+
 ---
 
 ## 🗺️ Roadmap
