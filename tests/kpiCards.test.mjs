@@ -195,7 +195,7 @@ test('KPI 4 — feito passou do autorizado (cor de alerta na fração e na barra
   }));
   assertClean(html);
   assert.ok(html.includes('/10:00'));
-  assert.ok(html.includes('#db2777'), 'cor de alerta quando passa do autorizado');
+  assert.ok(html.includes('var(--je-danger-text)'), 'cor de alerta quando passa do autorizado');
 });
 
 // Isola o trecho de HTML de um card pelo título, pra não contar barras de
@@ -211,6 +211,75 @@ function extractCard(html, title) {
 test('KPI 4 — ícone de $ usa a mesma caixa dos ícones dos demais KPIs', () => {
   const card = extractCard(M.buildKpiCardsHTML(makeKpi()), 'Hora Extra (Pecúnia)');
   assert.ok(/class="je-kpi-icon-wrapper je-kpi-heauth-icon"/.test(card), 'reaproveita .je-kpi-icon-wrapper');
+});
+
+test('KPI 4 — sem excedente parado no banco, não mostra a dica "(+HH:MM)"', () => {
+  const html = M.buildKpiCardsHTML(makeKpi());
+  assertClean(html);
+  assert.ok(!html.includes('je-kpi-excedente-hint'));
+  assert.ok(!html.includes('je-kpi-pec-track-alert'));
+});
+
+test('KPI 4 — barra a 100% do autorizado COM excedente sobrando: mostra "(+HH:MM)" e o glow de alerta', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 600, authWeekdaySatFormatted: '10:00',
+    pecuniaWeekdaySatMinutes: 600, pecuniaWeekdaySat: '10:00', // feito == autorizado -> 100%, sem "over"
+    // teto total >= feito total (960min) pra "Executado" (rodapé do card) não
+    // entrar em "over" por conta própria e confundir a asserção de cor de alerta.
+    authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00',
+    excedenteSemPecuniaWeekdaySatMinutes: 45,
+    excedenteSemPecuniaWeekdaySatFormatted: '00:45'
+  }));
+  assertClean(html);
+  assert.ok(html.includes('(+00:45)'));
+  assert.ok(html.includes('je-kpi-excedente-hint'));
+  assert.ok(/title="Horas excedentes de Semana \/ Sábado[^"]*virar pecúnia em vez de saldo\./.test(html), 'tooltip explica o valor');
+  assert.ok(html.includes('je-kpi-pec-track-alert'), 'chegou a 100% do autorizado com excedente ainda sobrando');
+  assert.ok(!html.includes('var(--je-danger-text)'), 'feito == autorizado não é "over" (só quando ultrapassa)');
+  // glow acompanha a cor do PRÓPRIO bloco (Semana/Sábado = navy #0a2540),
+  // não uma cor fixa — feedback do usuário após ver um âmbar genérico numa
+  // barra roxa.
+  assert.ok(html.includes('--je-pec-glow-rgb:10, 37, 64;'), 'glow na cor navy do bloco Semana/Sábado');
+});
+
+test('KPI 4 — glow de alerta acompanha a cor roxa do bloco Domingo/Feriado', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 600, authWeekdaySatFormatted: '10:00',
+    authSundayHolidayMin: 600, authSundayHolidayFormatted: '10:00',
+    pecuniaSundayHolidayMinutes: 600, pecuniaSundayHoliday: '10:00', // feito == autorizado -> 100%
+    excedenteSemPecuniaSundayHolidayMinutes: 30,
+    excedenteSemPecuniaSundayHolidayFormatted: '00:30'
+  }));
+  assertClean(html);
+  assert.ok(html.includes('je-kpi-pec-track-alert'));
+  assert.ok(html.includes('--je-pec-glow-rgb:124, 58, 237;'), 'glow na cor roxa (#7c3aed) do bloco Domingo/Feriado');
+});
+
+test('KPI 4 — abaixo de 100% do autorizado, mesmo com excedente no dia, NÃO mostra a dica nem o glow', () => {
+  // Reproduz o caso reportado: barra em 41% (09:50/24:00) mas com excedente
+  // diário acumulado (dias sem pecúnia isolados) — não indica falta de
+  // autorização enquanto o teto nem foi alcançado, então a dica fica muda.
+  const html = M.buildKpiCardsHTML(makeKpi({
+    hasHEAutorizadoConfig: true,
+    authWeekdaySatMin: 1200, authWeekdaySatFormatted: '20:00',
+    pecuniaWeekdaySatMinutes: 590, pecuniaWeekdaySat: '09:50',
+    excedenteSemPecuniaWeekdaySatMinutes: 496, // 08:16
+    excedenteSemPecuniaWeekdaySatFormatted: '08:16'
+  }));
+  assertClean(html);
+  assert.ok(!html.includes('je-kpi-excedente-hint'), 'não chegou a 100% do autorizado ainda — dica não faz sentido aqui');
+  assert.ok(!html.includes('je-kpi-pec-track-alert'));
+});
+
+test('KPI 4 — sem nenhuma autorização lida do SAEX, a dica de excedente NÃO aparece (não há teto pra "atingir")', () => {
+  const html = M.buildKpiCardsHTML(makeKpi({
+    excedenteSemPecuniaSundayHolidayMinutes: 30,
+    excedenteSemPecuniaSundayHolidayFormatted: '00:30'
+  }));
+  assertClean(html);
+  assert.ok(!html.includes('je-kpi-excedente-hint'));
 });
 
 test('KPI 4 — sempre 3 barras de progresso (Semana/Sáb, Dom/Fer, Executado), com ou sem SAEX', () => {

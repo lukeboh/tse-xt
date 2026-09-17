@@ -1,0 +1,1145 @@
+/* ==========================================================================
+   TSE XT - Reembolso Farmacêutico: revisão de UX do cadastro de Novo Pedido
+   (ReembolsoFarmaceuticoAction_registrarPedidoload)
+
+   O cartão em volta de cada seção (.grupoTopicos.je-detail-form-exempt,
+   marcado por detailModal.js pras seções que TÊM campo de entrada de dados
+   — logo não são "detalhe" pra virar modal, mas também não deveriam ficar
+   cruas) é genérico e mora em content.css. Aqui só o que é específico desta
+   tela: o acordeão de instruções, o grid do formulário (marcado
+   .je-reembolso-form-grid por reembolsoFarmaceutico.js) e a rolagem própria
+   da lista de resultados da busca de medicamento.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Acordeão do bloco "Informações - Leia as instruções..."
+   (#divFormInformacoes, marcado por setupInstructionsAccordion() em
+   reembolsoFarmaceutico.js) — some por inteiro por padrão (título nativo
+   incluso), com um toggle próprio, fora do bloco, sempre visível.
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-instrucoes-toggle-wrap {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin: 0 0 10px 0 !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(0, 119, 255, 0.08) !important;
+  border: 1px solid rgba(0, 119, 255, 0.2) !important;
+  border-radius: var(--je-radius-full, 999px) !important;
+  color: var(--je-primary-dark) !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  padding: 5px 12px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle:hover {
+  background: rgba(0, 119, 255, 0.15) !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle svg {
+  flex-shrink: 0 !important;
+  transition: transform 0.2s ease !important;
+}
+
+body.je-xt-enabled .je-instrucoes-toggle[aria-expanded="true"] svg {
+  transform: rotate(90deg) !important;
+}
+
+/* Bloco inteiro (título "Informações..." + ícone de ajuda nativo + lista)
+   some junto — não só a lista. max-height + overflow:hidden (não
+   display:none) pra animar a expansão/colapso em vez de pular direto
+   entre os dois estados; 900px é generoso o bastante pro conteúdo real
+   (título + lista com sub-itens) nunca cortar, sem exagerar o "salto"
+   do easing por causa de uma meta bem maior que a altura de verdade. */
+body.je-xt-enabled #divFormInformacoes {
+  overflow: hidden !important;
+  max-height: 900px !important;
+  opacity: 1 !important;
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, margin-bottom 0.35s ease !important;
+}
+
+body.je-xt-enabled #divFormInformacoes.je-instrucoes-wrap-collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+body.je-xt-enabled .je-instrucoes-heading {
+  display: flex !important;
+  /* o <h4> nativo do portal tem float:left (o mesmo CSS antigo baseado em
+     float do blueprint.css) — sem isto o pai (um <div> sem clearfix)
+     colapsa pra altura 0 e o conteúdo seguinte pinta por cima do título. */
+  float: none !important;
+  clear: both !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  margin: 0 0 10px 0 !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* ícone nativo de ajuda (abre outra janela) — mantém o tamanho discreto ao
+   lado do texto, sem herdar peso/tamanho do título. */
+body.je-xt-enabled .je-instrucoes-heading img {
+  width: 15px !important;
+  height: 15px !important;
+  vertical-align: middle !important;
+  cursor: help !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes ul {
+  margin: 4px 0 0 0 !important;
+  padding: 0 0 0 20px !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes li {
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+  margin-bottom: 6px !important;
+}
+
+body.je-xt-enabled #conteudoFormInstrucoes li a {
+  color: var(--je-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Grid do formulário (table.je-reembolso-form-grid, marcado por JS em
+      cima do <table> que contém o campo "nomeMedicamento" — evita que
+      seletores baseados em :has() peguem também a Lista de Apresentações,
+      que é uma <table> aninhada dentro da própria célula do Medicamento).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled table.je-reembolso-form-grid {
+  display: block !important;
+  width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  border-collapse: collapse !important;
+  box-shadow: none !important;
+  /* .je-filter-table-card (moldura de card genérica, content.css) dá
+     overflow:hidden + border-radius nesta MESMA <table> — com o <th>
+     "Medicamento:" colado no canto superior esquerdo (padding:0, regra
+     abaixo), a curvatura arredondada cortava o "M". Este grid não é mais
+     um card com moldura própria (isso já é o .grupoTopicos por fora),
+     então não precisa nem de raio nem de recorte aqui. */
+  overflow: visible !important;
+  border-radius: 0 !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 18px 24px !important;
+  align-items: start !important;
+}
+
+/* Cada <tr> é um campo — label (th) em cima, controle (td) embaixo, como
+   os demais formulários do TSE XT. O :not([style*="display: none"]) é
+   essencial: a linha "Nome do Beneficiário" começa escondida por JS
+   nativo (alteraBeneficiario()) e só aparece quando "Dependente" é
+   marcado — sem essa exclusão, o !important abaixo reexibiria a linha
+   sempre, quebrando a alternância nativa. .je-reembolso-row-spacer
+   também é excluída aqui (em vez de deixar a regra dela mais abaixo
+   competir por especificidade — ela tem menos classes no seletor e
+   perdia, mesmo vindo depois no arquivo). */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr:not([style*="display: none"]):not([style*="display:none"]):not(.je-reembolso-row-spacer) {
+  display: flex !important;
+  flex-direction: column !important;
+  /* rótulo bem próximo do campo (distância padrão do resto do XT) — 7px
+     deixava um vão perceptível entre o <th> e o controle. */
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+/* Painel harmônico, não tabela: sem filete de <tr> (o portal tem uma
+   regra nativa "tr { border: 1px solid #C0C0C0 }" em duas folhas de
+   estilo próprias) e sem o zebrado azul-clarinho das linhas pares — a
+   regra genérica de tabela de dados (content.css) assume grade de
+   resultados, não faz sentido num formulário. */
+body.je-xt-enabled table.je-reembolso-form-grid tr {
+  border: none !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid tbody tr:nth-child(even) td {
+  background: transparent !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display: none"],
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr[style*="display:none"] {
+  display: none !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr > th {
+  display: block !important;
+  text-align: left !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  white-space: normal !important;
+  vertical-align: top !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr > td {
+  display: block !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  vertical-align: top !important;
+  /* algumas dessas células foram classificadas .je-cell-actions pelo
+     modernizador genérico de tabelas (a tabela inteira é .je-generic-data-
+     table — ver comentário no topo do arquivo) e herdam white-space:nowrap
+     — bom pra uma coluna de ícone/ação estreita numa grade de resultados,
+     ruim aqui: "Calcular Desconto" não quebra linha e vaza por cima da
+     coluna vizinha do grid. */
+  white-space: normal !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid a {
+  white-space: normal !important;
+}
+
+/* O white-space:normal acima (seletor com mais tipos que classes) perde
+   pra regra genérica table.je-generic-data-table td.je-cell-actions —
+   3 classes contra 2, então especificidade maior mesmo com menos peso
+   "visual" no seletor. Repete o mesmo peso de classes (3) pra pelo menos
+   empatar — no empate, quem carrega por último (este arquivo, depois de
+   content.css no manifest) vence. */
+body.je-xt-enabled table.je-reembolso-form-grid td.je-cell-actions {
+  white-space: normal !important;
+}
+
+/* input/select/a nativos do portal têm float:left (o mesmo CSS antigo do
+   blueprint.css) — sem neutralizar, o próximo elemento (o resultado da
+   busca, o ícone/link "Calcular Desconto") não cai numa linha nova embaixo:
+   contorna o elemento flutuante e aparece do lado, ou vaza pra célula
+   vizinha do grid. */
+body.je-xt-enabled table.je-reembolso-form-grid td > input,
+body.je-xt-enabled table.je-reembolso-form-grid td > select,
+body.je-xt-enabled table.je-reembolso-form-grid td > a,
+body.je-xt-enabled table.je-reembolso-form-grid td > img,
+body.je-xt-enabled table.je-reembolso-form-grid td > span,
+body.je-xt-enabled table.je-reembolso-form-grid td > div,
+body.je-xt-enabled table.je-reembolso-form-grid td > label {
+  float: none !important;
+}
+
+/* Campos de texto/select genéricos do grid: largura contida na coluna.
+   O campo do Medicamento é excluído (:not) — a linha dele ocupa a largura
+   toda do grid (regra abaixo) e o input acompanha. */
+body.je-xt-enabled table.je-reembolso-form-grid input[type="text"]:not([name="nomeMedicamento"]),
+body.je-xt-enabled table.je-reembolso-form-grid select {
+  width: 100% !important;
+  max-width: 260px !important;
+  box-sizing: border-box !important;
+}
+
+/* Linhas "especiais", marcadas por reembolsoFarmaceutico.js (setupFormGrid)
+   — classe em vez de :has(), pra não depender de aritmética de
+   especificidade contra a regra genérica ":not([style...])" acima (que
+   tem mais classes no seletor mesmo sendo "mais simples"). */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-full {
+  grid-column: 1 / -1 !important;
+}
+
+/* Quantidade e Valor Total Pago na mesma linha: a 1ª tentativa usava só
+   "grid-column-start"/"span" no auto-placement do CSS Grid — funcionava,
+   mas o número de colunas que cabem lado a lado no grid muda com a
+   largura da tela, e o resultado real (medido ao vivo) ainda saía com um
+   desalinhamento vertical entre os dois campos. Trocado pelo mesmo
+   truque, já validado, do Beneficiário: embrulhar os 2 <tr> num <div>
+   flex só (setupQuantidadeValorLayout() em reembolsoFarmaceutico.js),
+   garantindo os 2 sempre lado a lado, alinhados pelo topo,
+   independentemente de quantas colunas o grid decidir caber. */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > div.je-qtd-valor-combo {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  column-gap: 24px !important;
+  row-gap: 8px !important;
+}
+
+/* Os 2 <tr> deixaram de ser filho direto de <tbody> — mesma situação (e
+   mesma solução) do Beneficiário: redeclara o estilo de campo aqui,
+   incluindo o prefixo "table.je-filter-table-card" no <th> só pra
+   empatar em especificidade com a regra genérica de cabeçalho de tabela
+   "tr:first-child th" (o <tr> da Quantidade virou ":first-child" DENTRO
+   deste novo div). */
+body.je-xt-enabled .je-qtd-valor-combo > tr {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+body.je-xt-enabled table.je-filter-table-card .je-qtd-valor-combo > tr > th {
+  display: block !important;
+  flex: 0 0 auto !important;
+  text-align: left !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  /* ".label" genérico (content.css) empurra margin-bottom:6px, que SOMA
+     (não substitui) ao gap:4px do flex do <tr> — sem este reset, a
+     distância rótulo→campo aqui ficava maior (10px) que o padrão do
+     resto do formulário (4px). */
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  white-space: normal !important;
+  vertical-align: top !important;
+}
+
+body.je-xt-enabled table.je-filter-table-card .je-qtd-valor-combo > tr > td {
+  display: block !important;
+  padding: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+}
+
+body.je-xt-enabled .je-qtd-valor-combo > tr.je-qtd-valor-col-qtd {
+  flex: 0 0 auto !important;
+  width: 140px !important;
+}
+
+body.je-xt-enabled .je-qtd-valor-combo > tr.je-qtd-valor-col-valor {
+  flex: 1 1 320px !important;
+  min-width: 280px !important;
+}
+
+/* Tabela de campos do formulário (cada <tr> é 1 campo, não uma linha de
+   dado navegável) — o hover azul genérico (content.css, seletor
+   "table.je-filter-table-card tbody tr:not(:first-child):hover td",
+   pensado pra realçar a linha de uma grade de resultados) não faz
+   sentido aqui, mas essa tabela carrega as duas classes. A classe
+   repetida (".je-reembolso-form-grid.je-reembolso-form-grid") é de
+   propósito: empata a especificidade (4 classes, mesmo :not/:hover
+   contando 1 cada) sem precisar do ":not(:first-child)" — aqui NENHUMA
+   linha deve ficar azul no hover, nem a primeira (Medicamento). No
+   empate, vence quem carrega por último (este arquivo, depois de
+   content.css no manifest). */
+body.je-xt-enabled table.je-reembolso-form-grid.je-reembolso-form-grid tbody tr:hover td {
+  background: transparent !important;
+}
+
+/* Mesmo problema, mesma solução, na tabela do card lateral "Resumo do
+   Pedido" (#divFormFinalizacao) — ela é só .je-filter-table-card (não
+   carrega .je-reembolso-form-grid), então a regra acima não a alcança.
+   Aqui é a própria classe repetida (".je-filter-table-card.je-filter-
+   table-card") que faz o empate de especificidade. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card.je-filter-table-card tbody tr:hover td {
+  background: transparent !important;
+}
+
+/* Zebrado azul-clarinho de linha par (content.css, pensado pra grade de
+   dados) também batia aqui, deixando as linhas 2 e 4 (Valor referência,
+   Retornar) permanentemente azuis — não é hover, é o zebrado normal.
+   Mesma tabela "rótulo: valor", mesma solução: sem sentido aqui. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card.je-filter-table-card tbody tr:nth-child(even) td {
+  background: transparent !important;
+}
+
+/* <th>Medicamento:</th> sempre à esquerda — sem o qualificador
+   ".je-reembolso-row-full" a regra genérica de th (acima) perde pra
+   table.je-generic-data-table tr:first-child th (a linha do Medicamento
+   é a tr:first-child da tabela, e essa regra tem mais peso de
+   especificidade: 3 classes contra 2, mesmo com menos tipos). */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-full > th {
+  text-align: left !important;
+}
+
+/* Sempre ocupa a largura toda da linha, descontada só do botão de lupa
+   (que fica dentro de .je-reembolso-input-icon-row, ao lado, largura
+   fixa) — sem teto de 640px: essa linha já é largura cheia do grid
+   (.je-reembolso-row-full), então o campo deve preenchê-la por inteiro,
+   por maior que a tela fique. */
+body.je-xt-enabled table.je-reembolso-form-grid input[name="nomeMedicamento"] {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Linha vazia ("&nbsp;" que o portal usa só de espaçador visual entre os
+   campos e o botão) — sem função nenhuma dentro de um grid com gap. */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-spacer {
+  display: none !important;
+}
+
+/* Linha do botão ADICIONAR ITEM: largura inteira. Sem filete acima (era
+   um separador visual proposital, mas o usuário achou feio) — só o
+   espaçamento acima já basta pra separar do resto do formulário. Pedido
+   do usuário: o botão pode subir um pouco — reduzido de 14px pra 4px. */
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-actions {
+  padding-top: 4px !important;
+  margin-top: 4px !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > tr.je-reembolso-row-actions > td {
+  text-align: left !important;
+}
+
+/* Radios do Beneficiário (não usam o padrão .grupoRadioCheck) — mesmo
+   tratamento visual dos demais checkboxes/radios do design system. */
+body.je-xt-enabled table.je-reembolso-form-grid input[type="radio"] {
+  accent-color: var(--je-primary) !important;
+  width: 15px !important;
+  height: 15px !important;
+  cursor: pointer !important;
+  vertical-align: middle !important;
+  margin: 0 4px 0 0 !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid .lblRadio {
+  font-size: 13px !important;
+  color: #334155 !important;
+  margin-right: 18px !important;
+  cursor: pointer !important;
+}
+
+/* --------------------------------------------------------------------------
+   2.1 Beneficiário — setupBeneficiarioLayout() (reembolsoFarmaceutico.js)
+      embrulha os 2 <tr> ("Beneficiário:" com os radios e "Nome do
+      Beneficiário:" com o select, que só aparece com "Dependente"
+      marcado — alteraBeneficiario(), função nativa, continua controlando
+      isso por style.display no mesmo <tr>, agora só com um pai novo) num
+      <div> só, virando UM item cheio do grid — por dentro, os 2 <tr> ficam
+      lado a lado na mesma linha em vez de cada um virar uma linha cheia
+      separada (empilhados).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled table.je-reembolso-form-grid > tbody > div.je-beneficiario-combo {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  /* flex-wrap (não nowrap): em telas mais estreitas, onde os radios + o
+     nome completo do dependente não cabem lado a lado com folga
+     legível, cai pra 2 linhas — mesmo princípio já usado no layout
+     geral (Resumo ao lado enquanto houver espaço, só desce por
+     responsividade). */
+  flex-wrap: wrap !important;
+  /* flex-start: os 2 blocos agora têm a MESMA estrutura interna (rótulo
+     em cima, gap de 4px, conteúdo embaixo — o mesmo padrão "label acima
+     do campo" de todo o resto do formulário), então alinhando os TOPOS
+     os 2 rótulos batem e as 2 linhas de conteúdo (radios / select) caem
+     naturalmente na mesma altura, sem precisar centralizar nem alinhar
+     pela base. */
+  align-items: flex-start !important;
+  column-gap: 24px !important;
+  row-gap: 8px !important;
+}
+
+/* Os 2 <tr> deixaram de ser filho direto de <tbody> (agora são filhos do
+   .je-beneficiario-combo) — nenhuma regra "> tbody > tr..." de cima os
+   alcança mais, por isso o estilo de cada um é redeclarado aqui, sem
+   guerra de especificidade com a regra genérica.
+   IMPORTANTE: display:flex vai em cada seletor ESPECÍFICO (radios /
+   nome:not(hidden)) abaixo, nunca aqui num "> tr" genérico incondicional
+   — um "> tr { display:flex !important }" pegaria os 2 <tr> sempre,
+   inclusive quando alteraBeneficiario() (nativa) esconde
+   trNomeBeneficiario via style="display: none", forçando ele visível de
+   novo e quebrando o toggle. */
+/* Precisa do prefixo "table.je-filter-table-card" pra empatar em
+   especificidade (3 classes) com a regra genérica de cabeçalho de tabela
+   "table.je-filter-table-card tr:first-child th" (content.css) — sem
+   ele, ESTE seletor (2 classes) perdia por especificidade pra aquela
+   regra genérica mesmo vindo depois no arquivo. O <tr> dos radios virou
+   filho direto do .je-beneficiario-combo (div), então ele também é
+   ":first-child" DENTRO DESSE DIV, batendo sem querer na regra pensada
+   pro cabeçalho da tabela inteira e deixando "Beneficiário:" com o
+   texto azul + filete inferior de header (empatava com o resultado
+   "texto tracejado/desorganizado" reportado). border-bottom/background/
+   text-align entram aqui de propósito, pra anular exatamente essas 3
+   propriedades da regra genérica. */
+body.je-xt-enabled table.je-filter-table-card .je-beneficiario-combo > tr > th {
+  flex: 0 0 auto !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  white-space: nowrap !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  text-align: left !important;
+  /* ".label" genérico (content.css) empurra margin-bottom:6px, que SOMA
+     (não substitui) ao gap:4px do flex do <tr> — sem este reset, a
+     distância rótulo→campo aqui ficava maior (10px) que o padrão do
+     resto do formulário (4px), e foi isso que deixou "Nome do
+     Beneficiário:" com uma distância maior que a do resto da tela. */
+  margin: 0 !important;
+}
+
+/* Linha dos radios — sempre visível, nenhum toggle nativo controla esta.
+   flex-direction: column (rótulo EM CIMA, não ao lado): mesmo padrão
+   "label acima do campo" de "Nome do Beneficiário:" e de todo o resto do
+   formulário — antes o rótulo ficava ao lado dos radios, inconsistente
+   com o resto da tela. */
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-radios {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+/* Radios alinhados à esquerda, rótulo logo em seguida de cada um (já é a
+   ordem do HTML nativo — só precisava do container em linha pra não
+   quebrar cada radio+rótulo numa linha própria). Altura de 38px (a mesma
+   de um <input>/<select> do design system) pra esta linha bater
+   exatamente com a linha do select ao lado (Nome do Beneficiário). */
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-radios > td {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-start !important;
+  gap: 6px 20px !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
+  /* Os 2 <label class="je-radio-option"> são filhos diretos deste <td> —
+     e batem, sem querer, na MESMA regra genérica de content.css que dava
+     padding gigante pro Quantidade e pro Valor Total Pago
+     ("table.je-filter-table-card td:has(> label)"). Sem este reset, os
+     17px/14px de padding-top/bottom comiam quase toda a altura fixa de
+     38px acima, sobrando pouquíssimo espaço de verdade pros radios. */
+  padding: 0 !important;
+  /* filete cinza do <td> genérico (content.css) sobrando embaixo desta
+     célula, sem sentido aqui dentro do agrupamento do Beneficiário. */
+  border-bottom: none !important;
+}
+
+/* Cada par radio+rótulo embrulhado num <label> só (setupBeneficiarioLayout()
+   em reembolsoFarmaceutico.js) — a centralização vertical de cada par
+   vira um problema local e idêntico pros 2, sem depender da renderização
+   nativa (às vezes ligeiramente diferente entre marcado/desmarcado) do
+   radio "solto" no meio de 4 irmãos genéricos. De brinde, clicar no
+   texto agora também marca o radio (antes só clicando no círculo). */
+/* Precisa neutralizar explicitamente TODAS as propriedades de 2 regras
+   genéricas que também casam com "<td> > <label>" e têm mais peso que um
+   seletor ingênuo daria a entender: "table.je-filter-table-card td >
+   label" (content.css, pensada pra rótulo de campo de formulário —
+   width:100%, display:block, uppercase, height:auto, etc.) e "form
+   label" (mesmo arquivo, uppercase/bold/height:14px). Sem o width:auto
+   aqui, o "width:100%" daquela regra vencia (nós não disputávamos essa
+   propriedade) e cada <label> esticava a linha toda, empurrando o par
+   seguinte pra quebrar de linha — a causa real dos radios aparecendo
+   empilhados em vez de lado a lado. */
+body.je-xt-enabled .je-beneficiario-combo .je-radio-option {
+  display: inline-flex !important;
+  align-items: center !important;
+  align-self: center !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  float: none !important;
+  text-align: left !important;
+  text-transform: none !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+}
+
+body.je-xt-enabled .je-beneficiario-combo .je-radio-option .lblRadio {
+  margin-right: 0 !important;
+}
+
+/* SEMPRE visível (pedido do usuário: "melhor deixar o fieldset do Nome
+   do Beneficiário sempre exibido e apenas habilitar ou desabilitar" —
+   alternar via display:none dava um "pulo" incômodo no layout ao trocar
+   o radio). alteraBeneficiario() (nativa) continua alternando
+   style.display neste <tr> por baixo dos panos, mas o !important abaixo
+   ignora esse toggle de propósito — quem passa a controlar
+   habilitado/desabilitado é setupBeneficiarioAlwaysVisible()
+   (reembolsoFarmaceutico.js), via o atributo disabled do <select>.
+   Rótulo EM CIMA do select (não ao lado, como os radios) — "Nome do
+   Beneficiário:" é comprido, e lado a lado com o select (largo o
+   bastante pra mostrar o nome completo) essa linha sozinha já quase não
+   cabia ao lado da linha dos radios; empilhado, a largura total do par
+   vira só a do select (o mais largo dos 2), sobrando espaço de sobra
+   pra continuar tudo numa linha só com os radios. */
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-nome {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+}
+
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-nome > td {
+  min-width: 0 !important;
+  width: 100% !important;
+  border-bottom: none !important;
+  /* Mesmo problema, mesma causa, do <td> dos radios acima: o <select> é
+     filho direto deste <td> e bate na regra genérica de content.css
+     "table.je-filter-table-card td:has(> select)" (padding-top de 17px)
+     — é essa a razão da "Nome do Beneficiário:" aparecer longe demais do
+     select, fora da distância padrão do resto do formulário (4px). */
+  padding: 0 !important;
+}
+
+/* Nome completo do dependente pode passar de 30 caracteres — sem o teto
+   de 260px genérico (table.je-reembolso-form-grid select, acima), o
+   <select> cresce o suficiente pra mostrar o nome inteiro. Fonte trocada
+   pra a do design system (o nativo herdava Verdana, mais larga por
+   caractere) — ajuda o nome completo caber num select mais estreito.
+   width:100% (era auto): pedido do usuário — o combo pode ocupar todo o
+   resto da linha, em vez de só o necessário pra caber o texto. */
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-nome select {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 220px !important;
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+}
+
+/* Estado desabilitado (rádio "O próprio servidor" marcado): esmaecido,
+   deixando claro que o campo não se aplica agora, sem sumir do layout. */
+body.je-xt-enabled .je-beneficiario-combo > tr.je-beneficiario-row-nome select:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  background: rgba(226, 232, 240, 0.35) !important;
+}
+
+/* Ícones nativos auxiliares (ajuda do tipo de uso, calculadora) — só
+   alinhamento, sem trocar de ícone. */
+body.je-xt-enabled table.je-reembolso-form-grid img {
+  vertical-align: middle !important;
+}
+
+/* O glow animado padrão de foco (jeGlowPulse, content.css — anel de 3px +
+   halo de 18px de blur, "respirando") é pensado pra inputs/selects de
+   38px de altura; nos campos bem compactos deste formulário (ex.: "Data
+   da Receita", 80px de largura) o halo de 18px de blur é bem maior que o
+   próprio campo e passa a impressão de um fundo azul sólido, não de um
+   anel de foco. Troca por um anel único e estático — mesmo tratamento já
+   usado nos campos do modal da Calculadora e no textarea de Observações
+   nesta mesma tela.
+   :not([type="radio"]):not([type="checkbox"]) — reportado pelo usuário:
+   os radios do Beneficiário ficavam com um fundo azul claro ao ganhar
+   foco. O seletor "input:focus" é genérico e não excluía radios; o
+   box-shadow quadrado de 3px ao redor de um controle pequeno e redondo
+   (15x15px) parecia um preenchimento sólido, não um anel de foco.
+   Radios/checkboxes já têm o próprio destaque nativo (accent-color) e
+   não precisam deste tratamento. */
+body.je-xt-enabled table.je-reembolso-form-grid input:not([type="radio"]):not([type="checkbox"]):focus,
+body.je-xt-enabled table.je-reembolso-form-grid input:not([type="radio"]):not([type="checkbox"]):focus-visible,
+body.je-xt-enabled table.je-reembolso-form-grid select:focus,
+body.je-xt-enabled table.je-reembolso-form-grid select:focus-visible {
+  animation: none !important;
+  outline: none !important;
+  border-color: var(--je-primary) !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+}
+
+/* #imgCalculadora ("Calcular Desconto") é um <input type="image"> — a
+   regra genérica table.je-filter-table-card td > input:not([type=radio])
+   :not([type=checkbox]):not([type=hidden]):not(.je-legacy-btn-consultar)
+   (content.css) não exclui type="image" e força display:block !important
+   (0-6-3 de especificidade), sobrepondo o display:none !important de
+   .je-legacy-icon-hidden (0-2-0) que modernizeNativeIcons() usa pra
+   esconder o nativo depois de inserir o ícone substituto — reaparecia
+   duplicado ao lado do SVG novo. #id tem especificidade de sobra pra
+   vencer qualquer regra por classe. */
+body.je-xt-enabled #imgCalculadora.je-legacy-icon-hidden {
+  display: none !important;
+}
+
+body.je-xt-enabled #imgCalculadora {
+  width: 18px !important;
+  height: 18px !important;
+  vertical-align: middle !important;
+}
+
+body.je-xt-enabled table.je-reembolso-form-grid td > span {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Resultado da busca (#tblListaApresentacoes): rolagem própria — a
+      lista pode passar de 15 itens e esticar a página toda.
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-medicamento-results-wrap {
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  margin-top: 10px !important;
+  border-radius: var(--je-radius-sm) !important;
+  border: 1px solid var(--je-glass-border) !important;
+}
+
+body.je-xt-enabled .je-medicamento-results-wrap table.je-generic-data-table {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* cabeçalho gruda no topo da área de rolagem */
+body.je-xt-enabled .je-medicamento-results-wrap thead th,
+body.je-xt-enabled .je-medicamento-results-wrap tr.cabecalhoColunas th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1 !important;
+}
+
+body.je-xt-enabled .je-medicamento-results-wrap tbody tr:not(.cabecalhoColunas) {
+  cursor: pointer !important;
+}
+
+/* Linhas ocultas/exibidas pelo filtro de palavras extras da busca —
+   animado (fade + colapso do padding), não um sumiço abrupto:
+   animateRowVisibility() (reembolsoFarmaceutico.js) alterna
+   .je-row-collapsing por 220ms antes de aplicar (ou tirar) .je-row-hidden
+   de vez. table.je-modernized-table tr tem "display: table-row
+   !important" (content.css, correção de float legado) que sobreporia um
+   display:none inline direto — usa o #id da tabela pra garantir
+   especificidade maior que qualquer seletor só de classe. */
+body.je-xt-enabled #tblListaApresentacoes tbody tr:not(.cabecalhoColunas) {
+  transition: opacity 0.22s ease !important;
+}
+
+body.je-xt-enabled #tblListaApresentacoes tbody tr:not(.cabecalhoColunas) > td {
+  transition: padding 0.22s ease, opacity 0.22s ease !important;
+}
+
+body.je-xt-enabled #tblListaApresentacoes tbody tr.je-row-collapsing {
+  opacity: 0 !important;
+}
+
+body.je-xt-enabled #tblListaApresentacoes tbody tr.je-row-collapsing > td {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+body.je-xt-enabled #tblListaApresentacoes tbody tr.je-row-hidden {
+  display: none !important;
+}
+
+/* Linha do medicamento selecionado ganha destaque enquanto o radio dela
+   estiver marcado. */
+body.je-xt-enabled .je-medicamento-results-wrap tbody tr:has(input[type="radio"]:checked) {
+  background: rgba(0, 119, 255, 0.12) !important;
+  box-shadow: inset 3px 0 0 var(--je-primary) !important;
+}
+
+/* .je-generic-data-table tbody tr:nth-child(even) td (zebrado, content.css)
+   tem mais especificidade que um seletor só com .je-medicamento-results-
+   wrap — soma a classe .je-generic-data-table aqui pra vencer também nas
+   linhas pares. */
+body.je-xt-enabled .je-medicamento-results-wrap table.je-generic-data-table tbody tr:has(input[type="radio"]:checked) td {
+  background: transparent !important;
+  font-weight: 700 !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Layout lateral: Resumo do Pedido (.je-reembolso-layout-aside) ao lado
+      do Formulário + Lista de Medicamentos, enquanto houver espaço — só
+      desce pra baixo deles por responsividade. Marcado por
+      setupSidebarLayout() em reembolsoFarmaceutico.js, que embrulha os 3
+      blocos (deixando #divFormInformacoes/instruções de fora — quando
+      abertas, continuam ocupando a largura toda da coluna principal).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-reembolso-layout {
+  display: grid !important;
+  /* Formulário só com a largura que o conteúdo interno de fato precisa
+     (max-content — a tabela "Lista de Apresentações" da busca de
+     medicamento é o elemento mais largo lá dentro) em vez de esticar
+     pra preencher 1fr: media ao vivo mostrava uma área em branco enorme
+     sobrando dentro do card do formulário, à direita da tabela, com o
+     Resumo do Pedido preso a 470px fixos ao lado. Agora é o Resumo quem
+     vira 1fr e cresce pra aproveitar o espaço que sobrar (com piso de
+     410px, a largura mínima confortável pra ele). */
+  grid-template-columns: minmax(0, max-content) minmax(410px, 1fr) !important;
+  gap: 20px !important;
+  align-items: start !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-form {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > table.je-reembolso-layout-list {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  margin: 0 !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
+  grid-column: 2 !important;
+  /* estica pelas 2 linhas da coluna principal (Formulário + Lista) —
+     assim o card acompanha a altura visual do que está ao lado, mesmo
+     quando o Resumo em si é bem mais baixo. */
+  grid-row: 1 / 3 !important;
+  position: sticky !important;
+  top: 16px !important;
+  align-self: start !important;
+  /* Altura preferencial de 660px; rolagem própria se o conteúdo (ex.:
+     textarea de Observações bem preenchido) precisar de mais espaço —
+     nunca estoura o layout. */
+  height: 660px !important;
+  overflow-y: auto !important;
+  /* coluna flex: a tabela "rótulo: valor" de dentro (table.je-filter-
+     table-card, abaixo) é o único filho direto e precisa poder crescer
+     (flex:1) pra a linha de Observações conseguir esticar até o fundo
+     do card. */
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* dentro do layout, quem controla largura/espaçamento é o grid — o
+   max-width/margin genérico do cartão (content.css) atrapalharia. */
+body.je-xt-enabled .je-reembolso-layout > .grupoTopicos.je-detail-form-exempt {
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* O <h4>"Resumo do Pedido..." e o <ul><li><table>...</table></li></ul> são
+   os 2 filhos diretos do card (agora display:flex; column, regra acima) —
+   o <ul>/<li> precisam poder crescer (flex:1) pra a tabela de dentro
+   conseguir esticar até o fundo do card, senão o flex do card não tem
+   efeito nenhum (o filho direto que precisaria crescer é o <ul>, não a
+   tabela lá dentro). */
+body.je-xt-enabled .je-reembolso-layout-aside > ul,
+body.je-xt-enabled .je-reembolso-layout-aside > ul > li {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+/* A tabela "rótulo: valor" do Resumo é table.je-filter-table-card, cuja
+   regra genérica (content.css) usa width:auto + layout de tabela nativo
+   de propósito — certo pra painel de filtro solto na página, mas aqui o
+   card É um sidebar dedicado: vira uma coluna flex (mesma técnica de
+   table.je-reembolso-form-grid) pra a tabela preencher a largura toda E
+   a linha de Observações poder crescer (flex:1) até o fundo do card —
+   sem crescer, ela ficava do mesmo tamanho das demais linhas mesmo
+   sobrando bastante espaço vertical abaixo dela. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tbody {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+/* Cada linha "rótulo: valor" — rótulo (th) rente à direita numa coluna de
+   largura fixa (pra os valores começarem todos alinhados), valor (td) à
+   esquerda ocupando o resto.
+   align-items: stretch (era baseline): "QUANTIDADE DE MEDICAMENTOS:" é
+   comprido e quebra em 2 linhas dentro dos 165px do rótulo — com
+   "baseline", o <td> (só 1 linha de conteúdo, "0") ficava bem mais baixo
+   que o rótulo, com a borda inferior da célula sobrando bem acima da do
+   rótulo ao lado ("borda pequena, incoerente com a célula à esquerda").
+   Com "stretch", o <td> passa a ter a MESMA altura do <th> (2 linhas
+   quando ele quebra), e o align-items:center dentro dele (regra
+   seguinte) centraliza o valor verticalmente nesse espaço maior. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr th {
+  flex: 0 0 auto !important;
+  width: 165px !important;
+  text-align: right !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr td {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Linha de Observações: a única que cresce e ocupa o espaço vertical que
+   sobrar no card (marcada por setupObservacoesCounter() em
+   reembolsoFarmaceutico.js) — as demais (Quantidade, Valor referência)
+   mantêm altura de conteúdo normal.
+   flex-direction: column (em vez do "rótulo à esquerda, valor à
+   direita" genérico logo acima, com o <th> travado em 165px) — rótulo
+   EM CIMA do textarea, que passa a ocupar a largura toda do card
+   (~470px) em vez de ficar espremido nos ~270px que sobravam ao lado da
+   coluna de rótulo. Sem isso, o textarea ficava fino e comprido (bem
+   mais alto que largo) sem necessidade. */
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr.je-resumo-row-observacoes {
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  min-height: 0 !important;
+  gap: 4px !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr.je-resumo-row-observacoes > th {
+  width: auto !important;
+  text-align: left !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside table.je-filter-table-card tr.je-resumo-row-observacoes > td {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+/* Contador de caracteres das Observações: o número que conta usa a cor
+   azul padrão do projeto (--je-primary — a mesma dos botões/links/
+   badges), não o navy escuro do texto comum. */
+body.je-xt-enabled .je-reembolso-layout-aside .je-char-counter-container strong {
+  color: var(--je-primary) !important;
+}
+
+body.je-xt-enabled .je-reembolso-layout-aside .je-char-counter-container {
+  flex: 0 0 auto !important;
+}
+
+/* Observações vira um <textarea> de várias linhas (setupObservacoesCounter
+   em reembolsoFarmaceutico.js) — precisa dar pra ler um texto de até 1000
+   caracteres sem rolar na horizontal feito o <input> de uma linha só, e
+   agora cresce (flex:1) até o fundo do card em vez de parar numa altura
+   fixa com espaço vazio sobrando embaixo. */
+body.je-xt-enabled .je-reembolso-observacoes-textarea {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 140px !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  color: #1e293b !important;
+}
+
+body.je-xt-enabled .je-reembolso-observacoes-textarea:focus {
+  outline: none !important;
+  border-color: var(--je-primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+}
+
+/* Só empilha (Resumo desce pra baixo) quando o espaço realmente acaba —
+   card lateral de 470px não cabendo mais ao lado da coluna principal com
+   folga legível. */
+@media (max-width: 980px) {
+  body.je-xt-enabled .je-reembolso-layout {
+    display: block !important;
+  }
+
+  body.je-xt-enabled .je-reembolso-layout > .je-reembolso-layout-aside {
+    position: static !important;
+    margin-top: 20px !important;
+    height: auto !important;
+    max-height: 660px !important;
+  }
+
+  body.je-xt-enabled .je-reembolso-layout > table.je-reembolso-layout-list {
+    margin: 20px 0 !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Observações (dentro do Resumo, marcado por setupObservacoesCounter()):
+      contador dinâmico de caracteres no lugar do "(máx. 1000 caracteres)"
+      estático — mesmo componente visual (.je-char-counter-container) do
+      resto do TSE XT (content.css), aqui só o campo em si.
+   -------------------------------------------------------------------------- */
+
+/* setupObservacoesCounter() esconde o <input> nativo (input.style.display
+   = 'none', vira o <textarea> visível acima) — mas table.je-filter-table-
+   card td > input:not(...) { display: block !important } (content.css)
+   ganhava dessa inline style, reexibindo um segundo campo (input de uma
+   linha, com o mesmo valor sincronizado) logo abaixo do textarea. Um
+   seletor por #id tem especificidade de sobra pra vencer qualquer regra
+   por classe, então garante o display:none de vez. */
+body.je-xt-enabled #formReembolsoNovoPedido_observacoes {
+  display: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Ícones ao lado do campo (não numa linha embaixo) — embrulho
+      .je-reembolso-input-icon-row criado por setupInlineIcons().
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-reembolso-input-icon-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > input,
+body.je-xt-enabled .je-reembolso-input-icon-row > select {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > .je-native-icon,
+body.je-xt-enabled .je-reembolso-input-icon-row > #imgCalculadora {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+/* "Calcular Desconto" era um <a> cru (link azul sublinhado) — vira um
+   botão de verdade, no mesmo padrão "pill" já usado pelo toggle "Ver
+   instruções" desta mesma tela. */
+body.je-xt-enabled .je-reembolso-input-icon-row > a {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  background: rgba(0, 119, 255, 0.08) !important;
+  border: 1px solid rgba(0, 119, 255, 0.2) !important;
+  border-radius: var(--je-radius-full, 999px) !important;
+  color: var(--je-primary-dark) !important;
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  text-decoration: none !important;
+  padding: 7px 14px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > a:hover {
+  background: rgba(0, 119, 255, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+body.je-xt-enabled .je-reembolso-input-icon-row > a:active {
+  transform: translateY(0) !important;
+}
+
+/* Ícone de calculadora nativo (#imgCalculadora → .je-native-icon, via
+   modernizeNativeIcons()): some por completo — a mesma ação dele agora
+   mora dentro do próprio botão "Calcular Desconto" (glifo abaixo), sem
+   precisar de 2 controles pra 1 ação só (ver setupInlineIcons() em
+   reembolsoFarmaceutico.js). */
+body.je-xt-enabled .je-reembolso-calc-icon-hidden {
+  display: none !important;
+}
+
+/* Glifo da calculadora dentro do botão "Calcular Desconto". */
+body.je-xt-enabled .je-reembolso-input-icon-row > a .je-calc-desconto-btn-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 6px !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Diálogo "Cálculo do Valor com Desconto" — reaproveita o modal
+      genérico (.je-detail-modal-*, já estilizado em content.css) no
+      lugar da janela de popup nativa (window.open, sem chrome).
+   -------------------------------------------------------------------------- */
+
+body.je-xt-enabled .je-calc-desconto-card {
+  max-width: 380px !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin-bottom: 12px !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row label {
+  font-family: var(--je-font) !important;
+  font-size: 12.5px !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row input {
+  width: 90px !important;
+  flex: 0 0 auto !important;
+  text-align: right !important;
+  padding: 6px 8px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  font-family: var(--je-font) !important;
+  font-size: 13px !important;
+  box-sizing: border-box !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-row input:focus {
+  outline: none !important;
+  border-color: var(--je-primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 119, 255, 0.15) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-result {
+  padding-top: 12px !important;
+  margin-top: 4px !important;
+  border-top: 1px dashed rgba(203, 213, 225, 0.9) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-result input {
+  background: rgba(0, 119, 255, 0.06) !important;
+  font-weight: 700 !important;
+  color: var(--je-primary-dark) !important;
+  border-color: rgba(0, 119, 255, 0.25) !important;
+}
+
+body.je-xt-enabled .je-calc-desconto-actions {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+}

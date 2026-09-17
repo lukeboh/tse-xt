@@ -16,6 +16,16 @@ window.JEPessoasModernizer = (function () {
     }[tag] || tag));
   }
 
+  // "#7c3aed" -> "124, 58, 237", pra usar em rgba(var(--x), alpha) — o glow
+  // de destaque do KPI 4 (je-kpi-pec-track-alert) acompanha a cor de cada
+  // bloco (roxo em Domingo/Feriado, azul em Semana/Sábado) em vez de uma cor
+  // fixa. Fallback pro roxo se o hex vier mal formado (nunca deveria).
+  function hexToRgbTriplet(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!m) return '124, 58, 237';
+    return [1, 2, 3].map((i) => parseInt(m[i], 16)).join(', ');
+  }
+
   // Alternar o tema pelo toggle da página (topbar ou flutuante) NÃO pode
   // mais ser só uma troca de classe CSS reversível: funções como
   // modernizeGenericMoldura() MOVEM <label>/<input> nativos pra dentro de
@@ -308,6 +318,13 @@ window.JEPessoasModernizer = (function () {
       if (menuLateral && menuLateral.contains(heading)) continue;
       if (isInsideInjectedUI(heading)) continue;
       if (isGenericSectionLabel(text)) continue;
+      // Marca o heading nativo REALMENTE consumido como título (não dá pra
+      // esconder todo <h3> solto via CSS — várias telas usam h3 como
+      // cabeçalho de seção legítimo, ex.: "Solicitações da Unidade Titular"
+      // na Gestão de Serviço Extraordinário). Só este elemento específico
+      // vira duplicado do banner de título injetado logo abaixo, e só ele é
+      // escondido (ver .je-native-page-title-source em content.css).
+      heading.classList.add('je-native-page-title-source');
       return text;
     }
     return null;
@@ -521,7 +538,7 @@ window.JEPessoasModernizer = (function () {
 
     // --- Planejamento: cores e textos derivados ---
     const bs = kpiData.balanceStatus || (kpiData.monthBalanceMin > 0 ? 'credor' : (kpiData.monthBalanceMin < 0 ? 'devedor' : 'zero'));
-    const balColor = bs === 'credor' ? '#059669' : (bs === 'devedor' ? '#a16207' : '#475569');
+    const balColor = bs === 'credor' ? 'var(--je-success-text)' : (bs === 'devedor' ? 'var(--je-warning-text)' : '#475569');
     const balLabel = bs === 'credor' ? 'credor' : (bs === 'devedor' ? 'devedor' : 'zerado');
 
     // Linha do KPI 3 (Banco) — para onde vão / de onde vêm as horas do mês
@@ -551,19 +568,38 @@ window.JEPessoasModernizer = (function () {
     const hasHEConfig = !!kpiData.hasHEAutorizadoConfig;
     const heAuthLoading = !!kpiData.heAuthLoading;
     const heauthSpinner = '<span class="je-kpi-heauth-spinner" title="Consultando o autorizado no SAEX…"></span>';
-    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color, gradient) {
+    function pecBlock(label, pct, doneFmt, doneMin, authMin, authFmt, color, gradient, excedenteMin, excedenteFmt) {
       const hasAuth = hasHEConfig && authMin > 0;
       const over = hasAuth && doneMin > authMin;
       const barPct = hasAuth ? Math.min(100, Math.round((doneMin / authMin) * 100)) : 0;
+
+      // "Quanto poderia virar pecúnia se houvesse autorização" — só faz
+      // sentido mostrar (e alertar a chefia) DEPOIS que o teto autorizado já
+      // foi atingido (barra em 100%): antes disso, sobrar excedente sem
+      // pecúnia num dia isolado não indica falta de autorização nenhuma (o
+      // servidor ainda nem chegou no que já está autorizado). Sem hasAuth
+      // não há teto pra "atingir", então também não mostra.
+      const atCap = hasAuth && barPct >= 100;
+      const hasExcedente = atCap && (excedenteMin || 0) > 0;
+      const excedenteHint = hasExcedente
+        ? `<span class="je-kpi-excedente-hint" title="Horas excedentes de ${label} que hoje entram no saldo do mês (banco de horas) porque a autorização atual não cobre todo o excedente trabalhado. Se a autorização for aumentada (ou registrada retroativamente), essas horas podem virar pecúnia em vez de saldo.">(+${excedenteFmt})<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></span>`
+        : '';
+
+      // Mesma condição do hint acima — a barra em destaque forte é o alerta
+      // visual, o texto entre parênteses é o número. Independente do estado
+      // "over" (cor de alerta quando o já registrado ultrapassa o
+      // autorizado) — são situações diferentes e podem coexistir.
+      const alertGlow = hasExcedente;
+
       return `<div style="font-size:11px;">
         <div style="display:flex; justify-content:space-between; align-items:baseline;">
           <span style="color:#64748b; font-weight:600;">${label} <span style="font-size:9px; opacity:0.7;">${pct}</span></span>
           <span>${hasAuth
-            ? `<strong style="color:${over ? '#db2777' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>`
-            : `<strong style="color:${color};">${doneFmt}</strong>${heAuthLoading ? heauthSpinner : ''}`}</span>
+            ? `<strong style="color:${over ? 'var(--je-danger-text)' : color};">${doneFmt}</strong><span style="color:#94a3b8;">/${authFmt}</span>${excedenteHint}`
+            : `<strong style="color:${color};">${doneFmt}</strong>${heAuthLoading ? heauthSpinner : ''}${excedenteHint}`}</span>
         </div>
-        <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden; margin-top:3px;" title="${over ? 'Passou do autorizado' : ''}">
-          <div style="width:${barPct}%; height:100%; background:${over ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : gradient}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        <div class="je-kpi-pec-track${alertGlow ? ' je-kpi-pec-track-alert' : ''}" style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:var(--je-radius-full, 999px); overflow:hidden; margin-top:3px;${alertGlow ? ` --je-pec-glow-rgb:${hexToRgbTriplet(color)};` : ''}" title="${over ? 'Passou do autorizado' : ''}">
+          <div style="width:${barPct}%; height:100%; background:${over ? 'linear-gradient(90deg, var(--je-danger-accent) 0%, var(--je-danger-text) 100%)' : gradient}; border-radius:var(--je-radius-full, 999px); transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
         </div>
       </div>`;
     }
@@ -580,7 +616,7 @@ window.JEPessoasModernizer = (function () {
     const execOver = hasAuthTotal && pecTotalMin > authTotalMin;
     const execBarPct = execTargetMin > 0 ? Math.min(100, Math.round((pecTotalMin / execTargetMin) * 100)) : 0;
     const execLine = hasAuthTotal
-      ? `Executado: <strong style="color:${execOver ? '#db2777' : '#0a2540'};">${kpiData.pecuniaTotalFormatted}</strong> / ${kpiData.authTotalHoursFormatted} Autorizadas <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês)</span>`
+      ? `Executado: <strong style="color:${execOver ? 'var(--je-danger-text)' : '#0a2540'};">${kpiData.pecuniaTotalFormatted}</strong> / ${kpiData.authTotalHoursFormatted} Autorizadas <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês)</span>`
       : `Executado: <strong style="color:#0a2540;">${kpiData.pecuniaTotalFormatted}</strong>${heAuthLoading ? heauthSpinner : ''} <span style="color:#94a3b8;" title="Teto legal de 60h de serviço extraordinário por mês (Res. 22.901/2008 art. 4º).">(Teto 60h/mês: resta ${kpiData.pecuniaLegalMonthlyRemainingFormatted})</span>`;
 
     return `
@@ -619,8 +655,8 @@ window.JEPessoasModernizer = (function () {
           </div>
         </div>
         <div class="je-kpi-value" style="color: ${balColor};">${kpiData.monthBalanceFormatted}</div>
-        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
-          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: var(--je-radius-full, 999px); overflow: hidden; margin: 4px 0 5px 0;">
+          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: var(--je-radius-full, 999px); transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
         </div>
         <div class="je-kpi-subtext">
           <span class="${bs === 'credor' ? 'je-badge-positive' : (bs === 'devedor' ? 'je-badge-negative' : '')}">${balLabel}</span>
@@ -633,7 +669,7 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Saldo atual do banco de horas e o que este mês tende a adicionar (homologação) ou consumir.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">Banco de Horas</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(236, 72, 153, 0.1)'}; color: ${isPositiveBank ? '#059669' : '#db2777'};">
+          <div class="je-kpi-icon-wrapper" style="background: ${isPositiveBank ? 'rgba(16, 185, 129, 0.1)' : 'rgba(236, 72, 153, 0.1)'}; color: ${isPositiveBank ? 'var(--je-success-text)' : 'var(--je-danger-text)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
               <path d="M12 12v8a2 2 0 0 0 4 0"></path>
@@ -641,7 +677,7 @@ window.JEPessoasModernizer = (function () {
             </svg>
           </div>
         </div>
-        <div class="je-kpi-value" style="color: ${isPositiveBank ? '#059669' : '#db2777'};">${kpiData.accumulatedBankBalance}</div>
+        <div class="je-kpi-value" style="color: ${isPositiveBank ? 'var(--je-success-text)' : 'var(--je-danger-text)'};">${kpiData.accumulatedBankBalance}</div>
         <div class="je-kpi-subtext">${bancoFlowLine}</div>
       </div>
 
@@ -657,13 +693,13 @@ window.JEPessoasModernizer = (function () {
           </div>
         </div>
         <div class="je-kpi-extra-lines" style="display: flex; flex-direction: column; gap: 6px; margin: 2px 0;">
-          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540', 'linear-gradient(90deg, #0a2540 0%, #0056b3 100%)')}
-          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed', 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)')}
+          ${pecBlock('Semana / Sábado', '+50%', kpiData.pecuniaWeekdaySat, kpiData.pecuniaWeekdaySatMinutes || 0, kpiData.authWeekdaySatMin || 0, kpiData.authWeekdaySatFormatted, '#0a2540', 'linear-gradient(90deg, #0a2540 0%, #0056b3 100%)', kpiData.excedenteSemPecuniaWeekdaySatMinutes || 0, kpiData.excedenteSemPecuniaWeekdaySatFormatted)}
+          ${pecBlock('Domingo / Feriado', '+100%', kpiData.pecuniaSundayHoliday, kpiData.pecuniaSundayHolidayMinutes || 0, kpiData.authSundayHolidayMin || 0, kpiData.authSundayHolidayFormatted, '#7c3aed', 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)', kpiData.excedenteSemPecuniaSundayHolidayMinutes || 0, kpiData.excedenteSemPecuniaSundayHolidayFormatted)}
         </div>
         <div class="je-kpi-subtext" style="flex-direction: column; align-items: stretch; gap: 3px;">
           <span style="font-size:10.5px; color:#64748b;">${execLine}</span>
-          <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:999px; overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
-            <div style="width:${execBarPct}%; height:100%; background:${execOver ? 'linear-gradient(90deg, #ec4899 0%, #db2777 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius:999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+          <div style="position:relative; width:100%; height:6px; background:rgba(0, 102, 204, 0.08); border-radius:var(--je-radius-full, 999px); overflow:hidden;" title="${execOver ? 'Passou do total autorizado' : ''}">
+            <div style="width:${execBarPct}%; height:100%; background:${execOver ? 'linear-gradient(90deg, var(--je-danger-accent) 0%, var(--je-danger-text) 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius:var(--je-radius-full, 999px); transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
           </div>
         </div>
       </div>
@@ -672,7 +708,7 @@ window.JEPessoasModernizer = (function () {
       <div class="je-kpi-card" title="Progresso da jornada ordinária do mês (7h/8h/5h por dia útil, sem hora extra). Meta: ${kpiData.totalExpectedTimeFormatted}.">
         <div class="je-kpi-header">
           <span class="je-kpi-title">${kpiData.hasHybridWorkInMonth ? 'Meta Presencial' : 'Meta do Mês'} (${kpiData.progressPercent}%)</span>
-          <div class="je-kpi-icon-wrapper" style="background: ${kpiData.isTargetExceeded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 102, 204, 0.1)'}; color: ${kpiData.isTargetExceeded ? '#059669' : 'var(--je-primary)'};">
+          <div class="je-kpi-icon-wrapper" style="background: ${kpiData.isTargetExceeded ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 102, 204, 0.1)'}; color: ${kpiData.isTargetExceeded ? 'var(--je-success-text)' : 'var(--je-primary)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -684,17 +720,17 @@ window.JEPessoasModernizer = (function () {
         <div class="je-kpi-value" style="display: flex; align-items: baseline; justify-content: space-between; gap: 4px;">
           <span>${kpiData.totalWorkedTimeFormatted} <span style="font-size:11px; font-weight:600; color:#64748b;">/ ${kpiData.totalExpectedTimeFormatted}</span></span>
           ${kpiData.isTargetExceeded
-            ? `<span style="font-size: 10.5px; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 999px;">+${kpiData.exceededTimeFormatted}</span>`
+            ? `<span style="font-size: 10.5px; font-weight: 800; color: var(--je-success-text); background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: var(--je-radius-full, 999px);">+${kpiData.exceededTimeFormatted}</span>`
             : ''}
         </div>
-        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: 999px; overflow: hidden; margin: 4px 0 5px 0;">
-          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        <div style="position: relative; width: 100%; height: 6px; background: rgba(0, 102, 204, 0.08); border-radius: var(--je-radius-full, 999px); overflow: hidden; margin: 4px 0 5px 0;">
+          <div style="width: ${kpiData.barFillPercent}%; height: 100%; background: ${kpiData.isTargetExceeded ? 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)' : 'linear-gradient(90deg, #0077ff 0%, #00d2ff 100%)'}; border-radius: var(--je-radius-full, 999px); transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);"></div>
         </div>
         <div class="je-kpi-subtext">
           ${kpiData.hasHybridWorkInMonth
             ? `<span>${kpiData.totalExpectedMinutesMonth === 0 ? 'Sem exigência presencial' : `Faltam <strong>${kpiData.remainingHoursFormatted}</strong> presencial`}</span>`
             : (kpiData.isTargetExceeded
-              ? `<span style="color: #059669; font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
+              ? `<span style="color: var(--je-success-text); font-weight: 700;">🎉 Meta extrapolada em +${kpiData.exceededTimeFormatted}</span>`
               : `<span>Faltam <strong>${kpiData.remainingHoursFormatted}</strong> • ${kpiData.remainingWorkingDaysMonth} dias</span>`)}
           ${kpiData.isReducedRecessMonth && !kpiData.hasHybridWorkInMonth ? `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;" title="Recesso: jornada de 5h em turno único (Portaria-TSE 885/2024).">recesso 5h</span>` : ''}
         </div>
@@ -1692,9 +1728,35 @@ window.JEPessoasModernizer = (function () {
   // comportamento nativo (inclusive onclick="funcaoDoStruts(...)").
   const NATIVE_ICON_PATTERNS = [
     {
-      match: /detalhar/i,
+      // Ícone de "ver detalhes" (lupa) — MESMO traço circle+linha usado em
+      // todo lugar que a extensão desenha uma lupa (cabeçalho de filtro,
+      // busca do Menu de Serviços). "detalhar" pega a maioria das telas;
+      // "lupa" cobre o padrão de arquivo usado por outras (ex.: Reembolso
+      // Farmacêutico, img/lupa16x16.gif) — antes ficava com o ícone nativo
+      // (não era "olho": simplesmente não batia em nenhum padrão e não era
+      // substituído).
+      match: /detalhar|lupa/i,
       color: 'var(--je-primary)',
-      svg: '<circle cx="12" cy="12" r="3"></circle><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>'
+      svg: '<circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line>'
+    },
+    {
+      // Ícone de ajuda/dúvida (img/ajuda.bmp — bitmap "?" nativo, usado
+      // tanto no cabeçalho de "Informações" quanto em campos avulsos como
+      // #imgAjudaMedicamento). Vira o "help circle" de traço do design
+      // system, no lugar do bitmap cru.
+      match: /ajuda/i,
+      color: 'var(--je-primary)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>'
+    },
+    {
+      // #imgCalculadora ("Calcular Desconto" do Reembolso Farmacêutico,
+      // img/calculadora18px.jpg) — é um <input type="image">, não um
+      // <img> (por isso modernizeNativeIcons() abaixo também varre
+      // input[type="image"]), com o .jpg nativo pixelizado. Vira o mesmo
+      // traço de calculadora do design system.
+      match: /calculadora/i,
+      color: 'var(--je-primary)',
+      svg: '<rect width="16" height="20" x="4" y="2" rx="2"></rect><line x1="8" x2="16" y1="6" y2="6"></line><line x1="16" x2="16" y1="14" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path>'
     },
     {
       match: /iconedit/i,
@@ -1736,24 +1798,71 @@ window.JEPessoasModernizer = (function () {
       match: /(^|\/)(menos|recolher|fechar|minus)[^/]*\.(png|gif|jpg)/i,
       color: 'var(--je-primary)',
       svg: '<line x1="5" y1="12" x2="19" y2="12"></line>'
+    },
+    {
+      // "inserir.png" — linha de ação nova na Gestão de Serviço
+      // Extraordinário ("Nova solicitação"/"Nova Autorização"). Mesmo
+      // traço "+" já usado pros botões NOVO/INCLUIR.
+      match: /(^|\/)inserir\.(png|gif|jpg)/i,
+      color: 'var(--je-success-text)',
+      svg: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>'
+    },
+    {
+      // "xis.png" (cancelar solicitação/autorização) — X dentro de círculo.
+      match: /(^|\/)xis\.(png|gif|jpg)/i,
+      color: 'var(--je-danger-text)',
+      svg: '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>'
+    },
+    {
+      // "remover.png" (excluir solicitação/autorização) — lixeira.
+      match: /(^|\/)remover\.(png|gif|jpg)/i,
+      color: 'var(--je-danger-text)',
+      svg: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>'
+    },
+    {
+      // "validado.png" na Gestão de Serviço Extraordinário é reaproveitado
+      // pelo SAEX como ação de EDITAR (tooltip "Alterar"/"Alterar
+      // Autorização"), não como selo de status validado — por isso exige o
+      // tooltip real "alterar" combinado com o nome do arquivo, em vez de
+      // confiar só num dos dois (o mesmo arquivo pode significar "já
+      // validado", sem ação, em alguma outra tela ainda não varrida).
+      // matchTooltip: true — ÚNICO padrão que precisa olhar o tooltip (ver
+      // motivo abaixo, em modernizeNativeIcons).
+      match: /(?=.*validado\.(png|gif|jpg))(?=.*\balterar\b)/i,
+      matchTooltip: true,
+      color: 'var(--je-primary)',
+      svg: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>'
     }
   ];
 
   function modernizeNativeIcons() {
-    const images = document.querySelectorAll('#container img');
+    // input[type="image"] também é alvo (ex.: #imgCalculadora do Reembolso
+    // Farmacêutico) — mesmo atributo src, mesma lógica de substituição.
+    const images = document.querySelectorAll('#container img, #container input[type="image"]');
     images.forEach((img) => {
       if (img.dataset.jeIconReplaced) return;
       if (isInsideInjectedUI(img)) return;
 
       const src = img.getAttribute('src') || '';
-      const pattern = NATIVE_ICON_PATTERNS.find((p) => p.match.test(src));
+      // Sinal combinado (src + tooltip) só pros padrões marcados
+      // `matchTooltip: true` (hoje só "validado.png" -> editar, que
+      // reaproveita o MESMO arquivo pra ações diferentes conforme a tela).
+      // Todos os outros continuam testando só o src: um regex genérico tipo
+      // /detalhar|lupa/i testado contra o tooltip pegava, por engano,
+      // qualquer ícone cujo title só MENCIONASSE a palavra "detalhar" — foi
+      // o caso real do ícone de relógio de Hora Extra (title "Detalhar
+      // Autorização..."), que já tem seu próprio modernizador dedicado
+      // (modernizeOvertimeClockIcons) e acabava ganhando uma 2ª lupa
+      // duplicada ao lado do relógio.
+      const tooltip = img.getAttribute('title') || img.getAttribute('alt') || '';
+      const signal = src + ' ' + tooltip;
+      const pattern = NATIVE_ICON_PATTERNS.find((p) => p.match.test(p.matchTooltip ? signal : src));
       if (!pattern) return;
 
       img.dataset.jeIconReplaced = 'true';
       img.classList.add('je-legacy-icon-hidden');
 
       const isClickable = img.hasAttribute('onclick');
-      const tooltip = img.getAttribute('title') || img.getAttribute('alt') || '';
 
       const modernIcon = document.createElement(isClickable ? 'button' : 'span');
       if (isClickable) modernIcon.type = 'button';
@@ -1854,7 +1963,47 @@ window.JEPessoasModernizer = (function () {
         e.preventDefault();
         e.stopPropagation();
         if (legacyImg) {
-          legacyImg.click();
+          // O popup nativo do calendário pode calcular ONDE abrir tanto
+          // pelas coordenadas do evento de clique (clientX/Y) quanto pela
+          // própria posição em tela do elemento clicado (offsetLeft/
+          // offsetTop, via alguma função tipo getAbsolutePosition) — como
+          // legacyImg fica sempre display:none (ícone pixelado escondido
+          // em content.css), ele não tem caixa NENHUMA em tela nos dois
+          // casos, e o popup sempre nascia no canto superior esquerdo da
+          // página, longe do campo (só trocar por um MouseEvent com
+          // coordenadas certas não bastou — o popup continuava no topo).
+          // Dá a ele, só durante o clique, a mesma posição/tamanho do
+          // botão moderno visível (mas invisível e fora do fluxo:
+          // position:fixed + visibility:hidden), cobrindo as duas contas
+          // possíveis, e desfaz logo em seguida.
+          var r = modernCalBtn.getBoundingClientRect();
+          var prevStyle = legacyImg.getAttribute('style');
+          legacyImg.style.setProperty('display', 'inline-block', 'important');
+          legacyImg.style.setProperty('position', 'fixed', 'important');
+          legacyImg.style.setProperty('top', r.top + 'px', 'important');
+          legacyImg.style.setProperty('left', r.left + 'px', 'important');
+          legacyImg.style.setProperty('width', r.width + 'px', 'important');
+          legacyImg.style.setProperty('height', r.height + 'px', 'important');
+          legacyImg.style.setProperty('margin', '0', 'important');
+          legacyImg.style.setProperty('visibility', 'hidden', 'important');
+          legacyImg.style.setProperty('pointer-events', 'none', 'important');
+          legacyImg.style.setProperty('z-index', '-1', 'important');
+
+          var cx = r.left + r.width / 2;
+          var cy = r.top + r.height / 2;
+          var evt = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: cx,
+            clientY: cy,
+          });
+          legacyImg.dispatchEvent(evt);
+
+          requestAnimationFrame(() => {
+            if (prevStyle === null) legacyImg.removeAttribute('style');
+            else legacyImg.setAttribute('style', prevStyle);
+          });
         } else {
           dateInput.focus();
           if (typeof dateInput.showPicker === 'function') {
@@ -2298,6 +2447,74 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+  // Botão de "atualizar" solto (<img onclick="atualizarTela()">) logo depois
+  // de um .je-filter-table-card — padrão visto na Gestão de Serviço
+  // Extraordinário (#tbFiltroUnidades + img/atualizar.png num <div
+  // align="center"> à parte). Vira um <button> "ATUALIZAR" no mesmo padrão
+  // visual do CONSULTAR (modernizeGenericFormButtons), movido pra DENTRO do
+  // card em vez de ficar solto abaixo dele — mesmo texto/ícone do sistema.
+  function modernizeFilterCardRefreshIcon() {
+    document.querySelectorAll('table.je-filter-table-card').forEach((card) => {
+      if (card.dataset.jeRefreshMoved) return;
+
+      // só olha o "vão" imediatamente após o card (não atravessa outro
+      // heading/tabela — não é dele que o botão pode ser).
+      let legacyImg = null;
+      let sib = card.nextElementSibling;
+      for (let i = 0; i < 3 && sib; i++, sib = sib.nextElementSibling) {
+        if (sib.tagName === 'H2' || sib.tagName === 'H3' || sib.tagName === 'TABLE') break;
+        const found = (sib.matches && sib.matches('img[onclick]')) ? sib : (sib.querySelector && sib.querySelector('img[onclick]'));
+        if (found && /atualizar/i.test((found.getAttribute('onclick') || '') + ' ' + (found.getAttribute('title') || ''))) {
+          legacyImg = found;
+          break;
+        }
+      }
+      if (!legacyImg) return;
+      card.dataset.jeRefreshMoved = 'true';
+
+      const firstRow = card.rows[0];
+      const cell = document.createElement('td');
+      cell.colSpan = (firstRow && firstRow.cells.length) || 1;
+      const row = document.createElement('tr');
+      // Marcador pra content.css tirar essa linha do zebrado par/ímpar
+      // genérico (table.je-filter-table-card tbody tr:nth-child(even) td)
+      // — faz sentido numa tabela de DADOS, não numa linha de botão só.
+      row.classList.add('je-filter-card-action-row');
+      row.appendChild(cell);
+      (card.tBodies[0] || card).appendChild(row);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'je-btn-consultar';
+      btn.title = legacyImg.title || 'Atualizar';
+      btn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        <span>ATUALIZAR</span>
+      `;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (btn.dataset.jeBusy === '1') return;
+        btn.dataset.jeBusy = '1';
+        btn.innerHTML = `<span>ATUALIZANDO...</span>`;
+        btn.style.opacity = '0.8';
+        legacyImg.click();
+      });
+      cell.appendChild(btn);
+
+      // esconde o <img> legado (e, se ele for o único filho do wrapper
+      // nativo, o wrapper também — normalmente um <div align="center"> só
+      // com o ícone, que senão sobra como um vão vazio na página).
+      const legacyParent = legacyImg.parentElement;
+      const legacyWrap = (legacyParent && legacyParent.childElementCount === 1) ? legacyParent : legacyImg;
+      legacyWrap.classList.add('je-legacy-icon-hidden');
+    });
+  }
+
   return {
     applyThemeState,
     createPersistentToggle,
@@ -2313,6 +2530,7 @@ window.JEPessoasModernizer = (function () {
     setupGenericCharCounters,
     modernizeNativeIcons,
     modernizeCalendarIcons,
+    modernizeFilterCardRefreshIcon,
     highlightUserAndManagerNames,
     mountLoginPage
   };
