@@ -34,6 +34,21 @@ window.JEPessoasAuthScan = (function () {
     return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
   }
 
+  // Substituto de `.innerText` imune a aba em segundo plano: `.innerText`
+  // depende do layout (o navegador pula o cálculo numa aba oculta e volta
+  // string vazia, zerando toda a leitura de dias/rodapé) — mesma causa raiz
+  // documentada em domModernizer.js/robustText. `.textContent` não depende
+  // de layout (funciona também num Document desconectado, produzido por
+  // DOMParser — ver comentário no topo do arquivo), mas perde a quebra de
+  // linha que `.innerText` insere em <br>, então troca <br> por espaço num
+  // clone antes de ler.
+  function robustText(el) {
+    if (!el) return '';
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    return clone.textContent;
+  }
+
   const HOLIDAY_RE = /FERIADO|RECESSO|FACULTATIVO/;
   const LICENSE_RE = /LICEN[ÇC]A|M[ÉE]DICA|LUTO|NOJO|GALA|MATERNIDADE|PATERNIDADE|CAPACITA[ÇC][ÃA]O|PR[ÊE]MIO/;
   const VACATION_RE = /F[ÉE]RIAS/;
@@ -66,7 +81,7 @@ window.JEPessoasAuthScan = (function () {
       // fallback: primeira tabela que tenha PECÚNIA + (HORAS EXCED. | HORAS AJUST.)
       const tables = Array.from(doc.querySelectorAll('table'));
       table = tables.find((t) => {
-        const txt = normWs(t.innerText);
+        const txt = normWs(robustText(t));
         return /PEC[UÚ]NIA/.test(txt) && /(HORAS EXCED|HORAS AJUST|HORA AJUST)/.test(txt);
       });
     }
@@ -81,7 +96,7 @@ window.JEPessoasAuthScan = (function () {
       .toUpperCase()
       .replace(/\s+/g, '');
     const closed = headerBlob.includes('AJUSTAD') || headerBlob.includes('HORASAJUST');
-    const tableText = normWs(table.innerText || table.textContent);
+    const tableText = normWs(robustText(table));
     const hybrid = HYBRID_RE.test(tableText);
 
     const days = [];
@@ -91,7 +106,7 @@ window.JEPessoasAuthScan = (function () {
       if (tr.querySelector('th')) return;
       const dateCell = tr.querySelector('td.h01');
       if (!dateCell) return;
-      const dateText = dateCell.innerText.trim();
+      const dateText = robustText(dateCell).trim();
       const m = dateText.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       if (!m) return;
 
@@ -101,18 +116,18 @@ window.JEPessoasAuthScan = (function () {
       const dObj = new Date(yearNum, monthNum - 1, dayNum);
       const dow = dObj.getDay();
 
-      const e1 = tr.querySelector('td.h02')?.innerText.trim() || '';
-      const s1 = tr.querySelector('td.h03')?.innerText.trim() || '';
-      const e2 = tr.querySelector('td.h04')?.innerText.trim() || '';
-      const s2 = tr.querySelector('td.h05')?.innerText.trim() || '';
-      const e3 = tr.querySelector('td.h06')?.innerText.trim() || '';
+      const e1 = robustText(tr.querySelector('td.h02')).trim();
+      const s1 = robustText(tr.querySelector('td.h03')).trim();
+      const e2 = robustText(tr.querySelector('td.h04')).trim();
+      const s2 = robustText(tr.querySelector('td.h05')).trim();
+      const e3 = robustText(tr.querySelector('td.h06')).trim();
       // a célula de abono/liberação não traz classe .h08 no corpo — cai para a 8ª célula
-      const abono = (tr.querySelector('td.h08') || tr.children[7])?.innerText.trim() || '';
-      const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
-      const h10 = tr.querySelector('td.h10')?.innerText.trim() || '';
-      const pecunia = (tr.querySelector('td.h12') || tr.querySelector('td.h11'))?.innerText.trim() || '';
-      const occ = normWs(tr.querySelector('td.h16')?.innerText || '');
-      const rowU = normWs(tr.innerText);
+      const abono = robustText(tr.querySelector('td.h08') || tr.children[7]).trim();
+      const totalDay = robustText(tr.querySelector('td.h09')).trim();
+      const h10 = robustText(tr.querySelector('td.h10')).trim();
+      const pecunia = robustText(tr.querySelector('td.h12') || tr.querySelector('td.h11')).trim();
+      const occ = normWs(robustText(tr.querySelector('td.h16')));
+      const rowU = normWs(robustText(tr));
       const ctx = occ + ' ' + rowU;
 
       const isHoliday = HOLIDAY_RE.test(ctx);
@@ -155,12 +170,12 @@ window.JEPessoasAuthScan = (function () {
       const rows = Array.from(table.querySelectorAll('tr'));
       const tr = rows.find((r) => {
         const first = r.children[0];
-        return first && normWs(first.innerText).startsWith(normWs(label));
+        return first && normWs(robustText(first)).startsWith(normWs(label));
       });
       if (!tr) return null;
       const nums = Array.from(tr.children)
         .slice(1)
-        .map((td) => td.innerText.trim())
+        .map((td) => robustText(td).trim())
         .filter((t) => /^\d{1,3}:\d{2}$/.test(t));
       return nums;
     }

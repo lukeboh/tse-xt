@@ -32,6 +32,21 @@ window.JEPessoasKPI = (function () {
     return `${strH}:${strM}`;
   }
 
+  // Substituto de `.innerText` imune a aba em segundo plano: `.innerText`
+  // depende do layout (o navegador pula o cálculo numa aba oculta e volta
+  // string vazia), o que zerava os KPIs inteiros quando a extração rodava
+  // com a aba escondida — mesma causa raiz documentada em
+  // domModernizer.js/robustText e no visibilitychange de content.js.
+  // `.textContent` não depende de layout, mas perde a quebra de linha que
+  // `.innerText` insere em <br> — por isso troca <br> por espaço num clone
+  // antes de ler.
+  function robustText(el) {
+    if (!el) return '';
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    return clone.textContent;
+  }
+
   function getTodayString() {
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
@@ -91,20 +106,20 @@ window.JEPessoasKPI = (function () {
     const rows = table.querySelectorAll('tr');
 
     rows.forEach((tr) => {
-      const text = tr.innerText || '';
+      const text = robustText(tr);
 
       // Captura Saldo Acumulado do Banco de Horas no rodapé
       if (text.includes('Saldo Acumulado do Banco de Horas:')) {
         const cell = tr.querySelector('.cellTotais, td:last-child');
         if (cell) {
-          accumulatedBankBalance = cell.innerText.trim();
+          accumulatedBankBalance = robustText(cell).trim();
         }
       }
 
       // Linhas dos dias (com data dd/mm/aaaa na célula .h01)
       const dateCell = tr.querySelector('.h01');
       if (dateCell) {
-        const dateText = dateCell.innerText.trim();
+        const dateText = robustText(dateCell).trim();
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
         const match = dateText.match(dateRegex);
 
@@ -116,17 +131,17 @@ window.JEPessoasKPI = (function () {
           const dayOfWeek = dateObj.getDay(); // 0 = Dom, 6 = Sab
           const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
 
-          const e1 = tr.querySelector('.h02')?.innerText.trim() || '';
-          const s1 = tr.querySelector('.h03')?.innerText.trim() || '';
-          const e2 = tr.querySelector('.h04')?.innerText.trim() || '';
-          const s2 = tr.querySelector('.h05')?.innerText.trim() || '';
-          const e3 = tr.querySelector('.h06')?.innerText.trim() || '';
-          const s3 = tr.querySelector('.h07')?.innerText.trim() || '';
-          const abono = tr.querySelector('.h08')?.innerText.trim() || '';
-          const totalDay = tr.querySelector('.h09')?.innerText.trim() || '';
-          const exceedDay = tr.querySelector('.h10')?.innerText.trim() || '';
-          const pecunia = (tr.querySelector('.h12') || tr.querySelector('.h11'))?.innerText.trim() || '';
-          const occurrence = tr.querySelector('.h16')?.innerText.trim() || '';
+          const e1 = robustText(tr.querySelector('.h02')).trim();
+          const s1 = robustText(tr.querySelector('.h03')).trim();
+          const e2 = robustText(tr.querySelector('.h04')).trim();
+          const s2 = robustText(tr.querySelector('.h05')).trim();
+          const e3 = robustText(tr.querySelector('.h06')).trim();
+          const s3 = robustText(tr.querySelector('.h07')).trim();
+          const abono = robustText(tr.querySelector('.h08')).trim();
+          const totalDay = robustText(tr.querySelector('.h09')).trim();
+          const exceedDay = robustText(tr.querySelector('.h10')).trim();
+          const pecunia = robustText(tr.querySelector('.h12') || tr.querySelector('.h11')).trim();
+          const occurrence = robustText(tr.querySelector('.h16')).trim();
 
           const pecuniaMin = parseTimeToMinutes(pecunia);
           const abonoMin = parseTimeToMinutes(abono);
@@ -134,7 +149,7 @@ window.JEPessoasKPI = (function () {
           const totalMin = parseTimeToMinutes(totalDay);
 
           // Identificação de Ocorrências e Dispensas da Jornada Ordinária
-          const rawRowText = tr.innerText.toUpperCase();
+          const rawRowText = text.toUpperCase();
           const occText = (occurrence + ' ' + rawRowText).toUpperCase();
 
           const isHolidayOrRecess = occText.includes('FERIADO') || occText.includes('RECESSO') || occText.includes('FACULTATIVO');
@@ -272,7 +287,7 @@ window.JEPessoasKPI = (function () {
       }
     }
 
-    const tableText = table.innerText.toUpperCase();
+    const tableText = robustText(table).toUpperCase();
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
     // R3 — mês com HE autorizado (Portaria 380/2026 art. 13): há autorização de
@@ -292,7 +307,7 @@ window.JEPessoasKPI = (function () {
     if (aSel && aSel.value) viewYear = parseInt(aSel.value, 10);
     if (!viewMonth || !viewYear) {
       const firstDate = table.querySelector('td.h01, .h01');
-      const md = firstDate && (firstDate.innerText || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      const md = firstDate && robustText(firstDate).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       if (md) { viewMonth = parseInt(md[2], 10); viewYear = parseInt(md[3], 10); }
     }
     const isReducedRecessMonth = !!(window.JEPessoasLegal && window.JEPessoasLegal.isReducedRecessMonth

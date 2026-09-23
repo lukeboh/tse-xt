@@ -5,9 +5,24 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '0.7.0';
+  const CURRENT_VERSION = '1.0.0';
 
   const CHANGELOG = [
+    {
+      version: '1.0.0',
+      date: '2026-09-23',
+      title: 'Marco 1.0 — Série 0.7.x consolidada: todo o Meu Espaço modernizado, Boot Splash no login e primeira versão pública na Chrome Web Store',
+      features: [
+        'Marco 1.0: o TSE XT cobre todo o portal Meu Espaço — as ~30 telas do menu clássico herdam automaticamente o design system (glassmorfismo, tabelas com zebrado e alinhamento numérico, botões semânticos, formulários responsivos), com camadas dedicadas para Espelho de Ponto, Reembolso Farmacêutico e Gestão de Serviço Extraordinário.',
+        'Boot Splash no login: tela azul institucional (#0a2540) com glow e o logo oficial cobre a transição nos dois métodos de logon (Matrícula/Senha e Acesso Extranet/SSO) e se dissolve ao revelar a página montada. Só aparece no logon inicial, é ativado no beforeunload (nunca cobre um hCaptcha ainda em verificação), é pré-criado no document_start (o ícone já está carregado quando precisa aparecer) e mantém a mesma legenda entre a página de login e a seguinte (sem "pulo" nem duas splashes). O título aparecia como "XTTSE" por herdar a regra global `span { float: left }` do portal — corrigido.',
+        'Correção crítica: a tela de login/captcha podia travar a aba por minutos a 100% de CPU — o observador que remonta a extensão (`checkStaleAndRetry`) reexecutava toda a montagem a cada mutação de DOM do hCaptcha, porque a tela de login nunca tem topbar. A tela de login agora sai cedo, como a TSE XT desligada.',
+        'Espelho de Ponto: colunas desalinhadas ao logar pelo "Entrar" (botão de hora extra caindo sobre a coluna Ocorrência) e KPI de Hora Extra zerado — ambos por `.innerText` vazio com a aba em segundo plano. Leituras trocadas por `textContent` em domModernizer, authorizationScan e kpiExtractor.',
+        'Command Palette (Ctrl+K): a consulta ao Espelho de Ponto por mês voltou a funcionar.',
+        'Reembolso Farmacêutico: busca de medicamento mais esperta — envia a 1ª palavra ao backend e refina localmente por dosagem/apresentação (ex.: "Exodus 15 mg"), preservando texto, foco e cursor após o recarregamento da lista.',
+        'Licença MIT; README, Política de Privacidade e descrição da loja revisados para todo o Meu Espaço; aviso de aplicação experimental atualizado.',
+        'Chrome Web Store: capturas e blocos promocionais regerados a partir da aplicação real (anonimizados), com ferramentas em tools/loja/ e roteiro de liberação em docs/roteiro-liberacao.md.'
+      ]
+    },
     {
       version: '0.7.0',
       date: '2026-09-17',
@@ -148,7 +163,7 @@ window.JEPessoasVersion = (function () {
           <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #0a2540;">TSE XT — Aplicação Experimental</h3>
         </div>
         <div style="padding: 20px; font-size: 13.5px; line-height: 1.65; color: #334155;">
-          <p style="margin: 0 0 12px;">O <strong>TSE XT</strong> é uma aplicação <strong>experimental</strong>, com o único objetivo de melhorar a experiência do usuário no controle do ponto.</p>
+          <p style="margin: 0 0 12px;">O <strong>TSE XT</strong> é uma aplicação <strong>experimental</strong>, com o único objetivo de melhorar a experiência do usuário no portal <strong>Meu Espaço</strong> (controle de ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais serviços).</p>
           <p style="margin: 0 0 12px;">Pode conter erros.</p>
           <p style="margin: 0;"><strong>Não representa nenhuma garantia</strong> de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho.</p>
         </div>

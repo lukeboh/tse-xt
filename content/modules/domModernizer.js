@@ -825,20 +825,34 @@ window.JEPessoasModernizer = (function () {
     // matches por substring com espaço.
     const normalizeWs = (s) => (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
 
-    const tableText = normalizeWs(table.innerText);
+    // Substituto de `.innerText` imune a aba em segundo plano: `.innerText`
+    // depende do layout (o navegador pula o cálculo numa aba oculta e volta
+    // string vazia — causa raiz documentada em content.js/checkStaleAndRetry
+    // de a modernização "travar" com zero linhas e o botão do h17 cair
+    // visualmente em cima da coluna Ocorrência). `.textContent` não depende
+    // de layout, mas perde a quebra de linha que `.innerText` insere em
+    // <br> — por isso troca <br> por espaço num clone antes de ler.
+    const robustText = (el) => {
+      if (!el) return '';
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+      return clone.textContent;
+    };
+
+    const tableText = normalizeWs(robustText(table));
     const hasHybridWorkInMonth = tableText.includes('TRABALHO HIBRIDO') || tableText.includes('TRABALHO HÍBRIDO') || tableText.includes('TELETRABALHO');
 
     // Identifica se a tabela possui a coluna "HORAS AJUST." (mês fechado/homologado)
-    const headerTexts = Array.from(table.querySelectorAll('th')).map(th => normalizeWs(th.innerText));
+    const headerTexts = Array.from(table.querySelectorAll('th')).map(th => normalizeWs(robustText(th)));
     const isClosedMonthTable = headerTexts.some(t => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
 
     // 1. Injeta Cabeçalhos das Novas Colunas (APENAS se NÃO houver trabalho híbrido no mês)
     if (!hasHybridWorkInMonth) {
       const headerRows = table.querySelectorAll('tr');
       headerRows.forEach((tr) => {
-        const pecuniaTh = tr.querySelector('th.h12') || tr.querySelector('th.h11') || Array.from(tr.querySelectorAll('th')).find(th => normalizeWs(th.innerText).includes('PECÚNIA') || normalizeWs(th.innerText).includes('PECUNIA'));
+        const pecuniaTh = tr.querySelector('th.h12') || tr.querySelector('th.h11') || Array.from(tr.querySelectorAll('th')).find(th => normalizeWs(robustText(th)).includes('PECÚNIA') || normalizeWs(robustText(th)).includes('PECUNIA'));
         const exceedTh = tr.querySelector('th.h10') || Array.from(tr.querySelectorAll('th')).find(th => {
-          const text = normalizeWs(th.innerText);
+          const text = normalizeWs(robustText(th));
           return text.includes('HORAS AJUST') || text.includes('HORAS EXCED') || text.includes('AJUST') || text.includes('EXCED');
         });
         const anchorTh = pecuniaTh || exceedTh;
@@ -877,11 +891,11 @@ window.JEPessoasModernizer = (function () {
 
       const dateCell = tr.querySelector('td.h01');
       if (dateCell) {
-        const dateText = dateCell.innerText.trim();
+        const dateText = robustText(dateCell).trim();
         if (!dateText.match(/^\d{2}\/\d{2}\/\d{4}$/)) return;
 
-        const rawText = tr.innerText.toUpperCase();
-        
+        const rawText = robustText(tr).toUpperCase();
+
         // Destaca hoje
         if (dateText === todayFormatted) {
           tr.classList.add('je-row-today');
@@ -897,15 +911,15 @@ window.JEPessoasModernizer = (function () {
         }
 
         // Leitura de batidas do dia
-        const e1 = tr.querySelector('td.h02')?.innerText.trim() || '';
-        const s1 = tr.querySelector('td.h03')?.innerText.trim() || '';
-        const e2 = tr.querySelector('td.h04')?.innerText.trim() || '';
-        const s2 = tr.querySelector('td.h05')?.innerText.trim() || '';
-        const e3 = tr.querySelector('td.h06')?.innerText.trim() || '';
-        const s3 = tr.querySelector('td.h07')?.innerText.trim() || '';
-        const abono = tr.querySelector('td.h08')?.innerText.trim() || '';
-        const totalDay = tr.querySelector('td.h09')?.innerText.trim() || '';
-        const exceedDay = tr.querySelector('td.h10')?.innerText.trim() || '';
+        const e1 = robustText(tr.querySelector('td.h02')).trim();
+        const s1 = robustText(tr.querySelector('td.h03')).trim();
+        const e2 = robustText(tr.querySelector('td.h04')).trim();
+        const s2 = robustText(tr.querySelector('td.h05')).trim();
+        const e3 = robustText(tr.querySelector('td.h06')).trim();
+        const s3 = robustText(tr.querySelector('td.h07')).trim();
+        const abono = robustText(tr.querySelector('td.h08')).trim();
+        const totalDay = robustText(tr.querySelector('td.h09')).trim();
+        const exceedDay = robustText(tr.querySelector('td.h10')).trim();
         const occCell = tr.querySelector('td.h16');
         // Ocorrência "real" — ignora selos R5/R6 que o próprio TSE XT injetou aqui,
         // senão numa re-execução o texto deles é lido como ocorrência e duplicado.
@@ -913,7 +927,7 @@ window.JEPessoasModernizer = (function () {
         if (occCell) {
           const occClone = occCell.cloneNode(true);
           occClone.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach((n) => n.remove());
-          occText = occClone.innerText.trim().toUpperCase();
+          occText = robustText(occClone).trim().toUpperCase();
         }
 
         // Verificação de Data Passada para Inconsistência de Batida
@@ -982,11 +996,11 @@ window.JEPessoasModernizer = (function () {
                 const fullTitle = rawTitle ? `${rawTitle} | Ajuste necessário: ${missingPunchReason}` : `Ajuste necessário: ${missingPunchReason}`;
                 existingLink.setAttribute('title', fullTitle);
               }
-              const linkText = existingLink.innerText.trim().replace(/^⚠️\s*/, '');
+              const linkText = robustText(existingLink).trim().replace(/^⚠️\s*/, '');
               const baseText = linkText || 'AJUSTE SEU PONTO';
               existingLink.innerHTML = escapeHTML(baseText);
             } else {
-              const originalText = occCell.innerText.trim().replace(/^⚠️\s*/, '');
+              const originalText = robustText(occCell).trim().replace(/^⚠️\s*/, '');
               const hasExistingText = originalText && originalText !== '-' && originalText !== '--:--';
               const labelText = hasExistingText ? originalText : 'AJUSTE SEU PONTO';
               const tooltip = missingPunchReason ? `Ajuste necessário: ${missingPunchReason}` : 'Ajuste de Ponto Necessário';
@@ -999,19 +1013,19 @@ window.JEPessoasModernizer = (function () {
             if (existingLink) {
               existingLink.classList.add('je-occurrence-badge', 'je-occurrence-viagem');
             } else {
-              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${escapeHTML(occCell.innerText)}</span>`;
+              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-viagem">${escapeHTML(robustText(occCell))}</span>`;
             }
           } else if (occText.includes('FERIADO') || occText.includes('RECESSO')) {
             if (existingLink) {
               existingLink.classList.add('je-occurrence-badge', 'je-occurrence-feriado');
             } else {
-              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${escapeHTML(occCell.innerText)}</span>`;
+              occCell.innerHTML = `<span class="je-occurrence-badge je-occurrence-feriado">${escapeHTML(robustText(occCell))}</span>`;
             }
           } else if (!occText.includes('SÁBADO') && !occText.includes('DOMINGO')) {
             if (existingLink) {
               existingLink.classList.add('je-occurrence-badge');
             } else {
-              occCell.innerHTML = `<span class="je-occurrence-badge">${escapeHTML(occCell.innerText)}</span>`;
+              occCell.innerHTML = `<span class="je-occurrence-badge">${escapeHTML(robustText(occCell))}</span>`;
             }
           }
         }
@@ -1019,7 +1033,7 @@ window.JEPessoasModernizer = (function () {
         // Se NÃO estiver em regime híbrido, injeta as células do TSE XT
         if (!hasHybridWorkInMonth) {
           const pecuniaCell = tr.querySelector('td.h12') || tr.querySelector('td.h11');
-          const pecunia = pecuniaCell ? pecuniaCell.innerText.trim() : '';
+          const pecunia = robustText(pecuniaCell).trim();
 
           const exceedMin = parseMinutes(exceedDay);
           const pecuniaMin = parseMinutes(pecunia);
@@ -1197,7 +1211,7 @@ window.JEPessoasModernizer = (function () {
       }
 
       // Linha de Totais da Tabela Principal ("Totais:")
-      if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && tr.innerText.includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
+      if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && robustText(tr).includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
         tr.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
         const cells = Array.from(tr.querySelectorAll('td'));
         
@@ -1208,7 +1222,7 @@ window.JEPessoasModernizer = (function () {
           // 1. Célula de Pecúnia no Rodapé
           const pecuniaTd = document.createElement('td');
           pecuniaTd.className = 'cellTotais je-totais-pecunia';
-          pecuniaTd.innerText = '00:00';
+          pecuniaTd.textContent = '00:00';
           targetExcedCell.parentNode.insertBefore(pecuniaTd, targetExcedCell.nextSibling);
           let currentFooterAnchor = pecuniaTd;
 
@@ -2431,6 +2445,7 @@ window.JEPessoasModernizer = (function () {
     // nenhuma mudança acontece com a extensão desligada.
     if (!loginToggleEnabled) return;
 
+    document.documentElement.classList.add('je-login-page');
     document.body.classList.add('je-login-page');
 
     // Limpeza cosmética: nós de texto com só espaços/&nbsp; soltos dentro
@@ -2445,6 +2460,73 @@ window.JEPessoasModernizer = (function () {
         node.textContent = '';
       }
     });
+
+    // Ativação do Boot Splash SÓ no início real da navegação (beforeunload),
+    // não mais no clique/Enter/submit em si.
+    //
+    // Antes disso, `triggerLoginSplash()` rodava direto no clique de "Entrar",
+    // cobrindo a tela inteira (z-index 2147483647 — o máximo possível, ver
+    // #je-boot-splash em content.css) ANTES de o hCaptcha validar. HAR real
+    // (2026-09-22) mostrou 71,8s de silêncio total de rede entre o
+    // hCaptcha resolver (`checkcaptcha`, ~200) e o POST de
+    // `Login_autenticar.action` sair — ou seja, o captcha às vezes precisa
+    // de bem mais que um instante (verificação de risco, ou um desafio
+    // interativo) antes do login realmente ser enviado. Cobrir a tela nesse
+    // meio-tempo deixava o usuário olhando pra uma tela azul com cara de
+    // travada, sem conseguir ver nem interagir com nada por baixo (inclusive
+    // um eventual desafio do hCaptcha).
+    //
+    // `beforeunload` só dispara quando o navegador REALMENTE começa a sair
+    // da página (a navegação do POST de login foi de fato disparada) — ainda
+    // cobre a transição pro Paint Holding do Chrome (o motivo original desta
+    // função existir), mas nunca cobre uma espera de captcha que ainda pode
+    // ser cancelada/repetida na mesma página.
+    let pendingSplashMsg = null;
+    function triggerLoginSplash(msg) {
+      pendingSplashMsg = msg || 'Autenticando suas credenciais…';
+    }
+    window.addEventListener('beforeunload', () => {
+      if (!pendingSplashMsg) return;
+      const msg = pendingSplashMsg;
+      document.documentElement.classList.add('je-logging-in', 'je-xt-boot');
+      document.body.classList.add('je-logging-in');
+      document.documentElement.style.backgroundColor = '#0a2540';
+      if (window.JEPessoasBoot && window.JEPessoasBoot.showSplash) {
+        window.JEPessoasBoot.showSplash(msg);
+      } else {
+        let splash = document.getElementById('je-boot-splash');
+        if (!splash && window.JEPessoasBoot && window.JEPessoasBoot.injectBootSplash) {
+          window.JEPessoasBoot.injectBootSplash();
+          splash = document.getElementById('je-boot-splash');
+        }
+        if (splash) {
+          splash.classList.remove('je-boot-complete', 'je-boot-hide');
+          splash.style.display = 'flex';
+        }
+      }
+    });
+
+    const btnEntrar = document.getElementById('login-btnEntrar');
+    if (btnEntrar) {
+      btnEntrar.addEventListener('click', () => triggerLoginSplash('Autenticando suas credenciais…'), true);
+    }
+
+    const btnOdin = document.getElementById('login-btnOdin');
+    if (btnOdin) {
+      btnOdin.addEventListener('click', () => triggerLoginSplash('Conectando via Acesso Extranet…'), true);
+    }
+
+    const senhaInput = document.getElementById('formulario_login_servidor_senha');
+    if (senhaInput) {
+      senhaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') triggerLoginSplash('Autenticando suas credenciais…');
+      }, true);
+    }
+
+    const loginForm = document.querySelector('form[action*="Login_autenticar"]') || (btnEntrar && btnEntrar.closest('form'));
+    if (loginForm) {
+      loginForm.addEventListener('submit', () => triggerLoginSplash('Autenticando suas credenciais…'), true);
+    }
   }
 
   // Botão de "atualizar" solto (<img onclick="atualizarTela()">) logo depois

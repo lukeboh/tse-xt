@@ -207,3 +207,10 @@ Na tela de logout/sessão expirada (`portalservidor2/Logout`, perfil `login`), o
 | T2 | Extrator de título genérico reutilizável entre perfis | F2 |
 | T3 | Módulo `tableModernizer.js` (novo) desacoplado do Espelho | F3 |
 | T4 | Split de `content.css` sem alterar seletores existentes | F4 |
+
+---
+
+## Consolidação Marco 1.0 (v1.0.0)
+
+Em 17/09/2026, com o fechamento das Fases F1 a F7, a reconstrução do Reembolso Farmacêutico, o painel de KPIs da Gestão de Serviço Extraordinário e a entrega do Boot Splash com resposta instantânea em 80ms, o projeto atinge o **Marco 1.0**, consolidando a cobertura de usabilidade e o Design System em todo o portal Meu Espaço.
+

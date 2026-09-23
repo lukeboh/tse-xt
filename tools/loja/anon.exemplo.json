@@ -1,0 +1,11 @@
+{
+  "_comentario": "Copie para anon.local.json (ignorado pelo git) e preencha com os nomes REAIS que aparecem nas telas capturadas. Ordem livre: o script aplica do termo mais longo para o mais curto, como palavra inteira. Matrículas e IPs são trocados automaticamente.",
+  "termos": [
+    ["Nome Completo Do Servidor", "Servidor Modelo"],
+    ["Nome", "Servidor"],
+    ["Sobrenome", "Modelo"],
+    ["NOME COMPLETO DO DEPENDENTE", "DEPENDENTE MODELO UM"],
+    ["NOME COMPLETO DE UM COLEGA DA UNIDADE", "ANA PAULA MOREIRA"],
+    ["PRIMEIRONOME", "ANA"]
+  ]
+}

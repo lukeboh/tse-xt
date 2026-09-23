@@ -11,3 +11,6 @@ $RECYCLE.BIN/
 # Build and package output
 dist/
 *.zip
+
+# Termos reais para anonimizar as capturas da loja (nunca versionar)
+tools/loja/anon.local.json

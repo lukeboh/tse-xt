@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>TSE XT - Bloco promocional</title>
+<!--
+  Template dos blocos promocionais da Chrome Web Store, renderizado por
+  gerar-promos.mjs no Chrome de depuração (?tipo=pequeno|letreiro&versao=X.Y).
+  Nada de interface desenhada à mão: toda "tela" aqui é recorte das capturas
+  reais em docs/ (já anonimizadas), então regerar as capturas atualiza os blocos.
+-->
+<style>
+  :root {
+    --azul-noite: #0a2540;
+    --azul: #0056b3;
+    --azul-claro: #3b9bff;
+    --texto: #e8f1ff;
+    --texto-2: #9fb6d6;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font);
+    color: var(--texto);
+    background:
+      radial-gradient(ellipse 60% 80% at 30% 45%, rgba(0, 119, 255, 0.28), transparent 70%),
+      radial-gradient(ellipse 50% 70% at 85% 30%, rgba(59, 155, 255, 0.16), transparent 70%),
+      var(--azul-noite);
+  }
+  .grade {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .logo {
+    display: grid; place-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 0 40px rgba(0, 119, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .logo img { width: 72%; height: 72%; object-fit: contain; }
+  .nome { font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .versao {
+    display: inline-block; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, #0077ff, var(--azul));
+    border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 119, 255, 0.45);
+    vertical-align: middle;
+  }
+  .chips { display: flex; flex-wrap: wrap; }
+  .chip {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px; font-weight: 600; color: var(--texto);
+  }
+  .rodape { color: var(--texto-2); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* ---------- Letreiro 1400x560 ---------- */
+  .letreiro { position: absolute; inset: 0; }
+  .letreiro .col { position: absolute; left: 72px; top: 0; bottom: 0; width: 560px; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+  .letreiro .marca { display: flex; align-items: center; gap: 22px; }
+  .letreiro .logo { width: 92px; height: 92px; border-radius: 22px; }
+  .letreiro .nome { font-size: 72px; }
+  .letreiro .versao { font-size: 20px; padding: 5px 14px; margin-left: 14px; }
+  .letreiro .tag { font-size: 24px; line-height: 1.4; color: var(--texto); }
+  .letreiro .tag b { color: #fff; }
+  .letreiro .chips { gap: 10px; }
+  .letreiro .chip { font-size: 16px; padding: 10px 14px; }
+  .letreiro .rodape { font-size: 13px; }
+  .tela {
+    position: absolute; overflow: hidden; border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(0, 119, 255, 0.25);
+    background: #f4f8ff;
+  }
+  .tela img { display: block; position: absolute; transform-origin: 0 0; }
+  .letreiro .principal { left: 690px; top: 58px; width: 680px; height: 330px; }
+  .letreiro .principal img { width: 1280px; transform: scale(0.53); }
+  .letreiro .secundaria { left: 850px; top: 336px; width: 500px; height: 190px; }
+  .letreiro .secundaria img { width: 1280px; transform: scale(0.78) translate(-618px, -163px); }
+
+  /* ---------- Pequeno 440x280 ---------- */
+  .pequeno { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
+  .pequeno .logo { width: 68px; height: 68px; border-radius: 17px; }
+  .pequeno .nome { font-size: 40px; }
+  .pequeno .versao { font-size: 13px; padding: 3px 10px; margin-left: 8px; }
+  .pequeno .tag { font-size: 15px; font-weight: 600; color: var(--texto-2); }
+  .pequeno .chips { gap: 7px; justify-content: center; }
+  .pequeno .chip { font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="grade"></div>
+<div id="raiz"></div>
+<script>
+  const p = new URLSearchParams(location.search);
+  const tipo = p.get('tipo') || 'letreiro';
+  const versao = p.get('versao') || '1.0';
+  const raiz = document.getElementById('raiz');
+  const logo = '<div class="logo"><img src="../../icons/base.png" alt=""></div>';
+  if (tipo === 'pequeno') {
+    raiz.innerHTML = `
+      <div class="pequeno">
+        ${logo}
+        <div class="nome">TSE XT<span class="versao">v${versao}</span></div>
+        <div class="tag">Usabilidade moderna para o Meu Espaço</div>
+        <div class="chips">
+          <span class="chip">⏱️ 5 KPIs de ponto</span>
+          <span class="chip">⌨️ Ctrl + K</span>
+          <span class="chip">🔒 100% local</span>
+        </div>
+      </div>`;
+  } else {
+    raiz.innerHTML = `
+      <div class="letreiro">
+        <div class="col">
+          <div class="marca">${logo}<div class="nome">TSE XT<span class="versao">v${versao}</span></div></div>
+          <div class="tag">Interface moderna e produtiva para <b>todo o Meu Espaço</b> do Tribunal Superior Eleitoral.</div>
+          <div class="chips">
+            <span class="chip">⏱️ Espelho de Ponto com 5 KPIs</span>
+            <span class="chip">🔎 Auditoria de Horas Perdidas</span>
+            <span class="chip">💊 Reembolso Farmacêutico</span>
+            <span class="chip">📋 Gestão de Hora Extra</span>
+          </div>
+          <div class="rodape">100% local · Manifest V3 · Código aberto</div>
+        </div>
+        <div class="tela principal"><img src="../../docs/tela-exemplo.png" alt=""></div>
+        <div class="tela secundaria"><img src="../../docs/tela-gestao-he.png" alt=""></div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
