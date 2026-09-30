@@ -9,12 +9,11 @@ window.JEPessoasKPI = (function () {
     if (!timeStr || typeof timeStr !== 'string') return 0;
     const clean = timeStr.replace(/[\u00a0\s]/g, '').replace(/[\u2212\u2013\u2014\u2010\u2015]/g, '-').trim();
     if (!clean || clean === '--:--' || clean === '-') return 0;
-    const isNegative = clean.startsWith('-') || clean.includes('-');
-    const digitsOnly = clean.replace(/[^0-9:]/g, '');
-    const parts = digitsOnly.split(':');
-    if (parts.length < 2) return 0;
-    const hours = parseInt(parts[0], 10) || 0;
-    const minutes = parseInt(parts[1], 10) || 0;
+    const match = clean.match(/(-?\d{1,4}):(\d{2})/);
+    if (!match) return 0;
+    const isNegative = match[1].startsWith('-') || clean.startsWith('-');
+    const hours = Math.abs(parseInt(match[1], 10)) || 0;
+    const minutes = parseInt(match[2], 10) || 0;
     const total = hours * 60 + minutes;
     return isNegative ? -total : total;
   }
@@ -44,6 +43,7 @@ window.JEPessoasKPI = (function () {
     if (!el) return '';
     const clone = el.cloneNode(true);
     clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-app-calc-tag').forEach((n) => n.remove());
     return clone.textContent;
   }
 

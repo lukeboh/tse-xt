@@ -29,9 +29,10 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 ### Espelho de Ponto
 - **Dashboard com 5 KPIs**: Saída de Hoje, Saldo do Mês, Banco de Horas, Hora Extra em Pecúnia (Semana/Sábado +50% e Domingo/Feriado +100%, com fração feito/autorizado lida direto do SAEX e indicador do excedente que poderia virar pecúnia com mais autorização) e Meta do Mês.
+- **Destaque Visual de Horas Extras em Pecúnia**: badges coloridos nas células do espelho identificando horas pagáveis em folha (+50% em dias úteis/sábados e +100% em domingos/feriados), com totalizador mensal dedicado na linha de totais da tabela.
 - **Colunas analíticas na tabela**: `SALDO ACUM.` (saldo excedente dia a dia) e `HORAS EXCED.` (meses fechados), com coloração verde/vermelho/neutro e badges de teto legal (`> 2h`/`> 10h`, art. 4º).
 - **Auditoria de Horas Perdidas**: varre o Espelho desde 2009 e quantifica as horas que nunca viraram pecúnia nem banco de horas, em quatro categorias explicadas com base normativa.
-- **Ajuste de Ponto Inline** e **modal de Autorização de Hora Extra**: incluir/excluir marcações e ver o detalhe de autorização do dia sem sair da tela, via actions oficiais do Struts.
+- **Ajuste de Ponto Inline** (incluindo **visão de chefia para servidores subordinados**) e **modal de Autorização de Hora Extra**: incluir/excluir marcações diretamente pela tabela e ver o detalhe de autorização do dia sem sair da tela, via actions oficiais do Struts.
 - **Auto-Consulta Instantânea** e **exportação** completa para Excel/CSV.
 
 ### Reembolso Farmacêutico

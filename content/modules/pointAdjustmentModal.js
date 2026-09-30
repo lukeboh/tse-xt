@@ -289,23 +289,19 @@ window.JEPessoasPointModal = (function () {
     }
 
     // Se o select de servidores existe e tem um servidor selecionado válido
+    // (O select #servidorSelecionado_matricula só existe na tela de chefia)
     const sel = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
     if (sel && sel.selectedIndex > 0) {
       const optText = (sel.options[sel.selectedIndex].text || '').toLowerCase();
       const val = (sel.value || '').trim();
       const isPlaceholder = optText.includes('selecione') || val === '0' || val === '' || val === '-1';
       if (!isPlaceholder) {
-        // Se a matrícula selecionada for diferente da logada, pode ajustar
+        // Se a matrícula selecionada for a do próprio chefe logado, não ajusta
         if (mine && val && val.replace(/\D/g, '') === mine) {
-          return false; // É o próprio chefe vendo o próprio espelho
+          return false;
         }
         return true;
       }
-    }
-
-    // Se encontrou a matrícula visualizada e não achou a própria, mas a visualizada veio do select ou cabeçalho:
-    if (viewed && !mine) {
-      return true;
     }
 
     return false;
@@ -816,8 +812,6 @@ window.JEPessoasPointModal = (function () {
       
       // Coluna de comandos (td.h17 - Comandos / Relógio de Horas Extras)
       const commandCell = tr.querySelector('td.h17') ||
-                          tr.querySelector('td.h10') ||
-                          tr.querySelector('td.h09') ||
                           tr.querySelector('td:last-child') ||
                           dateCell;
 

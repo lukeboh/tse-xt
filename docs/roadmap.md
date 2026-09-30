@@ -1,8 +1,8 @@
 # 🗺️ Roadmap Consolidado de Evoluções — TSE XT
 
-**Versão do documento:** 1.0.0  
+**Versão do documento:** 1.1.0-Snapshot  
 **Data de consolidação:** 30/09/2026  
-**Status do projeto:** Marco 1.0 entregue (v1.0.0) · Planejamento das próximas versões (v1.1+)
+**Status do projeto:** Série 1.1 em andamento (v1.1.0-Snapshot) · Marco 1.0 consolidado (v1.0.0)
 
 > Este documento é a **fonte única e centralizada da verdade** para o backlog de evolução do TSE XT. Reúne em um só lugar as pendências normativas de cálculo, melhorias de interface/experiência de usuário, novos módulos funcionais, débitos técnicos e validações regulatórias.
 

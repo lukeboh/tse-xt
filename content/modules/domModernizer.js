@@ -742,12 +742,11 @@ window.JEPessoasModernizer = (function () {
     if (!str || typeof str !== 'string') return 0;
     const clean = str.replace(/[\u00a0\s]/g, '').replace(/[\u2212\u2013\u2014\u2010\u2015]/g, '-').trim();
     if (!clean || clean === '--:--' || clean === '-') return 0;
-    const isNeg = clean.startsWith('-') || clean.includes('-');
-    const digitsOnly = clean.replace(/[^0-9:]/g, '');
-    const parts = digitsOnly.split(':');
-    if (parts.length < 2) return 0;
-    const h = parseInt(parts[0], 10) || 0;
-    const m = parseInt(parts[1], 10) || 0;
+    const match = clean.match(/(-?\d{1,4}):(\d{2})/);
+    if (!match) return 0;
+    const isNeg = match[1].startsWith('-') || clean.startsWith('-');
+    const h = Math.abs(parseInt(match[1], 10)) || 0;
+    const m = parseInt(match[2], 10) || 0;
     const total = h * 60 + m;
     return isNeg ? -total : total;
   }
@@ -816,6 +815,19 @@ window.JEPessoasModernizer = (function () {
       cell.removeAttribute('title');
     });
 
+    // Restaura as células de pecúnia para o valor original antes de reprocessar.
+    // Sem isso, a presença do badge (.je-pecunia-rate-tag com "+50%" ou "+100%")
+    // contamina a leitura do robustText na segunda passada e corrompe o cálculo
+    // das horas em pecúnia e do saldo acumulado do mês.
+    table.querySelectorAll('td.je-cell-pecunia-highlight').forEach((cell) => {
+      const valEl = cell.querySelector('.je-pecunia-val');
+      if (valEl) {
+        cell.textContent = valEl.textContent.trim();
+      }
+      cell.classList.remove('je-cell-pecunia-highlight');
+      cell.removeAttribute('title');
+    });
+
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
     // Selo R5 injetado na coluna de ocorrência — removido antes de reprocessar,
     // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
@@ -846,6 +858,7 @@ window.JEPessoasModernizer = (function () {
       if (!el) return '';
       const clone = el.cloneNode(true);
       clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+      clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-app-calc-tag').forEach((n) => n.remove());
       return clone.textContent;
     };
 

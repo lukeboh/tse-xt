@@ -1,7 +1,7 @@
 # Chrome Web Store — TSE XT
 
 > Fonte de verdade de tudo que é preenchido no Developer Dashboard. Atualizar aqui a cada liberação (ver [roteiro-liberacao.md](roteiro-liberacao.md)) e copiar para a loja.
-> Versão de referência: **1.0.0**
+> Versão de referência: **1.1.0-Snapshot** (Série 1.1)
 
 ---
 
@@ -10,7 +10,7 @@
 Copiar o bloco abaixo inteiro. O campo da loja é texto puro (sem Markdown) e aceita até 16.000 caracteres — este bloco tem 10.872.
 
 ```text
-✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.0)
+✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.1)
 
 O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade de todo o portal Meu Espaço do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto) até as dezenas de telas do menu clássico, com painéis dedicados para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
 
@@ -47,12 +47,13 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • SALDO ACUM.: acompanhe a evolução dia a dia do seu saldo diretamente na tabela, com badges de acréscimo +50% (sábado) e +100% (domingo/feriado) e coloração imediata (verde para crédito, rosa para débito, neutro para zero).
 • HORAS EXCED. (meses fechados): quando o mês é homologado e a coluna nativa passa a se chamar "HORAS AJUST.", o TSE XT injeta uma coluna própria com o saldo líquido real de cada dia (total trabalhado − jornada esperada), mantendo a leitura consistente com os meses abertos.
 • Dia corrente: antes de a coluna oficial "HORAS EXCED." ser processada à noite, o TSE XT já projeta o saldo do dia a partir do total trabalhado, com selo próprio.
+• Destaque visual de horas extras em pecúnia: células com valores a serem pagos em folha ganham badges destacados (+50% em dias úteis/sábados e +100% em domingos/feriados), com totalizador mensal exclusivo na linha de totais.
 • Cálculo rigoroso que desconsidera valores já pagos em Pecúnia, garantindo que horas indenizadas não distorçam o saldo a compensar.
 • Detecção automática de regime e de jornada (7h/8h/5h no recesso), com selos de teto legal de hora extra por dia (art. 4º) diretamente na tabela.
 
-📝 6. AJUSTE DE PONTO INLINE E AUTORIZAÇÃO DE HORA EXTRA (ESPELHO DE PONTO)
-• Formulário modal glassmorphic na própria tela do espelho para incluir marcações, sem navegar por várias páginas; listagem e exclusão individual das marcações do dia via rotinas oficiais do sistema. Disponível somente na visão de chefia (visualizando o ponto de outro servidor).
-• Detalhe de cada autorização de hora extra do dia (antes um popup nativo sem estilo) num modal com cartões organizados por autorização.
+📝 6. AJUSTE DE PONTO DE SUBORDINADOS PARA CHEFIAS (ESPELHO DE PONTO)
+• Botões rápidos ⚡ Ajustar Ponto nas linhas da tabela do espelho ao consultar integrantes da equipe (visão de chefia), abrindo o formulário modal integrado já preenchido com a matrícula do subordinado e a data selecionada.
+• Detalhe de cada autorização de hora extra do dia num modal integrado com cartões organizados por autorização.
 
 💊 7. REEMBOLSO FARMACÊUTICO RECONSTRUÍDO
 • Formulário de Novo Pedido reconstruído em cartão com grid de campos responsivo e instruções em acordeão recolhível.

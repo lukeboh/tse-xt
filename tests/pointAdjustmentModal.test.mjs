@@ -88,7 +88,10 @@ function fakeElement(opts = {}) {
       if (opts.onAppendChild) opts.onAppendChild(newChild);
       return newChild;
     },
-    remove() { opts.removed = true; }
+    remove() {
+      opts.removed = true;
+      if (opts.remove) opts.remove();
+    }
   };
   return el;
 }
@@ -245,3 +248,89 @@ test('pointAdjustmentModal — injectAdjustmentButtons injeta botões ⚡ nas li
   assert.equal(insertedButtons[0].classList.contains('je-btn-ajustar-ponto'), true);
   assert.equal(insertedButtons[0].title, '⚡ Ajustar Ponto para 01/09/2026');
 });
+
+test('pointAdjustmentModal — canAdjustCurrentTimesheet retorna false quando o chefe seleciona a si mesmo no select', () => {
+  const selectServidor = fakeElement({
+    id: 'servidorSelecionado_matricula',
+    value: '30001111',
+    selectedIndex: 1,
+    options: [
+      { text: '-- Selecione o Servidor --', value: '0' },
+      { text: '30001111 - CHEFE TITULAR', value: '30001111' }
+    ]
+  });
+
+  const doc = {
+    querySelector(sel) {
+      if (sel.includes('#topo .matricula') || sel.includes('.barra-superior .matricula')) {
+        return fakeElement({ innerText: '30001111' });
+      }
+      if (sel.includes('servidorSelecionado_matricula') || sel.includes('select[name*="servidor"')) {
+        return selectServidor;
+      }
+      return null;
+    },
+    querySelectorAll() { return []; }
+  };
+
+  const mod = loadModule('pointAdjustmentModal.js', { document: doc, window: { location: { search: '' } } });
+  const P = mod.JEPessoasPointModal;
+
+  assert.equal(P.getLoggedInMatricula(), '30001111');
+  assert.equal(P.canAdjustCurrentTimesheet(), false);
+});
+
+test('pointAdjustmentModal — canAdjustCurrentTimesheet retorna false para servidor comum mesmo se matrícula do topo falhar', () => {
+  // Cenário: servidor comum sem combo de chefia (#servidorSelecionado_matricula inexiste),
+  // topo não carregou a tempo (mine = ''), mas o h3 do conteúdo tem sua matrícula (30005555).
+  // NÃO pode autorizar ajuste (falso positivo impedido).
+  const h3Content = fakeElement({
+    innerText: 'Servidor: PEDRO SERVIDOR - Matrícula: 30005555'
+  });
+
+  const doc = {
+    querySelector() { return null; },
+    querySelectorAll(sel) {
+      if (sel.includes('h3')) return [h3Content];
+      return [];
+    }
+  };
+
+  const mod = loadModule('pointAdjustmentModal.js', { document: doc, window: { location: { search: '' } } });
+  const P = mod.JEPessoasPointModal;
+
+  assert.equal(P.getLoggedInMatricula(), '');
+  assert.equal(P.canAdjustCurrentTimesheet(), false);
+});
+
+test('pointAdjustmentModal — injectAdjustmentButtons remove botões já injetados quando o espelho passa a ser não ajustável', () => {
+  let removedCount = 0;
+  const existingBtn = fakeElement({
+    classes: ['je-btn-ajustar-ponto'],
+    remove() { removedCount++; }
+  });
+
+  const table = fakeElement({
+    id: 'tblEspelhoPontoMesCorrente',
+    querySelectorAll(sel) {
+      if (sel === '.je-btn-ajustar-ponto') return [existingBtn];
+      return [];
+    }
+  });
+
+  const doc = {
+    querySelector(sel) {
+      if (sel.includes('.matricula')) return fakeElement({ innerText: '30001111' });
+      return null;
+    },
+    querySelectorAll() { return []; }
+  };
+
+  const mod = loadModule('pointAdjustmentModal.js', { document: doc, window: { location: { search: '' } } });
+  const P = mod.JEPessoasPointModal;
+
+  assert.equal(P.canAdjustCurrentTimesheet(), false);
+  P.injectAdjustmentButtons(table);
+  assert.equal(removedCount, 1);
+});
+

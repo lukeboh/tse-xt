@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.0.0';
+  const CURRENT_VERSION = '1.1.0-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.0-Snapshot',
+      date: '2026-09-30',
+      title: 'Série 1.1.x — Ajuste de ponto de subordinados para chefias e destaque de horas extras em pecúnia',
+      features: [
+        'Ajuste de Ponto de Subordinados: chefias imediatas agora podem consultar o espelho de ponto de integrantes da unidade e registrar ajustes diretamente pela tabela (botão ⚡ Ajustar Ponto), com pré-carregamento automático da matrícula do subordinado e da data selecionada no modal do TSE XT.',
+        'Destaque de Horas Extras em Pecúnia: identificação e realce visual com badges específicos para horas extras pagas em pecúnia (+50% para dias úteis/sábados e +100% para domingos/feriados), além de totalizador mensal dedicado na linha de totais.',
+        'Correções de robustez: proteção rigorosa de idempotência na renderização de células de pecúnia contra corrupção em recálculos sucessivos e validação precisa de permissões de chefia evitando falsos positivos.'
+      ]
+    },
     {
       version: '1.0.0',
       date: '2026-09-23',
