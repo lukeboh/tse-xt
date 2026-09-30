@@ -86,11 +86,13 @@ Capturas da aplicação real, com dados pessoais anonimizados. Para regerar a ca
 
 ## 🗺️ Roadmap
 
-- **Arquitetura visual genérica**: ✅ concluída (Fases F1–F7) — histórico completo em [roadmap-arquitetura-visual.md](docs/roadmap-arquitetura-visual.md).
-- **Conformidade normativa do cálculo de frequência**: itens abertos (R1–R10, ex.: três estados de banco de horas, tetos legais, excedente sem autorização prévia) rastreados em [roadmap-conformidade.md](docs/roadmap-conformidade.md), com as regras já verificadas em [regras-calculo-frequencia.md](docs/regras-calculo-frequencia.md) e as questões ainda sem resposta em [duvidas-normativas.md](docs/duvidas-normativas.md).
-- **Persistência (sticky) ao rolar a tela**: manter o menu/topbar, a linha de KPIs e os cabeçalhos da tabela fixos durante a rolagem do espelho.
+Todo o planejamento de evolução do TSE XT está unificado e detalhado em **[docs/roadmap.md](docs/roadmap.md)**, estruturado em 4 trilhas principais:
+- **Trilha C (Conformidade)**: Ajustes de cálculo, três estados de banco de horas, tetos legais e desconsideração de horas não homologadas.
+- **Trilha U (Usabilidade & UX)**: Persistência (*sticky*) de KPIs/cabeçalhos na rolagem, modo conferência lado a lado e melhorias de exportação/impressão.
+- **Trilha M (Novos Módulos)**: Extrato inteligente com gestão de validade de BH e assistente de férias/afastamentos.
+- **Trilha T (Técnica & Testes)**: Refatoração do core matemático e expansão dos testes unitários com meses históricos.
 
-O histórico detalhado de cada versão (o que mudou e por quê) vive no changelog embutido na própria extensão — abra o badge de versão na topbar do Meu Espaço para consultá-lo.
+O histórico detalhado das versões anteriores e das fases visuais já concluídas (F1 a F7) pode ser consultado no changelog da extensão e no arquivo [roadmap-arquitetura-visual.md](docs/roadmap-arquitetura-visual.md).
 
 ---
 
