@@ -934,6 +934,113 @@ body.je-xt-disabled .je-multiplier-tag {
   display: none !important;
 }
 
+/* ==========================================================================
+   Destaque para Células de Horas Extras em Pecúnia (Tabela do Espelho)
+   ========================================================================== */
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-cell-pecunia-highlight {
+  background: rgba(124, 58, 237, 0.04) !important;
+  text-align: center !important;
+}
+
+body.je-xt-enabled .je-pecunia-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3.5px !important;
+  padding: 1.5px 6px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  cursor: help !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Pecúnia Semana / Sábado (+50%) */
+body.je-xt-enabled .je-pecunia-badge-wksat {
+  background: rgba(0, 119, 255, 0.09) !important;
+  color: #0056b3 !important;
+  border: 1px solid rgba(0, 119, 255, 0.28) !important;
+}
+
+body.je-xt-enabled .je-pecunia-badge-wksat:hover {
+  background: rgba(0, 119, 255, 0.16) !important;
+  box-shadow: 0 2px 6px rgba(0, 119, 255, 0.25) !important;
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+/* Pecúnia Domingo / Feriado (+100%) */
+body.je-xt-enabled .je-pecunia-badge-sunhol {
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: #6d28d9 !important;
+  border: 1px solid rgba(124, 58, 237, 0.32) !important;
+}
+
+body.je-xt-enabled .je-pecunia-badge-sunhol:hover {
+  background: rgba(124, 58, 237, 0.18) !important;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3) !important;
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+/* Ícone de Moeda / $ */
+body.je-xt-enabled .je-pecunia-icon {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  opacity: 0.85 !important;
+}
+
+/* Valor numérico */
+body.je-xt-enabled .je-pecunia-val {
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 700 !important;
+}
+
+/* Tag de taxa (+50% / +100%) */
+body.je-xt-enabled .je-pecunia-rate-tag {
+  display: inline-block !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  padding: 1px 3.5px !important;
+  border-radius: 3px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2px !important;
+  line-height: 1 !important;
+}
+
+body.je-xt-enabled .je-pecunia-badge-wksat .je-pecunia-rate-tag {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+  border: 1px solid #fde047 !important;
+}
+
+body.je-xt-enabled .je-pecunia-badge-sunhol .je-pecunia-rate-tag {
+  background: #ede9fe !important;
+  color: #6d28d9 !important;
+  border: 1px solid #ddd6fe !important;
+}
+
+/* Modo Desligado: Neutraliza o Badge para preservar texto nativo */
+body.je-xt-disabled .je-cell-pecunia-highlight {
+  background: transparent !important;
+}
+
+body.je-xt-disabled .je-pecunia-badge {
+  background: transparent !important;
+  color: inherit !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  display: inline !important;
+}
+
+body.je-xt-disabled .je-pecunia-icon,
+body.je-xt-disabled .je-pecunia-rate-tag {
+  display: none !important;
+}
+
 body.je-xt-disabled .je-row-today td,
 body.je-xt-disabled .je-row-today {
   background: transparent !important;

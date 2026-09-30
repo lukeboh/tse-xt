@@ -764,6 +764,16 @@ window.JEPessoasModernizer = (function () {
     return (isNeg ? '-' : '+') + `${strH}:${strM}`;
   }
 
+  function formatTime(minutes) {
+    if (minutes === null || minutes === undefined || isNaN(minutes)) return '00:00';
+    const absM = Math.abs(Math.round(minutes));
+    const h = Math.floor(absM / 60);
+    const m = absM % 60;
+    const strH = String(h).padStart(2, '0');
+    const strM = String(m).padStart(2, '0');
+    return `${strH}:${strM}`;
+  }
+
   function modernizeTable(targetHours = 7) {
     const table = document.getElementById('tblEspelhoPontoMesCorrente');
     if (table) {
@@ -884,6 +894,7 @@ window.JEPessoasModernizer = (function () {
     const todayFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
     let runningBalance = 0;
+    let totalPecuniaMinutes = 0;
 
     rows.forEach((tr) => {
       // Ignora linhas de cabeçalho
@@ -1040,18 +1051,42 @@ window.JEPessoasModernizer = (function () {
           const totalMin = parseMinutes(totalDay);
           const abonoMin = parseMinutes(abono);
 
-          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em mês
-          // de recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
-          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
-            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: dayYear, month: dayMonth })
-            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : (targetHours * 60));
-
           // Detecção de dispensa da jornada ordinária (espelha a lógica do kpiExtractor).
           const occU = (occText + ' ' + rawText).toUpperCase();
           const isHolidayOrRecess = occU.includes('FERIADO') || occU.includes('RECESSO') || occU.includes('FACULTATIVO');
           const isLicense = occU.includes('LICENÇA') || occU.includes('LICENCA') || occU.includes('MÉDICA') || occU.includes('MEDICA') || occU.includes('LUTO') || occU.includes('NOJO') || occU.includes('GALA') || occU.includes('MATERNIDADE') || occU.includes('PATERNIDADE') || occU.includes('CAPACITAÇÃO') || occU.includes('CAPACITACAO') || occU.includes('PRÊMIO') || occU.includes('PREMIO');
           const isVacation = occU.includes('FÉRIAS') || occU.includes('FERIAS');
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
+
+          // Destaque visual e badge para células com horas extras pagas em pecúnia
+          if (pecuniaMin > 0 && pecuniaCell) {
+            totalPecuniaMinutes += pecuniaMin;
+            const isSundayOrHoliday = dayOfWeek === 0 || isHolidayOrRecess;
+            const rateLabel = isSundayOrHoliday ? '+100%' : '+50%';
+            const typeLabel = isSundayOrHoliday ? (isHolidayOrRecess ? 'Feriado' : 'Domingo') : (dayOfWeek === 6 ? 'Sábado' : 'Dia Útil');
+            const badgeClass = isSundayOrHoliday ? 'je-pecunia-badge-sunhol' : 'je-pecunia-badge-wksat';
+            const tooltip = `💰 Hora Extra em Pecúnia (a ser paga em folha): ${pecunia} · ${typeLabel} (${rateLabel})`;
+
+            pecuniaCell.classList.add('je-cell-pecunia-highlight');
+            pecuniaCell.title = tooltip;
+
+            if (!pecuniaCell.querySelector('.je-pecunia-badge')) {
+              pecuniaCell.innerHTML = `
+                <span class="je-pecunia-badge ${badgeClass}" title="${escapeHTML(tooltip)}">
+                  <span class="je-pecunia-icon">$</span>
+                  <strong class="je-pecunia-val">${escapeHTML(pecunia)}</strong>
+                  <span class="je-pecunia-rate-tag">${rateLabel}</span>
+                </span>
+              `;
+            }
+          }
+
+          // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em mês
+          // de recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
+          const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
+            ? window.JEPessoasLegal.dailyTargetMinutes({ e2, e3, year: dayYear, month: dayMonth })
+            : (!!(e1 && s1 && e2 && s2) ? (8 * 60) : (targetHours * 60));
+
           const isDispensed = isLicense || isVacation || isTravel || (abonoMin >= dayTargetMinutes);
 
           // R5 — sinalização de excedente irregular em dias já encerrados.
@@ -1222,7 +1257,18 @@ window.JEPessoasModernizer = (function () {
           // 1. Célula de Pecúnia no Rodapé
           const pecuniaTd = document.createElement('td');
           pecuniaTd.className = 'cellTotais je-totais-pecunia';
-          pecuniaTd.textContent = '00:00';
+          const totalPecuniaFmt = formatTime(totalPecuniaMinutes);
+          if (totalPecuniaMinutes > 0) {
+            pecuniaTd.classList.add('je-cell-pecunia-highlight');
+            pecuniaTd.innerHTML = `
+              <span class="je-pecunia-badge je-pecunia-badge-sunhol" title="💰 Total de Horas Extras em Pecúnia no mês: ${totalPecuniaFmt}">
+                <span class="je-pecunia-icon">$</span>
+                <strong class="je-pecunia-val">${totalPecuniaFmt}</strong>
+              </span>
+            `;
+          } else {
+            pecuniaTd.textContent = '00:00';
+          }
           targetExcedCell.parentNode.insertBefore(pecuniaTd, targetExcedCell.nextSibling);
           let currentFooterAnchor = pecuniaTd;
 
@@ -2605,6 +2651,7 @@ window.JEPessoasModernizer = (function () {
     injectKPICards,
     buildKpiCardsHTML,
     modernizeTable,
+    modernizeMonthlyTable,
     modernizeForm,
     modernizeGenericFormButtons,
     modernizeGenericMoldura,
