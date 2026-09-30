@@ -34,9 +34,10 @@ window.JEPessoasPointModal = (function () {
     // 1. Tenta pegar da combo de servidores selecionados na tela principal
     const mainSelect = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
     if (mainSelect && mainSelect.selectedIndex >= 0) {
-      const optText = mainSelect.options[mainSelect.selectedIndex].text.trim();
-      if (optText && !optText.toLowerCase().includes('selecione')) {
-        return optText;
+      const optText = (mainSelect.options[mainSelect.selectedIndex].text || '').trim();
+      if (optText && !optText.toLowerCase().includes('selecione') && !optText.includes('--')) {
+        // Limpa possível prefixo numérico/matrícula (ex: "30099999 - NOME")
+        return optText.replace(/^\d+\s*[-–]\s*/, '').trim();
       }
     }
 
@@ -44,15 +45,23 @@ window.JEPessoasPointModal = (function () {
     if (doc) {
       const docSelect = doc.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i]');
       if (docSelect && docSelect.selectedIndex >= 0) {
-        const optText = docSelect.options[docSelect.selectedIndex].text.trim();
-        if (optText && !optText.toLowerCase().includes('selecione')) {
-          return optText;
+        const optText = (docSelect.options[docSelect.selectedIndex].text || '').trim();
+        if (optText && !optText.toLowerCase().includes('selecione') && !optText.includes('--')) {
+          return optText.replace(/^\d+\s*[-–]\s*/, '').trim();
         }
       }
     }
 
-    // 3. Fallback: tenta obter do cabeçalho do usuário logado na aplicação
-    const userEl = document.querySelector('.usuario-logado, #usuarioLogado, #divTopServidorNome, .no-print strong');
+    // 3. Tenta obter dos headings de dados do servidor consultado no #conteudo
+    const headings = document.querySelectorAll('#conteudo h3, #conteudo h4, .form-container h3, #opcoes-consulta h3, .moldura h3');
+    for (const h of headings) {
+      const text = h.innerText || h.textContent || '';
+      const m = text.match(/Servidor\s*:\s*([^-–\n]+)/i);
+      if (m && m[1].trim()) return m[1].trim();
+    }
+
+    // 4. Fallback: tenta obter do cabeçalho do usuário logado na aplicação
+    const userEl = document.querySelector('.usuario-logado, #usuarioLogado, #divTopServidorNome, .no-print strong, .je-user-chip strong');
     if (userEl) {
       return userEl.innerText.trim();
     }
@@ -166,48 +175,105 @@ window.JEPessoasPointModal = (function () {
     }
   }
 
-  function getCurrentUserOrSelectedMatricula() {
-    // 1. Tenta obter do select de servidores (quando chefe está selecionando um servidor)
-    const mainSelect = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
-    if (mainSelect && mainSelect.value && mainSelect.value !== '0') {
-      return mainSelect.value.trim();
+  function getLoggedInMatricula() {
+    // 1. Tenta obter do chip do usuário na topbar TSE XT (se já injetada)
+    const userChip = document.querySelector('.je-user-profile .je-user-chip, .je-user-chip');
+    if (userChip) {
+      const match = (userChip.innerText || userChip.textContent || '').match(/\((\d{6,8})\)/);
+      if (match) return match[1];
     }
 
-    // 2. Tenta obter do elemento da página com a matrícula do servidor logado (ex: .matricula strong => 30000000)
-    const matEl = document.querySelector('.matricula strong, .matricula span, #divTopServidorMatricula');
-    if (matEl) {
-      const text = matEl.innerText.replace(/\D/g, '').trim();
-      if (text && text.length >= 6) {
-        return text;
+    // 2. Tenta obter dos elementos nativos do topo do portal (usuário logado)
+    const topSelectors = [
+      '#topo .matricula strong',
+      '#topo .matricula span',
+      '#topo .matricula',
+      '.barra-superior .matricula strong',
+      '.barra-superior .matricula span',
+      '.barra-superior .matricula',
+      '#divTopServidorMatricula',
+      '.usuario-logado strong',
+      '.usuario-logado'
+    ];
+    for (const sel of topSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const digits = (el.innerText || el.textContent || '').replace(/\D/g, '').trim();
+        if (digits.length >= 6) return digits;
       }
     }
 
-    // 3. Tenta obter da URL atual
-    const match = window.location.search.match(/matricula=(\d+)/i);
-    if (match && match[1] && match[1] !== '0') {
-      return match[1];
-    }
-
-    return '';
-  }
-
-  function getLoggedInMatricula() {
-    const el = document.querySelector('.matricula strong, .matricula span, .matricula, #divTopServidorMatricula');
-    if (el) {
-      const digits = (el.innerText || '').replace(/\D/g, '').trim();
+    // 3. Fallback genérico para elemento .matricula fora do conteúdo de resultados
+    const anyMat = Array.from(document.querySelectorAll('.matricula')).find((el) => !el.closest('#conteudo') && !el.closest('form'));
+    if (anyMat) {
+      const digits = (anyMat.innerText || anyMat.textContent || '').replace(/\D/g, '').trim();
       if (digits.length >= 6) return digits;
     }
+
     return '';
   }
 
   function getViewedMatricula() {
+    // 1. Tenta obter do select de servidores (#servidorSelecionado_matricula)
     const sel = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
-    if (sel && sel.value && sel.value !== '0') return sel.value.replace(/\D/g, '').trim();
-    const inp = document.querySelector('input[name="servidorSelecionado.matricula"]');
-    if (inp && inp.value && inp.value !== '0') return inp.value.replace(/\D/g, '').trim();
-    const m = window.location.search.match(/matricula=(\d+)/i);
-    if (m && m[1] && m[1] !== '0') return m[1];
+    if (sel && sel.selectedIndex >= 0) {
+      const val = (sel.value || '').replace(/\D/g, '').trim();
+      if (val && val !== '0' && val.length >= 6) return val;
+
+      const optText = sel.options[sel.selectedIndex].text || '';
+      const match = optText.match(/\b(\d{6,8})\b/);
+      if (match && match[1] !== '0') return match[1];
+    }
+
+    // 2. Tenta obter de inputs com a matrícula do servidor selecionado
+    const inputSelectors = [
+      'input[name="servidorSelecionado.matricula"]',
+      'input[name="servidor.matricula"]',
+      'input[name="matricula"]',
+      '#servidorSelecionado_matricula',
+      '#matricula'
+    ];
+    for (const s of inputSelectors) {
+      const inp = document.querySelector(s);
+      if (inp && inp.value) {
+        const val = inp.value.replace(/\D/g, '').trim();
+        if (val && val !== '0' && val.length >= 6) return val;
+      }
+    }
+
+    // 3. Tenta obter dos cabeçalhos de dados do servidor consultado no #conteudo
+    const headings = document.querySelectorAll('#conteudo h3, #conteudo h4, .form-container h3, #opcoes-consulta h3, .moldura h3');
+    for (const h of headings) {
+      const text = h.innerText || h.textContent || '';
+      const m = text.match(/Matr[íi]cula\s*:\s*(\d{6,8})/i) || text.match(/\b(\d{6,8})\b/);
+      if (m && m[1]) return m[1];
+    }
+
+    // 4. Tenta obter de links ou ícones na própria tabela (ex: detalharAutorizacao com matrícula)
+    const tableEl = document.getElementById('tblEspelhoPontoMesCorrente');
+    if (tableEl) {
+      const authLink = tableEl.querySelector('[onclick*="detalharAutorizacao"], [onclick*="servidor.matricula"]');
+      if (authLink) {
+        const onclickStr = authLink.getAttribute('onclick') || '';
+        const m = onclickStr.match(/['"](\d{6,8})['"]/);
+        if (m && m[1]) return m[1];
+      }
+    }
+
+    // 5. Tenta obter da URL atual
+    const searchStr = (typeof window !== 'undefined' && window.location && window.location.search) ? window.location.search : '';
+    const urlMatch = searchStr.match(/[?&](?:servidorSelecionado\.matricula|servidor\.matricula|matricula)=(\d{6,8})/i);
+    if (urlMatch && urlMatch[1] && urlMatch[1] !== '0') {
+      return urlMatch[1];
+    }
+
     return '';
+  }
+
+  function getCurrentUserOrSelectedMatricula() {
+    const viewed = getViewedMatricula();
+    if (viewed) return viewed;
+    return getLoggedInMatricula();
   }
 
   // Regra do sistema: o ajuste de ponto só é permitido quando se visualiza o
@@ -216,7 +282,33 @@ window.JEPessoasPointModal = (function () {
   function canAdjustCurrentTimesheet() {
     const mine = getLoggedInMatricula();
     const viewed = getViewedMatricula();
-    return !!(mine && viewed && viewed !== mine);
+
+    // Se identificou ambas e são diferentes: com certeza é ponto de outra pessoa
+    if (mine && viewed && viewed !== mine) {
+      return true;
+    }
+
+    // Se o select de servidores existe e tem um servidor selecionado válido
+    const sel = document.querySelector('#servidorSelecionado_matricula, select[name*="servidor" i], select[name*="matricula" i]');
+    if (sel && sel.selectedIndex > 0) {
+      const optText = (sel.options[sel.selectedIndex].text || '').toLowerCase();
+      const val = (sel.value || '').trim();
+      const isPlaceholder = optText.includes('selecione') || val === '0' || val === '' || val === '-1';
+      if (!isPlaceholder) {
+        // Se a matrícula selecionada for diferente da logada, pode ajustar
+        if (mine && val && val.replace(/\D/g, '') === mine) {
+          return false; // É o próprio chefe vendo o próprio espelho
+        }
+        return true;
+      }
+    }
+
+    // Se encontrou a matrícula visualizada e não achou a própria, mas a visualizada veio do select ou cabeçalho:
+    if (viewed && !mine) {
+      return true;
+    }
+
+    return false;
   }
 
   function getSelectedServerParams() {
@@ -695,7 +787,7 @@ window.JEPessoasPointModal = (function () {
   function injectAdjustmentButtons(table) {
     if (!table) return;
 
-    // Só injeta o botão de ajuste quando o ponto exibido é de outra pessoa.
+    // Só injeta o botão de ajuste quando o ponto exibido é de outra pessoa (visão de chefia).
     // Se não for o caso, remove qualquer botão já injetado e sai.
     if (!canAdjustCurrentTimesheet()) {
       table.querySelectorAll('.je-btn-ajustar-ponto').forEach((b) => b.remove());
@@ -711,18 +803,28 @@ window.JEPessoasPointModal = (function () {
       const dateCell = tr.querySelector('td.h01');
       if (!dateCell) return;
 
-      const dateText = dateCell.innerText.trim();
-      if (!dateText.match(/^\d{2}\/\d{4}$/) && !dateText.match(/^\d{2}\/\d{2}\/\d{4}$/)) return;
+      const rawDateText = (dateCell.textContent || dateCell.innerText || '').trim();
+      const match = rawDateText.match(/(\d{2}\/\d{2}\/\d{4})/) || rawDateText.match(/(\d{2}\/\d{4})/);
+      if (!match) return;
+      const dateText = match[1];
 
-      const isPendingRow = tr.classList.contains('je-row-ajuste-pendente') || tr.innerText.includes('Falta') || tr.innerText.includes('AJUSTE') || tr.innerText.includes('INCONSIST');
+      const rowText = (tr.textContent || tr.innerText || '').toUpperCase();
+      const isPendingRow = tr.classList.contains('je-row-ajuste-pendente') ||
+                           rowText.includes('FALTA') ||
+                           rowText.includes('AJUSTE') ||
+                           rowText.includes('INCONSIST');
       
       // Coluna de comandos (td.h17 - Comandos / Relógio de Horas Extras)
-      const commandCell = tr.querySelector('td.h17') || tr.querySelector('td.h10') || tr.querySelector('td.h09') || tr.querySelector('td:last-child') || dateCell;
+      const commandCell = tr.querySelector('td.h17') ||
+                          tr.querySelector('td.h10') ||
+                          tr.querySelector('td.h09') ||
+                          tr.querySelector('td:last-child') ||
+                          dateCell;
 
       if (commandCell) {
         commandCell.style.setProperty('text-align', 'left', 'important');
         Array.from(commandCell.childNodes).forEach((node) => {
-          if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === '-') {
+          if ((node.nodeType === 3 || (typeof Node !== 'undefined' && node.nodeType === Node.TEXT_NODE)) && (node.textContent || '').trim() === '-') {
             node.textContent = '';
           }
         });
@@ -753,7 +855,7 @@ window.JEPessoasPointModal = (function () {
         const targetTd = clockBtn.closest('td');
         if (targetTd) targetTd.style.setProperty('text-align', 'left', 'important');
         clockBtn.parentNode.insertBefore(btn, clockBtn);
-      } else {
+      } else if (commandCell) {
         commandCell.appendChild(document.createTextNode(' '));
         commandCell.appendChild(btn);
       }
@@ -771,6 +873,11 @@ window.JEPessoasPointModal = (function () {
   return {
     init,
     openModalForDate,
-    injectAdjustmentButtons
+    injectAdjustmentButtons,
+    canAdjustCurrentTimesheet,
+    getLoggedInMatricula,
+    getViewedMatricula,
+    getSelectedServerName,
+    getCurrentUserOrSelectedMatricula
   };
 })();
