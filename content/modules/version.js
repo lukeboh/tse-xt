@@ -5,9 +5,29 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.0-Snapshot';
+  const CURRENT_VERSION = '1.1.2-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.2-Snapshot',
+      date: '2026-10-13',
+      title: 'Ajuste fino visual do cabeçalho sticky: eliminação de borda superior e vedação contra vazamentos',
+      features: [
+        'Eliminação da Borda Superior: remoção da linha cinza externa no topo do cabeçalho da tabela de frequência em repouso, preservando visual limpo integrado.',
+        'Vedação Hermética no Scroll: eliminação de frestas verticais no topo e remoção de transparências nos cantos superiores do cabeçalho fixado, impedindo que linhas de dados ou avisos da página vazem por trás durante a rolagem.',
+        'Sombra Superior Estanque: aplicação de cobertura superior nas células cinzas e azuis mantendo vedação contínua mesmo sob subpixel scrolling do navegador.'
+      ]
+    },
+    {
+      version: '1.1.1-Snapshot',
+      date: '2026-10-13',
+      title: 'Fixação (sticky) do cabeçalho da tabela do Espelho de Ponto preservando o design system',
+      features: [
+        'Cabeçalho Sticky Fiel ao Design Original: a linha de títulos da tabela de frequência permanece fixada no topo da tela durante a rolagem, mantendo os cantos arredondados, fundo cinza característico e sem distorção visual.',
+        'Refinamento do container de frequência: border-collapse e border-spacing calibrados para sticky sem necessidade de overflow clipping agressivo.',
+        'Recarregamento e bump de versão integrados ao ciclo de desenvolvimento.'
+      ]
+    },
     {
       version: '1.1.0-Snapshot',
       date: '2026-09-30',

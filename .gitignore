@@ -14,3 +14,6 @@ dist/
 
 # Termos reais para anonimizar as capturas da loja (nunca versionar)
 tools/loja/anon.local.json
+
+# Scratch temporário
+scratch/

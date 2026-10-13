@@ -560,9 +560,10 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente {
   backdrop-filter: var(--je-backdrop-blur) !important;
   -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
   border: 1px solid rgba(203, 213, 225, 0.9) !important;
-  border-radius: var(--je-radius-md) !important;
+  border-top: none !important;
+  border-radius: 0 0 var(--je-radius-md) var(--je-radius-md) !important;
   box-shadow: var(--je-shadow-tactile) !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   margin-top: 14px !important;
   transition: var(--je-transition-smooth);
 }
@@ -577,15 +578,27 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente tbody {
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr {
   display: table-row !important;
+  border: none !important;
+}
+
+/* Cabeçalho Sticky da Tabela do Espelho de Ponto (U1):
+   Mantém a linha de títulos visível no topo sem deformar o design system original. */
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:has(> th),
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.je-espelho-header-tint,
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.je-espelho-header-sticky {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 40 !important;
+  border: none !important;
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente th {
   display: table-cell !important;
-  /* mesmo tratamento das demais tabelas padronizadas (bloco unificado em
-     content.css): sem grade, só um filete inferior azul; texto negrito
-     maiúsculo na cor primária. As colunas injetadas (SALDO ACUM. /
-     HORAS EXCED.) têm regra própria mais específica e não são afetadas. */
-  background: transparent !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 40 !important;
+  /* Fundo cinza suave homogêneo fiel à interface original do espelho */
+  background: #dfe4ea !important;
   color: var(--je-primary) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
@@ -593,21 +606,32 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente th {
   letter-spacing: 0.3px !important;
   padding: 8px 4px !important;
   border: none !important;
-  border-bottom: 2px solid rgba(0, 119, 255, 0.4) !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 0 #dfe4ea !important;
   text-align: center !important;
   vertical-align: middle !important;
   line-height: 1.25 !important;
   white-space: normal !important;
 }
 
-/* Fundo do cabeçalho conforme a 1ª linha de dados: se ela for BRANCA, o
-   cabeçalho recebe o azul-clarinho do padrão (--je-table-zebra) pra não se
-   diluir; se a 1ª linha já tiver cor (cinza alternado / sábado / domingo /
-   feriado / hoje), o cabeçalho fica neutro (transparente) pra não empilhar
-   duas faixas coloridas. A classe é posta por modernizeMonthlyTable() lendo
-   o fundo computado da 1ª linha. Nunca vale pras colunas injetadas. */
+/* Vedação hermética no cabeçalho sticky sem projeção lateral para fora */
+body.je-xt-enabled #tblEspelhoPontoMesCorrente th:first-child {
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 0 #dfe4ea !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente th:last-child {
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 0 #dfe4ea !important;
+}
+
+/* Quando houver a classe de tintura de cabeçalho, mantém o mesmo tom cinza institucional */
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.je-espelho-header-tint th:not(.je-col-accumulated-balance):not(.je-col-daily-exceed) {
-  background: var(--je-table-zebra) !important;
+  background: #dfe4ea !important;
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente td {
@@ -771,19 +795,26 @@ body.je-xt-enabled table th.je-col-accumulated-balance,
 body.je-xt-enabled table th.je-col-daily-exceed {
   /* mesmo degradê do .je-btn-consultar, pra header e botão lerem como a
      mesma família visual */
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 45 !important;
   background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
   color: #ffffff !important;
   font-weight: 800 !important;
   font-size: 10px !important;
   line-height: 1.15 !important;
   letter-spacing: 0.3px !important;
-  border: 1px solid #0056b3 !important;
+  border: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #0056b3 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 0 #0056b3 !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
   white-space: nowrap !important;
   width: 1% !important;
   min-width: 88px !important;
   max-width: 102px !important;
-  padding: 6px 4px !important;
+  padding: 8px 4px !important;
   box-sizing: border-box !important;
   text-align: center !important;
 }
@@ -2330,9 +2361,25 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas + tr.h17 + tr.tota
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:last-child > td:not([colspan="16"]) {
   border-top: 1.5px solid rgba(0, 119, 255, 0.28) !important;
+  border-bottom: none !important;
   padding-top: 10px !important;
   padding-bottom: 10px !important;
   background: rgba(0, 119, 255, 0.06) !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:last-child {
+  border-bottom-left-radius: var(--je-radius-md, 14px) !important;
+  border-bottom-right-radius: var(--je-radius-md, 14px) !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:last-child > td:first-child {
+  border-bottom-left-radius: var(--je-radius-md, 14px) !important;
+  border-left: none !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:last-child > td:last-child {
+  border-bottom-right-radius: var(--je-radius-md, 14px) !important;
+  border-right: none !important;
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:last-child > td[colspan="8"]:first-child {

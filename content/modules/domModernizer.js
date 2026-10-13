@@ -800,7 +800,10 @@ window.JEPessoasModernizer = (function () {
       td.classList.remove('je-row-span-fill');
       delete td.dataset.jeOrigColspan;
     });
-    table.querySelectorAll('tr.je-espelho-header-tint').forEach((tr) => tr.classList.remove('je-espelho-header-tint'));
+    table.querySelectorAll('tr.je-espelho-header-tint, tr.je-espelho-header-sticky').forEach((tr) => {
+      tr.classList.remove('je-espelho-header-tint');
+      tr.classList.remove('je-espelho-header-sticky');
+    });
 
     // Restaura a célula nativa "HORAS EXCED." do dia corrente (projeção do
     // app) ao conteúdo original antes de reprocessar. Sem isso, uma 2ª
@@ -1360,6 +1363,9 @@ window.JEPessoasModernizer = (function () {
       const rows = Array.from(table.rows);
       const headerRow = rows.find((r) => Array.from(r.cells).some((c) => c.tagName === 'TH'));
       const firstDataRow = headerRow ? rows[rows.indexOf(headerRow) + 1] : null;
+      if (headerRow) {
+        headerRow.classList.add('je-espelho-header-sticky');
+      }
       if (headerRow && firstDataRow) {
         // fundo pode estar no <tr> (cinza alternado) ou no <td> (fim de
         // semana) — considera "com cor" se QUALQUER um deles não for claro.

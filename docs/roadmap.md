@@ -38,16 +38,185 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 | ID | Item | Severidade | Origem / Norma | Descrição & Ação Necessária |
 | :--- | :--- | :---: | :--- | :--- |
-| **C1** | **`SALDO ACUM.` apenas com Horas Homologadas** | 🔴 Alta | Portaria 380/2026 · [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) | **Problema:** Hoje o saldo acumulado diário incorpora todo o excedente bruto de finais de semana com fator 1,5/2,0.<br>**Ação:** Creditar no saldo diário apenas a parcela classificada como `Horas Excedentes Homologadas`. Tratar `Pecúnia` e horas `Não Homologadas` como externas ao banco de horas. Rotular a coluna como prévia do Extrato do Banco de Horas. |
-| **C2** | **Três Estados de Banco de Horas** | 🔴 Alta | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 13 | **Ação:** Implementar explicitamente a matriz de três regimes:<br>1. *Normal*: Crédito ✅ / Consumo ✅ / Saldo visível ✅.<br>2. *Híbrido/Teletrabalho sem HE*: Crédito ❌ / Consumo ✅ / Saldo visível ✅.<br>3. *Mês com HE Autorizado (art. 13)*: Crédito ✅ (apenas homologadas) / Consumo ❌ (vedada a utilização no mês) / Saldo visível ✅. |
-| **C3** | **Pecúnia em Mês Híbrido & Alerta de FDS Perdido** | 🟡 Média | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 12 | **Problema:** Em meses com trabalho híbrido/teletrabalho, o serviço extraordinário é suprimido na totalidade.<br>**Ação:** Restaurar a zeragem da pecúnia projetada no mês corrente quando houver $\ge 1$ dia híbrido. Emitir alerta visual se houver trabalho executado em sábado/domingo/feriado em mês híbrido, informando que essas horas não geram pecúnia nem acúmulo no banco. |
-| **C4** | **Faixa de Complementação 7h–8h & Recesso 5h** | 🟡 Média | Portaria 380/2026 art. 7º §2º · Portaria 885/2024 | **Ação:** Tratar a faixa da 7ª à 8ª hora no turno único como complementação da jornada mensal ordinária (não gera crédito imediato de saldo excedente). Ajustar o cálculo da meta em meses de recesso forense (janeiro e julho de ano ímpar), onde a jornada-base passa a 5h e o acúmulo no banco depende de decisão da DG. |
-| **C5** | **Alertas de Tetos Legais de Horas Extras** | 🟡 Média | Res. 22.901/2008 · Portaria 380/2026 art. 4º | **Ação:** Incluir badges e alertas no card e no rodapé do espelho quando ocorrer extrapolação de:<br>• $> 2\text{h}$ em dia útil;<br>• $> 10\text{h}$ em sábados/domingos/feriados;<br>• $> 60\text{h}$ acumuladas no mês (teto legal);<br>• Destaque da faixa de 60h a 90h ("sujeita a deliberação da DG"). |
-| **C6** | **Selo Diário de Excedente Além do Autorizado** | 🟡 Média | Portaria 380/2026 art. 3º e 10 | **Ação:** Cruzar o excedente do dia contra o limite diário da respectiva autorização obtida via `heAuthFetch.js` (backend do SAEX), exibindo aviso diário quando o realizado superar o autorizado. |
-| **C7** | **Conceito de Plantão/Eleição para Domingos e Feriados** | 🟡 Média | Res. 22.901/2008 art. 4º §2º · Portaria 380/2026 art. 5º | **Ação:** Fora de períodos de plantão eleitoral/dias de eleição, o pagamento de pecúnia aos domingos e feriados é vedado por norma. Direcionar o excedente desses dias para compensação (+100%), salvo se o mês for identificado como plantão/eleitoral. |
-| **C8** | **Alerta de Repouso Interjornada < 8h** | 🟢 Baixa | Res. 22.901/2008 art. 7º | **Ação:** Detectar e emitir alerta discreto quando o intervalo entre a última saída de um dia e a primeira entrada do dia subsequente for inferior ao mínimo de 8 horas consecutivas. |
-| **C9** | **Documentação / Aviso de Adicional Noturno** | 🟢 Baixa | Lei nº 8.112/1990 art. 75 | **Ação:** Exibir tooltip informativo esclarecendo que a hora noturna reduzida (52min30s) e a coluna `.h13` não são recalculadas pelo saldo sintético do TSE XT. |
-| **C10** | **Atualização da Legislação de Referência Injetada** | 🟢 Baixa | Portarias 490/2022 e 380/2026 | **Ação:** Atualizar a seção injetada de normas oficiais no rodapé da página para referenciar as portarias vigentes no TSE. |
+| **C1** | **`SALDO ACUM.` apenas com Horas Homologadas** | 🔴 Alta | Portaria 380/2026 · [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) | Creditar no saldo diário apenas a parcela `Horas Excedentes Homologadas`. Pecúnia e horas não homologadas ficam fora do banco. |
+| **C2** | **Três Estados de Banco de Horas** | 🔴 Alta | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 13 | Segregar regimes: Normal, Híbrido (sem crédito) e Mês com HE Autorizada (crédito restrito a homologadas, consumo vedado). |
+| **C3** | **Pecúnia em Mês Híbrido & Alerta de FDS Perdido** | 🟡 Média | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 12 | Zerar projeção de pecúnia em mês híbrido; emitir alerta para trabalho em FDS/feriado suprimido pela norma. |
+| **C4** | **Faixa de Complementação 7h–8h & Recesso 5h** | 🟡 Média | Portaria 380/2026 art. 7º §2º · Portaria 885/2024 | Tratar 7h–8h no turno único como complementação ordinária (não gera crédito imediato); recesso forense 5h. |
+| **C5** | **Alertas de Tetos Legais de Horas Extras** | 🟡 Média | Res. 22.901/2008 · Portaria 380/2026 art. 4º | Badges e alertas para > 2h em dia útil, > 10h em FDS/feriado, > 60h acumuladas no mês e faixa 60h–90h. |
+| **C6** | **Selo Diário de Excedente Além do Autorizado** | 🟡 Média | Portaria 380/2026 art. 3º e 10 | Cruzar excedente com limites diários lidos do SAEX via `heAuthFetch.js`; sinalizar quando realizado superar autorizado. |
+| **C7** | **Conceito de Plantão/Eleição para Domingos e Feriados** | 🟡 Média | Res. 22.901/2008 art. 4º §2º · Portaria 380/2026 art. 5º | Direcionar domingos/feriados fora de eleição/plantão para compensação (+100%), vedando pecúnia indevida. |
+| **C8** | **Alerta de Repouso Interjornada < 8h** | 🟢 Baixa | Res. 22.901/2008 art. 7º | Alerta discreto quando intervalo entre última saída e primeira entrada subsequente for < 8h consecutivas. |
+| **C9** | **Documentação / Aviso de Adicional Noturno** | 🟢 Baixa | Lei nº 8.112/1990 art. 75 | Tooltip elucidativo sobre hora ficta noturna de 52m30s e coluna `.h13` não recalculadas sinteticamente. |
+| **C10** | **Atualização da Legislação de Referência Injetada** | 🟢 Baixa | Portarias 490/2022 e 380/2026 | Atualizar bloco injetado no rodapé substituindo normas revogadas pelas portarias vigentes. |
+
+---
+
+### Detalhamento Executivo dos Itens da Trilha C
+
+---
+
+#### 🔴 C1 — `SALDO ACUM.` apenas com Horas Homologadas
+* **Norma & Fundamentação:** Portaria-TSE nº 380/2026 art. 9º, 10 e 11; [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) e [§3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco). O excedente diário possui 3 destinos mutuamente excludentes: *Pecúnia* (paga, não vai a banco), *Horas Homologadas* (vai a banco com fator) e *Horas Não Homologadas* (descartadas, perda).
+* **Casos de Testes Automatizados:**
+  * `TC-C1-01`: Mês fechado com HE autorizada onde 100% do excedente de FDS virou pecúnia $\rightarrow$ `SALDO ACUM.` não incorpora FDS; saldo final fecha em `00:00`.
+  * `TC-C1-02`: Mês com excedente não homologado pela chefia $\rightarrow$ `SALDO ACUM.` expurga horas não homologadas (fator zero).
+  * `TC-C1-03`: Mês com parcela homologada pela chefia (ex.: abr/2026) $\rightarrow$ apenas a parcela homologada é creditada no `SALDO ACUM.` (aplicando fator ×1,0 para úteis, ×1,5 sábado e ×2,0 domingo/feriado).
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Exemplo 1 (Pecúnia pura de eleição):* Mês 10/2024 fechado com 50h55 de pecúnia e 00:00 homologadas.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`  
+    Extrato: `https://meuespaco.tse.jus.br/portalservidor2/BancoHorasAction_recuperarExtrato.action` (nenhuma hora adquirida de 10/2024).
+  * *Exemplo 2 (Horas perdidas não homologadas):* Mês 03/2024 com 38h19 de pecúnia e 15h34 não homologadas.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** A coluna `SALDO ACUM.` somou todos os finais de semana (com fatores 1,5 e 2,0), inflando artificialmente o banco em dezenas de horas que ou já foram pagas em dinheiro ou foram descartadas.
+  * **Depois (Solução):** O saldo acumulado diário só incorpora o que for classificado como homologado para compensação, rotulado como prévia do "Horas Adquiridas" do Extrato oficial.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/domModernizer.js`, `tests/balanceCalc.test.mjs`.
+
+---
+
+#### 🔴 C2 — Três Estados de Banco de Horas
+* **Norma & Fundamentação:** Portaria-TSE nº 490/2022 art. 22; Portaria-TSE nº 380/2026 art. 13; [regras §3.7](regras-calculo-frequencia.md#37-trabalho-híbrido--teletrabalho--supressão-integral-do-serviço-extraordinário) e [§3.8](regras-calculo-frequencia.md#38-resíduo-de-horas-em-mês-híbrido-é-cosmético).
+* **Matriz de Regimes:**
+  1. *Normal (presencial):* Crédito ✅ / Consumo ✅ / Saldo visível ✅.
+  2. *Híbrido/Teletrabalho:* Crédito ❌ / Consumo ✅ / Saldo visível ✅ (resíduo cosmético de −70h a −98h não debita banco).
+  3. *Mês com HE Autorizado (art. 13):* Crédito ✅ (apenas homologadas) / Consumo ❌ (vedada utilização no mês) / Saldo visível ✅.
+* **Casos de Testes Automatizados:**
+  * `TC-C2-01`: Servidor presencial sem HE $\rightarrow$ Crédito e débito fluem normalmente.
+  * `TC-C2-02`: Mês com $\ge 1$ dia híbrido $\rightarrow$ Crédito bloqueado, consumo permitido de saldo pré-existente; resíduo negativo não alimenta cálculo de débito.
+  * `TC-C2-03`: Mês com autorização de HE $\rightarrow$ Crédito permitido apenas para homologadas; botão/projeção de consumo bloqueado.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Híbrido:* Mês 03/2026 (resíduo cosmético de −98:04 sem débito real no extrato).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=3`
+  * *HE Autorizado:* Mês 04/2026 (Portaria 380/2026 vigente, pecúnia 06:00 dom + 05:50 úteis homologadas).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=4`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Falta de segregação estrita no cálculo diário do saldo acumulado linha a linha e projeções de zeramento de mês tentando consumir banco em mês de HE autorizado.
+  * **Depois (Solução):** Bloqueio coerente e unificado em todos os KPIs e na coluna da tabela, refletindo os direitos de aquisição e usufruto de cada modalidade.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/kpiExtractor.js`, `tests/kpiCards.test.mjs`.
+
+---
+
+#### 🟡 C3 — Pecúnia em Mês Híbrido & Alerta de FDS Perdido
+* **Norma & Fundamentação:** Portaria-TSE nº 490/2022 art. 22-23; Portaria-TSE nº 380/2026 art. 12; [regras §3.7](regras-calculo-frequencia.md#37-trabalho-híbrido--teletrabalho--supressão-integral-do-serviço-extraordinário). Em mês com trabalho híbrido/teletrabalho, o serviço extraordinário é suprimido na integralidade.
+* **Casos de Testes Automatizados:**
+  * `TC-C3-01`: Mês aberto com dia híbrido registrado $\rightarrow$ projeção de pecúnia forçada a `00:00`.
+  * `TC-C3-02`: Trabalho registrado em sábado, domingo ou feriado em mês híbrido (ex.: sábado 04/07/2026 com 08h03) $\rightarrow$ emissão de badge de alerta visual de descarte normativo.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Trabalho de FDS em híbrido:* Sábado 04/07/2026 com 08h03 trabalhadas e `HORAS AJUST. = 00:00` / `PECÚNIA = 00:00` no sistema oficial.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=7`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** O TSE XT permitia projeção de pecúnia em mês aberto híbrido e não alertava o servidor que o trabalho prestado no fim de semana não teria qualquer contraprestação de banco ou pecúnia.
+  * **Depois (Solução):** Pecúnia projetada zerada automaticamente no KPI 4 e badge na linha do FDS/feriado alertando o servidor sobre a supressão normativa.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/kpiExtractor.js`, `content/modules/domModernizer.js`.
+
+---
+
+#### 🟡 C4 — Faixa de Complementação 7h–8h & Recesso 5h
+* **Norma & Fundamentação:** Portaria-TSE nº 380/2026 art. 7º §2º; Portaria-TSE nº 885/2024; [regras §3.6](regras-calculo-frequencia.md#36-jornada-diária-por-padrão-de-marcação-7h--8h--5h) e [§3.10](regras-calculo-frequencia.md#310-recesso--jornada-reduzida-a-5h-e-acúmulo-de-banco-restrito). Para o turno único, a faixa entre 420min e 480min é computada como complementação ordinária da jornada mensal (coluna nativa `Compl. Jorn. Mínima`), não serviço extraordinário. Em janeiro e julho (ano ímpar), a base é 5h e acúmulo no banco depende de ato da DG.
+* **Casos de Testes Automatizados:**
+  * `TC-C4-01`: Dia útil em turno único com 7h42 de total $\rightarrow$ os 42min entre 7h e 8h não creditam saldo excedente imediato.
+  * `TC-C4-02`: Mês de janeiro em turno único $\rightarrow$ jornada-alvo de 5h (300min); aviso no saldo acumulado de que excedente não vai automaticamente ao banco.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Complementação ordinária:* Mês 03/2024 (dias com 07:42 $\rightarrow$ `Compl. Jorn. Mínima 00:42`; 08:34 $\rightarrow$ `01:34`).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
+  * *Recesso 5h:* Mês 01/2025.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2025&mesSelecionado=1`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Qualquer minuto acima de 420min em dia útil gerava saldo positivo no `SALDO ACUM.`, divergindo da lógica de fechamento mensal do TSE.
+  * **Depois (Solução):** Classificação da faixa 7h–8h como complementação ordinária e isolamento do acúmulo de recesso.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/legalConfig.js`, `content/modules/domModernizer.js`.
+
+---
+
+#### 🟡 C5 — Alertas de Tetos Legais de Horas Extras
+* **Norma & Fundamentação:** Resolução-TSE nº 22.901/2008 art. 4º; Portaria-TSE nº 380/2026 art. 4º; [regras §3.4](regras-calculo-frequencia.md#34-tetos-de-fim-de-semana-e-feriado). Limites de 2h/dia útil, 10h/FDS-feriado, 60h/mês e faixa de 60h–90h para compensação sob deliberação da DG.
+* **Casos de Testes Automatizados:**
+  * `TC-C5-01`: Excedente diário útil $> 120\text{min}$ $\rightarrow$ badge `> 2h (art. 4º)`.
+  * `TC-C5-02`: Trabalho em FDS/feriado $> 600\text{min}$ $\rightarrow$ badge `> 10h (art. 4º)` e descarte do tempo excedente.
+  * `TC-C5-03`: Mês com horas extras acumuladas $> 60\text{h}$ $\rightarrow$ badge e alerta no card de teto legal de 60h atingido.
+  * `TC-C5-04`: Faixa de 60h a 90h $\rightarrow$ indicador de dependência de deliberação da DG para fins de compensação.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Teto de 10h em FDS:* Domingo 06/10/2016 com 11h52 trabalhadas, teto travado em 10h00 e 1h52 descartadas; ou Feriado 07/09/2026 com 11h24 trabalhadas (caso Fernando Lima Rocha).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=9`
+  * *Teto de 60h no mês:* Mês 10/2024 (50h55 de HE executada, próximo ao teto).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Alertas diários implementados parcialmente; faltava sinalização consolidada do teto mensal de 60h e da faixa especial de 60h–90h no card e rodapé.
+  * **Depois (Solução):** Alertas completos e transparentes no card de Horas Extras e nos badges da tabela diária.
+* **Arquivos Impactados:** `content/modules/domModernizer.js`, `content/modules/kpiExtractor.js`, `tests/balanceCalc.test.mjs`.
+
+---
+
+#### 🟡 C6 — Selo Diário de Excedente Além do Autorizado
+* **Norma & Fundamentação:** Portaria-TSE nº 380/2026 art. 3º e 10; [regras §3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco). Excedente executado sem respaldo de autorização prévia no SAEX não gera pecúnia nem banco automático.
+* **Casos de Testes Automatizados:**
+  * `TC-C6-01`: Dia onde `excedenteRealizado > limiteAutorizadoDoDia` (via `heAuthFetch.js`) $\rightarrow$ badge `> autorizado (SAEX)`.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Excedente não autorizado:* Mês 03/2024 em dias com trabalho além do autorizado pelo SAEX.  
+    URL do Espelho: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`  
+    URL do Backend SAEX: `https://meuespaco.tse.jus.br/portalservidor2/AutorizacaoHoraExcedenteAction_execute?dataDia.asString=15/03/2024&servidor.matricula=30000000`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** O servidor realizava horas excedentes acreditando que seriam pagas ou compensadas, descobrindo apenas no fechamento do mês que viraram "Horas Não Homologadas" perdidas.
+  * **Depois (Solução):** Comparação em tempo de execução com os dados da autorização SAEX do dia, alertando visualmente na própria linha que a parcela excedente depende de homologação ativa.
+* **Arquivos Impactados:** `content/modules/domModernizer.js`, `content/modules/heAuthFetch.js`.
+
+---
+
+#### 🟡 C7 — Conceito de Plantão/Eleição para Domingos e Feriados
+* **Norma & Fundamentação:** Resolução-TSE nº 22.901/2008 art. 4º §2º; Portaria-TSE nº 380/2026 art. 5º; [regras §3.4](regras-calculo-frequencia.md#34-tetos-de-fim-de-semana-e-feriado). Pagamento de pecúnia aos domingos e feriados é vedado fora de plantão eleitoral e dias de eleição.
+* **Casos de Testes Automatizados:**
+  * `TC-C7-01`: Domingo trabalhado em mês não eleitoral / fora de plantão $\rightarrow$ 100% compensação (+100% no banco); pecúnia fixada em zero.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Domingo sem eleição:* Mês 11/2017 (15h29 de domingos que viraram 30h58 de banco, pecúnia 00:00).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2017&mesSelecionado=11`
+  * *Domingo eleitoral:* Mês 10/2024 (pecúnia autorizada).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Em meses comuns, domingos trabalhados eram projetados com possibilidade de pecúnia sem checar o contexto de plantão eleitoral.
+  * **Depois (Solução):** Encaminhamento automático para compensação (+100%) em meses não eleitorais.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/legalConfig.js`, `content/modules/kpiExtractor.js`.
+
+---
+
+#### 🟢 C8 — Alerta de Repouso Interjornada < 8h
+* **Norma & Fundamentação:** Resolução-TSE nº 22.901/2008 art. 7º. Mínimo de 8h ininterruptas entre o fim de uma jornada e o início da seguinte.
+* **Casos de Testes Automatizados:**
+  * `TC-C8-01`: $E_1(Dia_{N+1}) - S_{fim}(Dia_N) < 480\text{min}$ $\rightarrow$ emissão de badge `⚠️ Repouso interjornada < 8h (art. 7º)`.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Fechamentos eleitorais / plantões:* Dias de apuração ou fechamento de cadastro com saídas noturnas e retornos matutinos.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=5`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Ausência total de controle temporal entre dias consecutivos.
+  * **Depois (Solução):** Alerta preventivo e ergonômico na linha do dia subsequente.
+* **Arquivos Impactados:** `content/modules/domModernizer.js`.
+
+---
+
+#### 🟢 C9 — Documentação / Aviso de Adicional Noturno
+* **Norma & Fundamentação:** Lei nº 8.112/1990 art. 75; hora noturna ficta de 52min30s (22h às 5h) registrada na coluna nativa `.h13`.
+* **Casos de Testes Automatizados:**
+  * `TC-C9-01`: Célula ou cabeçalho `.h13` renderiza tooltip informativo esclarecendo a limitação de cálculo.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Mês com trabalho noturno:* Qualquer mês com marcações após as 22h (ex.: 10/2024).  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Servidor tinha dúvida se a coluna de adicional noturno estava sendo incorporada ao saldo acumulado.
+  * **Depois (Solução):** Tooltip claro e normativo informando que o adicional noturno segue o cálculo nativo oficial do TSE.
+* **Arquivos Impactados:** `content/modules/domModernizer.js`.
+
+---
+
+#### 🟢 C10 — Atualização da Legislação de Referência Injetada
+* **Norma & Fundamentação:** Portarias-TSE nº 490/2022 e 380/2026; Res.-TSE nº 22.901/2008 (redação 23.629/2020); Portaria-TSE nº 885/2024.
+* **Casos de Testes Automatizados:**
+  * `TC-C10-01`: Bloco injetado no rodapé do espelho deve conter links e citações para as normas vigentes, substituindo as regras legadas de COVID de 2019–2021.
+* **Cenário Real & URLs no Meu Espaço:**
+  * *Rodapé de legislação do Espelho:* Seção "Legislação de referência" em qualquer mês.  
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action`
+* **Visualização Antes vs Depois:**
+  * **Antes (Problema):** Página oficial e injeção do TSE XT referenciando portarias antigas de teletrabalho na pandemia.
+  * **Depois (Solução):** Injeção moderna e padronizada com o quadro normativo pleno e atualizado do TSE.
+* **Arquivos Impactados:** `content/modules/domModernizer.js`, `content/modules/legalConfig.js`.
 
 ---
 
@@ -57,7 +226,7 @@ Melhorias para tornar o uso diário mais ergonômico, rápido e produtivo.
 
 | ID | Item | Impacto | Descrição & Ação Necessária |
 | :--- | :--- | :---: | :--- |
-| **U1** | **Persistência (*Sticky*) de Topbar, KPIs e Cabeçalho da Tabela** | 🔥 Alto | **Problema:** Ao rolar o espelho de ponto em meses longos, perde-se a visão dos KPIs e dos títulos das colunas.<br>**Ação:** Implementar `position: sticky` refinado na topbar, na linha de 5 cards de KPI e no `<thead>` da tabela de frequência com background sólido/glass translúcido e sombra de elevação. |
+| **U1** | **Persistência (*Sticky*) de Topbar, KPIs e Cabeçalho da Tabela** | 🔥 Alto | **Problema:** Ao rolar o espelho de ponto em meses longos, perde-se a visão dos KPIs e dos títulos das colunas.<br>**Ação:** Implementar `position: sticky` refinado na topbar, na linha de 5 cards de KPI e no cabeçalho da tabela de frequência.<br>*Status:* Cabeçalho de `#tblEspelhoPontoMesCorrente` concluído (sticky no topo com backdrop opaco, sombra de elevação e suporte a colunas customizadas). |
 | **U2** | **Modo Conferência Lado a Lado (XT × Oficial)** | 🔥 Alto | **Ação:** Criar um modo comparativo onde o saldo oficial do portal e o saldo analítico do TSE XT são exibidos lado a lado, com destaque visual de discrepâncias, facilitando auditoria rápida pelo servidor. |
 | **U3** | **Exportação Visual Aprimorada & Layout de Impressão (`@media print`)** | 💡 Médio | **Ação:** Criar folha de estilo de impressão limpa que remova botões, drawers e elementos de navegação, formatando o espelho com os 5 KPIs em página única para geração direta de PDF institucional. |
 | **U4** | **Central de Preferências Estendida** | 💡 Médio | **Ação:** Expandir a tela de popup da extensão para permitir configurar: regime de trabalho padrão (presencial / híbrido), jornada esperada (7h ou 8h), e ativação/desativação de alertas normativos específicos. |
