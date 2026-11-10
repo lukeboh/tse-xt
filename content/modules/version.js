@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.3-Snapshot';
+  const CURRENT_VERSION = '1.1.4-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.4-Snapshot',
+      date: '2026-11-10',
+      title: 'Roadmap: situação real dos itens da Trilha C',
+      features: [
+        'Sem mudança de comportamento na extensão: esta versão só atualiza a documentação.',
+        'C2 registrado como entregue na série 0.6.x; C4, C5 e C9 como parciais; C3, C6, C7, C8 e C10 como pendentes.',
+        'O roadmap passa a listar o que falta em cada item de conformidade e as dúvidas normativas de que ele depende.'
+      ]
+    },
     {
       version: '1.1.3-Snapshot',
       date: '2026-11-10',
