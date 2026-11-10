@@ -25,7 +25,7 @@ window.JEPessoasBalance = (function () {
   // "> 2h"/"> 10h" da tabela, ver domModernizer.js). O que excede o teto do
   // dia nunca vira pecúnia, mesmo com autorização — por isso limita
   // netExcedenteMin (o "poderia virar pecúnia se houvesse autorização" do
-  // KPI 4), não o delta do banco de horas em si (esse já é outra conta).
+  // KPI 4). No banco de horas o teto só corta sábado/domingo/feriado.
   // Lido de window.JEPessoasLegal com fallback pro valor literal — mesmo
   // padrão defensivo do R5, útil tanto se o módulo ainda não carregou quanto
   // nos testes (que não injetam legalConfig.js).
@@ -33,6 +33,35 @@ window.JEPessoasBalance = (function () {
     const L = (typeof window !== 'undefined') ? window.JEPessoasLegal : null;
     if (isWeekendOrHoliday) return (L && L.MAX_HE_FDS_MIN && L.MAX_HE_FDS_MIN.valor) || 600;
     return (L && L.MAX_HE_DIA_UTIL_MIN && L.MAX_HE_DIA_UTIL_MIN.valor) || 120;
+  }
+
+  /**
+   * Parcela homologada do mês por tipo de dia (rodapé "Horas Excedentes
+   * Homologadas"). O espelho só informa esse total mensal, então computeDailyDelta
+   * vai abatendo dele, na ordem das linhas, o que cada dia pode creditar — ao fim
+   * do mês o saldo fecha com o crédito real (homologadas × fator).
+   *
+   * @param {{uteis:number, sab:number, domfer:number}} homolog
+   */
+  function createHomologPool(homolog) {
+    const h = homolog || {};
+    return { uteis: h.uteis || 0, sab: h.sab || 0, domfer: h.domfer || 0 };
+  }
+
+  /** Lê do rodapé do espelho o pool de homologadas; null se não houver rodapé legível. */
+  function homologPoolFromEspelho(doc) {
+    try {
+      const scan = window.JEPessoasAuthScan && window.JEPessoasAuthScan.analyzeEspelho(doc);
+      return (scan && scan.footer && scan.footer.homolog) ? createHomologPool(scan.footer.homolog) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function takeHomolog(pool, key, availableMin) {
+    const taken = Math.min(Math.max(0, availableMin), Math.max(0, pool[key]));
+    pool[key] -= taken;
+    return taken;
   }
 
   /**
@@ -51,17 +80,17 @@ window.JEPessoasBalance = (function () {
    * @param {boolean} o.projectFromTotal   dia corrente de mês aberto: projeta o saldo
    *                                        a partir do TOTAL quando a coluna nativa (noturna)
    *                                        ainda não foi processada
-   * @returns {{delta:number, multiplierPct:(0|50|100), bucket:('weekday'|'sunday'), projected?:boolean, netExcedenteMin:number}}
+   * @param {Object}  [o.homologPool]      createHomologPool() do mês fechado, compartilhado entre
+   *                                        os dias e abatido aqui. Sem ele o mês fechado usa o
+   *                                        excedente bruto (rodapé indisponível).
+   * @returns {{delta:number, multiplierPct:(0|50|100), bucket:('weekday'|'sunday'), projected?:boolean, netExcedenteMin:number, lostHoursMin:number, isPecuniaOnly:boolean}}
    *   netExcedenteMin — quanto do excedente do dia AINDA poderia virar pecúnia se
-   *   houvesse autorização suficiente (o que já não virou pecúnia, capado no teto
-   *   legal de horas pagáveis por jornada — 2h em dia útil, 10h em sábado/domingo/
-   *   feriado, Res. 22.901/2008 art. 4º: o que passa do teto nunca é pecúnia,
-   *   autorizado ou não). NÃO é a mesma base do delta do banco de horas acima (que
-   *   não aplica esse teto) — os dois só coincidem quando o excedente bruto do dia
-   *   já está dentro do teto. Só populado nos ramos onde essa distinção faz sentido
-   *   (mês aberto, dia não dispensado); fica 0 em mês fechado/projeção, onde a
-   *   coluna PECÚNIA nativa não é comparável ao excedente do jeito que este cálculo
-   *   espera.
+   *   houvesse autorização suficiente (já capado no teto legal de horas pagáveis
+   *   por jornada: 2h em dia útil, 10h em sábado/domingo/feriado). Fica 0 em mês
+   *   fechado/projeção de dia útil, onde a coluna PECÚNIA nativa não é comparável.
+   *   lostHoursMin — tempo descartado acima do teto de 10h em sábado/domingo/
+   *   feriado. O excedente de dia útil acima de 2h não é descarte: continua na
+   *   reconciliação do mês (regras-calculo-frequencia.md §3.11).
    */
   function computeDailyDelta(o) {
     o = o || {};
@@ -70,37 +99,32 @@ window.JEPessoasBalance = (function () {
     const pecuniaMin = o.pecuniaMin || 0;
     const target = o.dayTargetMinutes || 0;
     const isClosedMonth = !!o.isClosedMonth;
+    const pool = isClosedMonth ? o.homologPool : null;
 
-    // 1. Domingo, feriado, recesso e facultativo: +100% sobre o excedente líquido trabalhado.
-    if (o.dayOfWeek === 0 || o.isHolidayOrRecess) {
-      const raw = totalMin > 0 ? totalMin : exceedMin;
-      const net = Math.max(0, raw - pecuniaMin);
-      // netExcedenteMin é sobre o que AINDA poderia virar pecúnia — capado no
-      // teto de 10h/jornada (o que passa do teto nunca é pecúnia, autorizado
-      // ou não). Ex.: feriado com 11:24 trabalhadas e 00:00 de pecúnia: só
-      // 10:00 (o teto) entram no "poderia virar pecúnia", não as 11:24 cheias.
-      const pecuniaEligibleMin = Math.min(raw, dailyPecuniaCapMin(true));
-      const netForPecunia = Math.max(0, pecuniaEligibleMin - pecuniaMin);
-      return {
-        delta: Math.round(net * SUNDAY_HOLIDAY_FACTOR),
-        multiplierPct: net > 0 ? 100 : 0,
-        bucket: 'sunday',
-        netExcedenteMin: netForPecunia
-      };
-    }
+    // 1 e 2. Domingo/feriado/recesso/facultativo (+100%) e sábado (+50%), sobre o
+    // excedente elegível: o que passa do teto de 10h é descartado.
+    const isSundayOrHoliday = o.dayOfWeek === 0 || !!o.isHolidayOrRecess;
+    if (isSundayOrHoliday || o.dayOfWeek === 6) {
+      let raw;
+      if (isSundayOrHoliday) {
+        raw = totalMin > 0 ? totalMin : exceedMin;
+      } else {
+        // Em mês fechado a h10 é "HORAS AJUST." e não serve de excedente -> usa o TOTAL.
+        raw = isClosedMonth ? totalMin : (exceedMin > 0 ? exceedMin : totalMin);
+      }
+      const capMin = dailyPecuniaCapMin(true);
+      const eligible = Math.min(raw, capMin);
+      const net = Math.max(0, eligible - pecuniaMin);
+      const credited = pool ? takeHomolog(pool, isSundayOrHoliday ? 'domfer' : 'sab', net) : net;
+      const delta = Math.round(credited * (isSundayOrHoliday ? SUNDAY_HOLIDAY_FACTOR : SATURDAY_FACTOR));
 
-    // 2. Sábado: +50% sobre o excedente líquido trabalhado.
-    if (o.dayOfWeek === 6) {
-      // Em mês fechado a h10 é "HORAS AJUST." e não serve de excedente -> usa o TOTAL.
-      const raw = isClosedMonth ? totalMin : (exceedMin > 0 ? exceedMin : totalMin);
-      const net = Math.max(0, raw - pecuniaMin);
-      const pecuniaEligibleMin = Math.min(raw, dailyPecuniaCapMin(true));
-      const netForPecunia = Math.max(0, pecuniaEligibleMin - pecuniaMin);
       return {
-        delta: Math.round(net * SATURDAY_FACTOR),
-        multiplierPct: net > 0 ? 50 : 0,
-        bucket: 'weekday',
-        netExcedenteMin: netForPecunia
+        delta,
+        multiplierPct: delta > 0 ? (isSundayOrHoliday ? 100 : 50) : 0,
+        bucket: isSundayOrHoliday ? 'sunday' : 'weekday',
+        netExcedenteMin: net,
+        lostHoursMin: Math.max(0, raw - capMin),
+        isPecuniaOnly: eligible > 0 && net === 0
       };
     }
 
@@ -108,13 +132,17 @@ window.JEPessoasBalance = (function () {
     //    não credita nem debita. (Em mês aberto mantém-se a regra antiga para não alterar
     //    comportamento já validado.)
     if (o.isDispensed && isClosedMonth) {
-      return { delta: 0, multiplierPct: 0, bucket: 'weekday', netExcedenteMin: 0 };
+      return { delta: 0, multiplierPct: 0, bucket: 'weekday', netExcedenteMin: 0, lostHoursMin: 0, isPecuniaOnly: false };
     }
 
     // 4. Dia útil normal.
     if (isClosedMonth) {
       // h10 = "HORAS AJUST." ≈ jornada reconhecida. Saldo real do dia = TOTAL - jornada esperada.
-      return { delta: totalMin - target, multiplierPct: 0, bucket: 'weekday', netExcedenteMin: 0 };
+      // Com o rodapé disponível só a parcela homologada credita, e dias curtos não
+      // debitam: o sistema já os completou (regras §3.11).
+      const gross = totalMin - target;
+      const delta = pool ? takeHomolog(pool, 'uteis', gross - pecuniaMin) : gross;
+      return { delta, multiplierPct: 0, bucket: 'weekday', netExcedenteMin: 0, lostHoursMin: 0, isPecuniaOnly: false };
     }
 
     // Mês aberto: h10 = "HORAS EXCED." já é o saldo líquido do dia.
@@ -122,13 +150,21 @@ window.JEPessoasBalance = (function () {
     // (projectFromTotal) e ela ainda está zerada, o TSE XT projeta o saldo do dia
     // a partir do TOTAL, como num mês fechado, e marca o resultado como projetado.
     if (o.projectFromTotal && exceedMin === 0 && totalMin > 0) {
-      return { delta: totalMin - target, multiplierPct: 0, bucket: 'weekday', projected: true, netExcedenteMin: 0 };
+      return { delta: totalMin - target, multiplierPct: 0, bucket: 'weekday', projected: true, netExcedenteMin: 0, lostHoursMin: 0, isPecuniaOnly: false };
     }
 
-    // Teto de 2h/jornada em dia útil — mesma lógica do fim de semana acima.
+    // Teto de 2h/jornada em dia útil — limita só o que poderia virar pecúnia.
     const pecuniaEligibleMin = Math.min(exceedMin, dailyPecuniaCapMin(false));
-    return { delta: exceedMin - pecuniaMin, multiplierPct: 0, bucket: 'weekday', netExcedenteMin: Math.max(0, pecuniaEligibleMin - pecuniaMin) };
+    const net = Math.max(0, pecuniaEligibleMin - pecuniaMin);
+    return {
+      delta: exceedMin - pecuniaMin,
+      multiplierPct: 0,
+      bucket: 'weekday',
+      netExcedenteMin: net,
+      lostHoursMin: 0,
+      isPecuniaOnly: pecuniaEligibleMin > 0 && net === 0
+    };
   }
 
-  return { computeDailyDelta, SUNDAY_HOLIDAY_FACTOR, SATURDAY_FACTOR };
+  return { computeDailyDelta, createHomologPool, homologPoolFromEspelho, SUNDAY_HOLIDAY_FACTOR, SATURDAY_FACTOR };
 })();

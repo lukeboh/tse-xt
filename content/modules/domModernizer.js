@@ -791,7 +791,7 @@ window.JEPessoasModernizer = (function () {
   function modernizeMonthlyTable(table, targetHours = 7) {
 
     // Limpa injeções anteriores para garantir idempotência
-    table.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+    table.querySelectorAll('.je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
 
     // Desfaz o "preenchimento de linha" (normalização de colspan do resumo do
     // mês, mais abaixo) — restaura o colspan nativo antes de reprocessar.
@@ -831,6 +831,15 @@ window.JEPessoasModernizer = (function () {
       cell.removeAttribute('title');
     });
 
+    table.querySelectorAll('td.je-cell-noturno-highlight').forEach((cell) => {
+      const valEl = cell.querySelector('.je-noturno-val');
+      if (valEl) {
+        cell.textContent = valEl.textContent.trim();
+      }
+      cell.classList.remove('je-cell-noturno-highlight');
+      cell.removeAttribute('title');
+    });
+
     table.querySelectorAll('td.h15 .je-occurrence-badge').forEach(el => el.remove());
     // Selo R5 injetado na coluna de ocorrência — removido antes de reprocessar,
     // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
@@ -861,7 +870,7 @@ window.JEPessoasModernizer = (function () {
       if (!el) return '';
       const clone = el.cloneNode(true);
       clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
-      clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-app-calc-tag').forEach((n) => n.remove());
+      clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-noturno-rate-tag, .je-noturno-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-app-calc-tag').forEach((n) => n.remove());
       return clone.textContent;
     };
 
@@ -872,6 +881,11 @@ window.JEPessoasModernizer = (function () {
     const headerTexts = Array.from(table.querySelectorAll('th')).map(th => normalizeWs(robustText(th)));
     const isClosedMonthTable = headerTexts.some(t => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
 
+    // Mês fechado: só a parcela homologada do rodapé entra no SALDO ACUM. (C1).
+    const closedMonthHomologPool = isClosedMonthTable
+      ? window.JEPessoasBalance.homologPoolFromEspelho(table.ownerDocument || document)
+      : null;
+
     // 1. Injeta Cabeçalhos das Novas Colunas (APENAS se NÃO houver trabalho híbrido no mês)
     if (!hasHybridWorkInMonth) {
       const headerRows = table.querySelectorAll('tr');
@@ -881,25 +895,40 @@ window.JEPessoasModernizer = (function () {
           const text = normalizeWs(robustText(th));
           return text.includes('HORAS AJUST') || text.includes('HORAS EXCED') || text.includes('AJUST') || text.includes('EXCED');
         });
-        const anchorTh = pecuniaTh || exceedTh;
+        let anchorTh = pecuniaTh || exceedTh;
 
-        if (anchorTh) {
-          // Injeta a coluna HORAS EXCED. APENAS se o mês for FECHADO (quando a coluna nativa se chama HORAS AJUST.)
+        if (anchorTh && anchorTh.parentNode) {
+          // 1. Injeta a coluna HORAS EXCED. APENAS se o mês for FECHADO (quando a coluna nativa se chama HORAS AJUST.)
           if (isClosedMonthTable && !tr.querySelector('th.je-col-daily-exceed')) {
             const deltaTh = document.createElement('th');
             deltaTh.className = 'je-col-daily-exceed';
             deltaTh.title = 'Horas Excedentes Líquidas do Dia (Calculadas pelo TSE XT: Saldo Diário Bruto com multiplicadores de fim de semana - Pecúnia)';
             deltaTh.innerHTML = 'HORAS EXCED.';
             anchorTh.parentNode.insertBefore(deltaTh, anchorTh.nextSibling);
+            anchorTh = deltaTh;
           }
 
-          const insertedDeltaTh = tr.querySelector('th.je-col-daily-exceed') || anchorTh;
+          // 2. Injeta a coluna SALDO ACUM. após HORAS EXCED. (ou após PECÚNIA em mês aberto)
           if (!tr.querySelector('th.je-col-accumulated-balance')) {
             const accumTh = document.createElement('th');
             accumTh.className = 'je-col-accumulated-balance';
             accumTh.title = 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
             accumTh.innerHTML = 'SALDO ACUM.';
-            insertedDeltaTh.parentNode.insertBefore(accumTh, insertedDeltaTh.nextSibling);
+            anchorTh.parentNode.insertBefore(accumTh, anchorTh.nextSibling);
+            anchorTh = accumTh;
+          }
+
+          // 3. Injeta a coluna HORAS PERDIDAS ao lado direito de "Compl. Jorn. Mínima" (.h15)
+          const complTh = tr.querySelector('th.h15') || Array.from(tr.querySelectorAll('th')).find(th => {
+            const text = normalizeWs(robustText(th));
+            return text.includes('COMPL. JORN') || text.includes('COMPL');
+          });
+          if (!tr.querySelector('th.je-col-lost-hours') && complTh && complTh.parentNode) {
+            const lostTh = document.createElement('th');
+            lostTh.className = 'je-col-lost-hours';
+            lostTh.title = 'Tempo de trabalho descartado por ultrapassar o teto legal de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º). Descarte automático que não gera pecúnia nem banco.';
+            lostTh.innerHTML = 'HORAS PERDIDAS';
+            complTh.parentNode.insertBefore(lostTh, complTh.nextSibling);
           }
         }
       });
@@ -911,6 +940,10 @@ window.JEPessoasModernizer = (function () {
 
     let runningBalance = 0;
     let totalPecuniaMinutes = 0;
+    let totalNoturnoPecuniaMinutes = 0;
+    let totalNoturnoOrdMinutes = 0;
+    let totalLostHoursMinutes = 0;
+    let totalComplJornadaMinutes = 0;
 
     rows.forEach((tr) => {
       // Ignora linhas de cabeçalho
@@ -1097,6 +1130,54 @@ window.JEPessoasModernizer = (function () {
             }
           }
 
+          // Destaque visual e badge para Adic. Noturno Pecúnia (.h13) e Adic. Noturno (.h14) (+25% — Lei nº 8.112/1990 art. 75)
+          const NOTURNO_SVG = '<span class="je-noturno-icon" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12.3 2a10 10 0 0 0-1.9.18 10 10 0 1 0 11.42 11.42A10 10 0 0 0 12.3 2z"/></svg></span>';
+
+          const noturnoPecuniaCell = tr.querySelector('td.h13');
+          if (noturnoPecuniaCell) {
+            const noturnoPecText = robustText(noturnoPecuniaCell).trim();
+            const noturnoPecMin = parseMinutes(noturnoPecText);
+            if (noturnoPecMin > 0) {
+              totalNoturnoPecuniaMinutes += noturnoPecMin;
+              const tooltip = `Adicional Noturno em Pecúnia (+25% s/ hora extra — Lei nº 8.112/1990 art. 75 / Res. TSE nº 22.901/2008): ${noturnoPecText}`;
+              noturnoPecuniaCell.classList.add('je-cell-noturno-highlight');
+              noturnoPecuniaCell.title = tooltip;
+              if (!noturnoPecuniaCell.querySelector('.je-noturno-badge')) {
+                noturnoPecuniaCell.innerHTML = `
+                  <span class="je-noturno-badge je-noturno-badge-pecunia" title="${escapeHTML(tooltip)}">
+                    ${NOTURNO_SVG}
+                    <strong class="je-noturno-val">${escapeHTML(noturnoPecText)}</strong>
+                    <span class="je-noturno-rate-tag">+25%</span>
+                  </span>
+                `;
+              }
+            }
+          }
+
+          const noturnoOrdCell = tr.querySelector('td.h14');
+          if (noturnoOrdCell) {
+            const noturnoOrdText = robustText(noturnoOrdCell).trim();
+            const noturnoOrdMin = parseMinutes(noturnoOrdText);
+            if (noturnoOrdMin > 0) {
+              totalNoturnoOrdMinutes += noturnoOrdMin;
+              const tooltip = `Adicional Noturno (+25% s/ hora regular — Lei nº 8.112/1990 art. 75): ${noturnoOrdText}`;
+              noturnoOrdCell.classList.add('je-cell-noturno-highlight');
+              noturnoOrdCell.title = tooltip;
+              if (!noturnoOrdCell.querySelector('.je-noturno-badge')) {
+                noturnoOrdCell.innerHTML = `
+                  <span class="je-noturno-badge je-noturno-badge-ord" title="${escapeHTML(tooltip)}">
+                    ${NOTURNO_SVG}
+                    <strong class="je-noturno-val">${escapeHTML(noturnoOrdText)}</strong>
+                    <span class="je-noturno-rate-tag">+25%</span>
+                  </span>
+                `;
+              }
+            }
+          }
+
+          const complJornadaCell = tr.querySelector('td.h15');
+          if (complJornadaCell) totalComplJornadaMinutes += parseMinutes(robustText(complJornadaCell).trim());
+
           // Jornada esperada do dia: 8h se houve intervalo (2ª entrada), 5h em mês
           // de recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
           const dayTargetMinutes = (window.JEPessoasLegal && window.JEPessoasLegal.dailyTargetMinutes)
@@ -1158,7 +1239,8 @@ window.JEPessoasModernizer = (function () {
             exceedMin,
             pecuniaMin,
             dayTargetMinutes,
-            projectFromTotal: isTodayRow && !isClosedMonthTable
+            projectFromTotal: isTodayRow && !isClosedMonthTable,
+            homologPool: closedMonthHomologPool
           });
           const dailyDelta = dayResult.delta;
           const isProjectedToday = !!dayResult.projected && isTodayRow;
@@ -1180,13 +1262,14 @@ window.JEPessoasModernizer = (function () {
 
           if (shouldCount) {
             runningBalance += dailyDelta;
+            totalLostHoursMinutes += (dayResult.lostHoursMin || 0);
           }
 
           const exceedCell = tr.querySelector('td.h10');
           const pecuniaCellTarget = pecuniaCell || exceedCell;
-          let currentAnchor = pecuniaCellTarget;
+          let currentAnchor = pecuniaCellTarget || exceedCell;
 
-          // Célula 1: HORAS EXCED. do TSE XT (Injetada APENAS em meses fechados)
+          // Célula 1: HORAS EXCED. do TSE XT (Injetada APENAS em meses fechados, após PECÚNIA)
           if (isClosedMonthTable) {
             const tdDelta = document.createElement('td');
             tdDelta.className = 'je-col-daily-exceed';
@@ -1213,7 +1296,7 @@ window.JEPessoasModernizer = (function () {
             }
           }
 
-          // Célula 2: SALDO ACUM. do TSE XT (Injetada em todos os meses)
+          // Célula 2: SALDO ACUM. do TSE XT (Injetada em todos os meses após HORAS EXCED. / PECÚNIA)
           const tdAccum = document.createElement('td');
           tdAccum.className = 'je-col-accumulated-balance';
 
@@ -1232,23 +1315,33 @@ window.JEPessoasModernizer = (function () {
 
           if (currentAnchor && currentAnchor.parentNode) {
             currentAnchor.parentNode.insertBefore(tdAccum, currentAnchor.nextSibling);
+            currentAnchor = tdAccum;
+          }
+
+          // Célula 3: HORAS PERDIDAS do TSE XT (Injetada ao lado direito de "Compl. Jorn. Mínima" td.h15)
+          const tdLost = document.createElement('td');
+          tdLost.className = 'je-col-lost-hours';
+          const lostMin = dayResult.lostHoursMin || 0;
+
+          if (shouldCount && lostMin > 0) {
+            tdLost.classList.add('je-lost-hours-positive');
+            tdLost.innerHTML = `<strong>+${formatTime(lostMin)}</strong>`;
+            tdLost.title = `Tempo descartado pelo teto legal: +${formatTime(lostMin)} acima do limite do art. 4º da Res. 22.901/2008 (não gera pecúnia nem banco)`;
+          } else {
+            tdLost.classList.add('je-lost-hours-zero');
+            tdLost.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+          }
+
+          const complCell = tr.querySelector('td.h15');
+          if (complCell && complCell.parentNode) {
+            complCell.parentNode.insertBefore(tdLost, complCell.nextSibling);
+          } else if (currentAnchor && currentAnchor.parentNode) {
+            currentAnchor.parentNode.insertBefore(tdLost, currentAnchor.nextSibling);
           }
 
           // Dia corrente de mês aberto: a coluna nativa "HORAS EXCED." só é
           // processada à noite. Enquanto isso o TSE XT projeta o saldo do dia a
           // partir do TOTAL e destaca a célula como calculada pelo app.
-          //
-          // A célula é NATIVA (não é uma coluna sintética do TSE XT), então não
-          // dá pra só confiar em display:none no modo OFF como as outras. Em vez
-          // de sobrescrever o conteúdo original, guarda os dois lados (nativo e
-          // projeção) e deixa o CSS trocar qual aparece conforme
-          // body.je-xt-enabled/disabled — assim nada aparece no modo OFF (nem
-          // ao carregar desabilitado, nem ao desligar o interruptor sem recarregar
-          // a página) e o valor nativo nunca é perdido.
-          // try/catch isolado: se algo aqui falhar, não pode derrubar o resto do
-          // loop de linhas — senão as colunas sintéticas (.je-col-daily-exceed /
-          // .je-col-accumulated-balance) parariam de ser injetadas em TODAS as
-          // linhas seguintes, não só na de hoje.
           try {
             if (isProjectedToday && exceedCell) {
               const nativeHTML = exceedCell.innerHTML;
@@ -1263,14 +1356,15 @@ window.JEPessoasModernizer = (function () {
 
       // Linha de Totais da Tabela Principal ("Totais:")
       if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && robustText(tr).includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
-        tr.querySelectorAll('.je-col-daily-exceed, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia').forEach(el => el.remove());
+        tr.querySelectorAll('.je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
         const cells = Array.from(tr.querySelectorAll('td'));
         
         if (cells.length >= 2) {
           cells[0].colSpan = 8;
           const targetExcedCell = cells[2] || cells[1];
+          let currentFooterAnchor = targetExcedCell;
 
-          // 1. Célula de Pecúnia no Rodapé
+          // 1. Célula de Pecúnia no Rodapé (Nativa ou Injetada)
           const pecuniaTd = document.createElement('td');
           pecuniaTd.className = 'cellTotais je-totais-pecunia';
           const totalPecuniaFmt = formatTime(totalPecuniaMinutes);
@@ -1285,13 +1379,13 @@ window.JEPessoasModernizer = (function () {
           } else {
             pecuniaTd.textContent = '00:00';
           }
-          targetExcedCell.parentNode.insertBefore(pecuniaTd, targetExcedCell.nextSibling);
-          let currentFooterAnchor = pecuniaTd;
+          currentFooterAnchor.parentNode.insertBefore(pecuniaTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = pecuniaTd;
 
           // 2. Célula de Total Horas Excedentes no Rodapé (Apenas em Meses Fechados)
           if (isClosedMonthTable) {
             const totalDeltaTd = document.createElement('td');
-            totalDeltaTd.className = `je-col-daily-exceed ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
+            totalDeltaTd.className = `cellTotais je-col-daily-exceed ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
             totalDeltaTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
             currentFooterAnchor.parentNode.insertBefore(totalDeltaTd, currentFooterAnchor.nextSibling);
             currentFooterAnchor = totalDeltaTd;
@@ -1299,15 +1393,75 @@ window.JEPessoasModernizer = (function () {
 
           // 3. Célula de Saldo Acumulado no Rodapé (TSE XT)
           const totalAccumTd = document.createElement('td');
-          totalAccumTd.className = `je-col-accumulated-balance ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
+          totalAccumTd.className = `cellTotais je-col-accumulated-balance ${runningBalance > 0 ? 'je-balance-positive' : (runningBalance < 0 ? 'je-balance-negative' : 'je-balance-zero')}`;
           totalAccumTd.innerHTML = `<strong>${formatSigned(runningBalance)}</strong>`;
           currentFooterAnchor.parentNode.insertBefore(totalAccumTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = totalAccumTd;
 
-          // 4. Célula trailing
+          // 4. Célula de Adic. Noturno Pecúnia no Rodapé
+          const NOTURNO_FOOTER_SVG = '<span class="je-noturno-icon" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12.3 2a10 10 0 0 0-1.9.18 10 10 0 1 0 11.42 11.42A10 10 0 0 0 12.3 2z"/></svg></span>';
+
+          const noturnoPecTd = document.createElement('td');
+          noturnoPecTd.className = 'cellTotais je-totais-noturno-pecunia';
+          const totalNoturnoPecFmt = formatTime(totalNoturnoPecuniaMinutes);
+          if (totalNoturnoPecuniaMinutes > 0) {
+            noturnoPecTd.classList.add('je-cell-noturno-highlight');
+            noturnoPecTd.innerHTML = `
+              <span class="je-noturno-badge je-noturno-badge-pecunia" title="Total de Adicional Noturno em Pecúnia no mês: ${totalNoturnoPecFmt} (+25%)">
+                ${NOTURNO_FOOTER_SVG}
+                <strong class="je-noturno-val">${totalNoturnoPecFmt}</strong>
+                <span class="je-noturno-rate-tag">+25%</span>
+              </span>
+            `;
+          } else {
+            noturnoPecTd.textContent = '00:00';
+          }
+          currentFooterAnchor.parentNode.insertBefore(noturnoPecTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = noturnoPecTd;
+
+          // 5. Célula de Adic. Noturno no Rodapé
+          const noturnoOrdTd = document.createElement('td');
+          noturnoOrdTd.className = 'cellTotais je-totais-noturno-ord';
+          const totalNoturnoOrdFmt = formatTime(totalNoturnoOrdMinutes);
+          if (totalNoturnoOrdMinutes > 0) {
+            noturnoOrdTd.classList.add('je-cell-noturno-highlight');
+            noturnoOrdTd.innerHTML = `
+              <span class="je-noturno-badge je-noturno-badge-ord" title="Total de Adicional Noturno no mês: ${totalNoturnoOrdFmt} (+25%)">
+                ${NOTURNO_FOOTER_SVG}
+                <strong class="je-noturno-val">${totalNoturnoOrdFmt}</strong>
+                <span class="je-noturno-rate-tag">+25%</span>
+              </span>
+            `;
+          } else {
+            noturnoOrdTd.textContent = '00:00';
+          }
+          currentFooterAnchor.parentNode.insertBefore(noturnoOrdTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = noturnoOrdTd;
+
+          // 6. Célula de Compl. Jorn. Mínima no Rodapé
+          const complTd = document.createElement('td');
+          complTd.className = 'cellTotais je-totais-compl-jornada';
+          complTd.textContent = formatTime(totalComplJornadaMinutes);
+          currentFooterAnchor.parentNode.insertBefore(complTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = complTd;
+
+          // 7. Célula de Total Horas Perdidas no Rodapé (TSE XT — ao lado direito de Compl. Jorn. Mínima)
+          const totalLostTd = document.createElement('td');
+          totalLostTd.className = `cellTotais je-col-lost-hours ${totalLostHoursMinutes > 0 ? 'je-lost-hours-positive' : 'je-lost-hours-zero'}`;
+          if (totalLostHoursMinutes > 0) {
+            totalLostTd.innerHTML = `<strong>+${formatTime(totalLostHoursMinutes)}</strong>`;
+            totalLostTd.title = `Total de horas descartadas pelo teto legal no mês: +${formatTime(totalLostHoursMinutes)} (Res. 22.901/2008 art. 4º)`;
+          } else {
+            totalLostTd.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+          }
+          currentFooterAnchor.parentNode.insertBefore(totalLostTd, currentFooterAnchor.nextSibling);
+          currentFooterAnchor = totalLostTd;
+
+          // 8. Célula trailing (Ocorrência + ações)
           const trailingTd = document.createElement('td');
           trailingTd.className = 'cellTotais je-totais-trailing';
-          trailingTd.colSpan = 4;
-          totalAccumTd.parentNode.insertBefore(trailingTd, totalAccumTd.nextSibling);
+          trailingTd.colSpan = 2;
+          currentFooterAnchor.parentNode.insertBefore(trailingTd, currentFooterAnchor.nextSibling);
         }
       }
     });

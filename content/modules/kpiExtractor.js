@@ -102,6 +102,8 @@ window.JEPessoasKPI = (function () {
     let pastExpectedMinutesMonth = 0;
     let remainingExpectedMinutesMonth = 0;
     let runningAccumulatedBalance = 0;
+    // Mês fechado: mesma regra da coluna SALDO ACUM. — só a parcela homologada credita.
+    const closedMonthHomologPool = isClosedMonth ? window.JEPessoasBalance.homologPoolFromEspelho(document) : null;
 
     const rows = table.querySelectorAll('tr');
 
@@ -203,7 +205,8 @@ window.JEPessoasKPI = (function () {
               exceedMin,
               pecuniaMin,
               dayTargetMinutes,
-              projectFromTotal: isToday && !isClosedMonth
+              projectFromTotal: isToday && !isClosedMonth,
+              homologPool: closedMonthHomologPool
             });
 
             // Soma da PECÚNIA (horas que serão pagas) por tipo de dia — alimenta o card "Horas Extras".
@@ -314,8 +317,7 @@ window.JEPessoasKPI = (function () {
       && viewYear && viewMonth && window.JEPessoasLegal.isReducedRecessMonth(viewYear, viewMonth));
 
     // Prévia do crédito real no banco = parcela HOMOLOGADA com fator por tipo de dia
-    // (Úteis ×1 + Sáb ×1,5 + Dom/Feriado ×2). Vem do rodapé do espelho, não da
-    // coluna SALDO ACUM. (que ainda inclui excedente não homologado — ver R1/R3).
+    // (Úteis ×1 + Sáb ×1,5 + Dom/Feriado ×2). Vem do rodapé do espelho.
     let homologPreviewMinutes = 0;
     try {
       const scan = window.JEPessoasAuthScan && window.JEPessoasAuthScan.analyzeEspelho(document, { targetDailyMinutes: targetDailyMinutes });

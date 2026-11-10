@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.2-Snapshot';
+  const CURRENT_VERSION = '1.1.3-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.3-Snapshot',
+      date: '2026-11-10',
+      title: 'Conformidade normativa (C1): Saldo Acumulado só com horas homologadas e coluna HORAS PERDIDAS',
+      features: [
+        'Item C1 — Saldo Acumulado fiel ao Extrato: em mês fechado, a coluna SALDO ACUM. e o card de KPI creditam só a parcela de "Horas Excedentes Homologadas" do rodapé, com fator por tipo de dia. Meses pagos em pecúnia ou sem homologação fecham em 00:00, sem inflar o banco com finais de semana.',
+        'Nova coluna HORAS PERDIDAS, à direita de Compl. Jorn. Mínima: tempo acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º), que não gera pecúnia nem banco.',
+        'O teto de 10h em sábado, domingo e feriado passa a limitar também o crédito no banco de horas. O excedente de dia útil acima de 2h continua na reconciliação do mês.',
+        'Selo +25% nas colunas de adicional noturno e totais de adicional noturno e de Compl. Jorn. Mínima no rodapé da tabela.'
+      ]
+    },
     {
       version: '1.1.2-Snapshot',
       date: '2026-10-13',

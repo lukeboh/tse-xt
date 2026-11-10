@@ -38,7 +38,7 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 | ID | Item | Severidade | Origem / Norma | Descrição & Ação Necessária |
 | :--- | :--- | :---: | :--- | :--- |
-| **C1** | **`SALDO ACUM.` apenas com Horas Homologadas** | 🔴 Alta | Portaria 380/2026 · [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) | Creditar no saldo diário apenas a parcela `Horas Excedentes Homologadas`. Pecúnia e horas não homologadas ficam fora do banco. |
+| **C1** | **`SALDO ACUM.` apenas com Horas Homologadas** | ✅ Concluído (v1.1.3) | Portaria 380/2026 · [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) | Creditar no saldo diário apenas a parcela `Horas Excedentes Homologadas`. Pecúnia e horas não homologadas ficam fora do banco; injeção da coluna `HORAS PERDIDAS`. |
 | **C2** | **Três Estados de Banco de Horas** | 🔴 Alta | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 13 | Segregar regimes: Normal, Híbrido (sem crédito) e Mês com HE Autorizada (crédito restrito a homologadas, consumo vedado). |
 | **C3** | **Pecúnia em Mês Híbrido & Alerta de FDS Perdido** | 🟡 Média | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 12 | Zerar projeção de pecúnia em mês híbrido; emitir alerta para trabalho em FDS/feriado suprimido pela norma. |
 | **C4** | **Faixa de Complementação 7h–8h & Recesso 5h** | 🟡 Média | Portaria 380/2026 art. 7º §2º · Portaria 885/2024 | Tratar 7h–8h no turno único como complementação ordinária (não gera crédito imediato); recesso forense 5h. |
@@ -55,12 +55,13 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 ---
 
-#### 🔴 C1 — `SALDO ACUM.` apenas com Horas Homologadas
+#### ✅ C1 — `SALDO ACUM.` apenas com Horas Homologadas (Concluído em v1.1.3-Snapshot)
 * **Norma & Fundamentação:** Portaria-TSE nº 380/2026 art. 9º, 10 e 11; [regras §3.1](regras-calculo-frequencia.md#31-os-três-destinos-do-excedente-diário) e [§3.9](regras-calculo-frequencia.md#39-excedente-além-do-quantitativo-de-he-autorizado--homologação-é-a-única-porta-para-o-banco). O excedente diário possui 3 destinos mutuamente excludentes: *Pecúnia* (paga, não vai a banco), *Horas Homologadas* (vai a banco com fator) e *Horas Não Homologadas* (descartadas, perda).
 * **Casos de Testes Automatizados:**
   * `TC-C1-01`: Mês fechado com HE autorizada onde 100% do excedente de FDS virou pecúnia $\rightarrow$ `SALDO ACUM.` não incorpora FDS; saldo final fecha em `00:00`.
   * `TC-C1-02`: Mês com excedente não homologado pela chefia $\rightarrow$ `SALDO ACUM.` expurga horas não homologadas (fator zero).
   * `TC-C1-03`: Mês com parcela homologada pela chefia (ex.: abr/2026) $\rightarrow$ apenas a parcela homologada é creditada no `SALDO ACUM.` (aplicando fator ×1,0 para úteis, ×1,5 sábado e ×2,0 domingo/feriado).
+  * `TC-C1-04`: Jornada superior a 10h em sábado/domingo/feriado (ex.: 11h52 em 06/10/2016 ou 11h24 em 07/09/2026) $\rightarrow$ coluna injetada `HORAS PERDIDAS` exibe `+01:52` ou `+01:24`, expurgando o tempo do saldo acumulado.
 * **Cenário Real & URLs no Meu Espaço:**
   * *Exemplo 1 (Pecúnia pura de eleição):* Mês 10/2024 fechado com 50h55 de pecúnia e 00:00 homologadas.  
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`  
@@ -69,8 +70,11 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** A coluna `SALDO ACUM.` somou todos os finais de semana (com fatores 1,5 e 2,0), inflando artificialmente o banco em dezenas de horas que ou já foram pagas em dinheiro ou foram descartadas.
-  * **Depois (Solução):** O saldo acumulado diário só incorpora o que for classificado como homologado para compensação, rotulado como prévia do "Horas Adquiridas" do Extrato oficial.
-* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/domModernizer.js`, `tests/balanceCalc.test.mjs`.
+  * **Depois (Solução):**
+    1. O saldo acumulado diário só incorpora o que for classificado como homologado para compensação, rotulado como prévia do "Horas Adquiridas" do Extrato oficial.
+    2. **Nova Coluna Injetada `HORAS PERDIDAS`:** enxertada no cabeçalho, nas linhas e no rodapé da tabela (à direita de `Compl. Jorn. Mínima`), quantificando para cada dia o tempo acima do teto de $10\text{h}$ em sábados/domingos/feriados (Res. 22.901/2008 art. 4º), que não é pago nem compensado. O excedente de dia útil acima de $2\text{h}$ não entra: continua na reconciliação do mês ([regras §3.11](regras-calculo-frequencia.md#311-compensação-intra-mês--o-excedente-de-um-dia-paga-o-débito-de-outro)).
+    3. **Limitações conhecidas:** o espelho só traz o total mensal de homologadas por tipo de dia, então a distribuição entre os dias segue a ordem das linhas e só o fechamento do mês é exato. Mês fechado com consumo de banco (`Horas Utilizadas do Banco`) não mostra esse débito na coluna.
+* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/domModernizer.js`, `content/modules/kpiExtractor.js`, `content/espelho-ponto.css`, `tests/balanceCalc.test.mjs`.
 
 ---
 

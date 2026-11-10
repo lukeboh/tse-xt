@@ -630,7 +630,7 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente th:last-child {
 }
 
 /* Quando houver a classe de tintura de cabeçalho, mantém o mesmo tom cinza institucional */
-body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.je-espelho-header-tint th:not(.je-col-accumulated-balance):not(.je-col-daily-exceed) {
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.je-espelho-header-tint th:not(.je-col-accumulated-balance):not(.je-col-daily-exceed):not(.je-col-lost-hours) {
   background: #dfe4ea !important;
 }
 
@@ -912,9 +912,82 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:not(.total-horas):hover td.je-
   box-shadow: inset 3px 0 0 rgba(0, 119, 255, 0.7), inset 0 0 0 1px rgba(0, 119, 255, 0.4) !important;
 }
 
-/* Modo Desligado: Oculta a Coluna da Extensão para Preservar 100% o Legado */
+/* ==========================================================================
+   Nova Coluna: HORAS PERDIDAS (C1 / Trilha C)
+   Tempo descartado por teto legal (Res. 22.901/2008 art. 4º) ou não homologado
+   ========================================================================== */
+body.je-xt-enabled #tblEspelhoPontoMesCorrente th.je-col-lost-hours,
+body.je-xt-enabled #tblEspelhoPontoMesCorrente thead th.je-col-lost-hours,
+body.je-xt-enabled table th.je-col-lost-hours {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 45 !important;
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0.3px !important;
+  border: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid #b45309 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -4px 0 #b45309 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+  white-space: nowrap !important;
+  width: 1% !important;
+  min-width: 88px !important;
+  max-width: 102px !important;
+  padding: 8px 4px !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-col-lost-hours,
+body.je-xt-enabled table td.je-col-lost-hours {
+  background: rgba(245, 158, 11, 0.04) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, monospace !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  width: 1% !important;
+  min-width: 88px !important;
+  max-width: 102px !important;
+  padding: 4px 6px !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-col-lost-hours.je-lost-hours-positive {
+  color: #c2410c !important;
+  background: rgba(249, 115, 22, 0.12) !important;
+  box-shadow: inset 3px 0 0 rgba(234, 88, 12, 0.6) !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-col-lost-hours.je-lost-hours-zero {
+  color: #64748b !important;
+  background: transparent !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:not(.total-horas):hover td.je-col-lost-hours.je-lost-hours-positive {
+  color: #9a3412 !important;
+  background: rgba(249, 115, 22, 0.22) !important;
+  box-shadow: inset 3px 0 0 rgba(234, 88, 12, 0.8) !important;
+}
+
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr:not(.total-horas):hover td.je-col-lost-hours.je-lost-hours-zero {
+  color: #475569 !important;
+  background: rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Modo Desligado: Oculta as Colunas da Extensão para Preservar 100% o Legado */
 body.je-xt-disabled #tblEspelhoPontoMesCorrente .je-col-accumulated-balance,
-body.je-xt-disabled .je-col-accumulated-balance {
+body.je-xt-disabled .je-col-accumulated-balance,
+body.je-xt-disabled #tblEspelhoPontoMesCorrente .je-col-lost-hours,
+body.je-xt-disabled .je-col-lost-hours {
   display: none !important;
 }
 
@@ -1053,12 +1126,97 @@ body.je-xt-enabled .je-pecunia-badge-sunhol .je-pecunia-rate-tag {
   border: 1px solid #ddd6fe !important;
 }
 
+/* =============================================================================
+   Badges de Adicional Noturno (+25% — Lei nº 8.112/1990 art. 75 / Res. TSE 22.901)
+   ============================================================================= */
+body.je-xt-enabled #tblEspelhoPontoMesCorrente td.je-cell-noturno-highlight {
+  background: rgba(49, 46, 129, 0.04) !important;
+  text-align: center !important;
+}
+
+body.je-xt-enabled .je-noturno-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3.5px !important;
+  padding: 1.5px 6px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  cursor: help !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Adicional Noturno Pecúnia (+25% s/ hora extra) */
+body.je-xt-enabled .je-noturno-badge-pecunia {
+  background: rgba(49, 46, 129, 0.09) !important;
+  color: #3730a3 !important;
+  border: 1px solid rgba(79, 70, 229, 0.35) !important;
+}
+
+body.je-xt-enabled .je-noturno-badge-pecunia:hover {
+  background: rgba(49, 46, 129, 0.17) !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.28) !important;
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+/* Adicional Noturno Ordinário (+25% s/ hora normal) */
+body.je-xt-enabled .je-noturno-badge-ord {
+  background: rgba(30, 41, 59, 0.08) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(71, 85, 105, 0.3) !important;
+}
+
+body.je-xt-enabled .je-noturno-badge-ord:hover {
+  background: rgba(30, 41, 59, 0.15) !important;
+  box-shadow: 0 2px 6px rgba(71, 85, 105, 0.25) !important;
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+body.je-xt-enabled .je-noturno-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0.9 !important;
+  line-height: 1 !important;
+}
+
+body.je-xt-enabled .je-noturno-icon svg {
+  width: 10px !important;
+  height: 10px !important;
+  display: block !important;
+}
+
+body.je-xt-enabled .je-noturno-val {
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 700 !important;
+}
+
+body.je-xt-enabled .je-noturno-rate-tag {
+  display: inline-block !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  padding: 1px 3.5px !important;
+  border-radius: 3px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2px !important;
+  line-height: 1 !important;
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  border: 1px solid #c7d2fe !important;
+}
+
 /* Modo Desligado: Neutraliza o Badge para preservar texto nativo */
-body.je-xt-disabled .je-cell-pecunia-highlight {
+body.je-xt-disabled .je-cell-pecunia-highlight,
+body.je-xt-disabled .je-cell-noturno-highlight {
   background: transparent !important;
 }
 
-body.je-xt-disabled .je-pecunia-badge {
+body.je-xt-disabled .je-pecunia-badge,
+body.je-xt-disabled .je-noturno-badge {
   background: transparent !important;
   color: inherit !important;
   border: none !important;
@@ -1068,7 +1226,9 @@ body.je-xt-disabled .je-pecunia-badge {
 }
 
 body.je-xt-disabled .je-pecunia-icon,
-body.je-xt-disabled .je-pecunia-rate-tag {
+body.je-xt-disabled .je-pecunia-rate-tag,
+body.je-xt-disabled .je-noturno-icon,
+body.je-xt-disabled .je-noturno-rate-tag {
   display: none !important;
 }
 
@@ -1714,8 +1874,10 @@ body.je-xt-enabled .je-app-calc-tag {
 body.je-xt-disabled .je-btn-ajustar-ponto,
 body.je-xt-disabled .je-point-modal-overlay,
 body.je-xt-disabled .je-col-daily-exceed,
+body.je-xt-disabled .je-col-lost-hours,
 body.je-xt-disabled .je-col-accumulated-balance,
 body:not(.je-xt-enabled) .je-col-daily-exceed,
+body:not(.je-xt-enabled) .je-col-lost-hours,
 body:not(.je-xt-enabled) .je-col-accumulated-balance {
   display: none !important;
 }
@@ -2279,7 +2441,8 @@ body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas > td[colspan="8"]:
 }
 
 body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas ~ tr td.je-col-accumulated-balance,
-body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas ~ tr td.je-col-daily-exceed {
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas ~ tr td.je-col-daily-exceed,
+body.je-xt-enabled #tblEspelhoPontoMesCorrente tr.total-horas ~ tr td.je-col-lost-hours {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
