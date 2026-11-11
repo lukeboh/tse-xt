@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.4-Snapshot';
+  const CURRENT_VERSION = '1.1.5-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.5-Snapshot',
+      date: '2026-11-10',
+      title: 'Roadmap: decisões sobre plantão/eleição e selo SAEX',
+      features: [
+        'Sem mudança de comportamento: esta versão só atualiza o planejamento.',
+        'Item C7 cancelado: não haverá regra por dia de eleição ou plantão, e o fator ×2 segue valendo para domingo e feriado.',
+        'Item C6 adiado: o selo de excedente além do autorizado fica registrado para retomada futura.'
+      ]
+    },
     {
       version: '1.1.4-Snapshot',
       date: '2026-11-10',

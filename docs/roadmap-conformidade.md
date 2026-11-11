@@ -89,7 +89,9 @@
 - **Feature correlata no README:** "Horas extras autorizadas no card Horas Extras" e "Horas executadas não homologadas no KPI Banco de Horas" (R1).
 - **Depende de:** [duvidas-normativas.md D6](duvidas-normativas.md) (a homologação da chefia tem teto no autorizado?).
 
-## R7 — 🟡 Conceito de "plantão/eleição" para pecúnia de domingo/feriado
+## R7 — ❌ Cancelado em 10/11/2026 — Conceito de "plantão/eleição" para pecúnia de domingo/feriado
+
+> Não haverá regra por dia de eleição ou plantão. Ver C7 no [roadmap](roadmap.md). O texto abaixo fica como histórico.
 
 - **Hoje:** o card "Horas Extras", linha "Domingo / Feriados", soma pecúnia desses dias.
 - **Regra oficial:** pagamento aos domingos e feriados é **vedado** fora de plantão eleitoral / dias de eleição (art. 4º §2º da Res. 22.901/2008; art. 5º da Portaria 380/2026). Fora desse contexto a pecúnia de domingo/feriado é normalmente `00:00` e o excedente vai para **compensação** (fator 2,0).

@@ -43,8 +43,8 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 | **C3** | **Pecúnia em Mês Híbrido & Alerta de FDS Perdido** | 🟡 Pendente | Portaria 490/2022 art. 22 · Portaria 380/2026 art. 12 | Zerar projeção de pecúnia em mês híbrido; emitir alerta para trabalho em FDS/feriado suprimido pela norma. |
 | **C4** | **Faixa de Complementação 7h–8h & Recesso 5h** | 🟡 Parcial | Portaria 380/2026 art. 7º §2º · Portaria 885/2024 | Tratar 7h–8h no turno único como complementação ordinária (não gera crédito imediato); recesso forense 5h. |
 | **C5** | **Alertas de Tetos Legais de Horas Extras** | 🟡 Parcial | Res. 22.901/2008 · Portaria 380/2026 art. 4º | Badges e alertas para > 2h em dia útil, > 10h em FDS/feriado, > 60h acumuladas no mês e faixa 60h–90h. |
-| **C6** | **Selo Diário de Excedente Além do Autorizado** | 🟡 Pendente | Portaria 380/2026 art. 3º e 10 | Cruzar excedente com limites diários lidos do SAEX via `heAuthFetch.js`; sinalizar quando realizado superar autorizado. |
-| **C7** | **Conceito de Plantão/Eleição para Domingos e Feriados** | 🟡 Pendente | Res. 22.901/2008 art. 4º §2º · Portaria 380/2026 art. 5º | Direcionar domingos/feriados fora de eleição/plantão para compensação (+100%), vedando pecúnia indevida. |
+| **C6** | **Selo Diário de Excedente Além do Autorizado** | ⏸️ Adiado | Portaria 380/2026 art. 3º e 10 | Cruzar excedente com limites diários lidos do SAEX via `heAuthFetch.js`; sinalizar quando realizado superar autorizado. |
+| **C7** | **Conceito de Plantão/Eleição para Domingos e Feriados** | ❌ Cancelado | Res. 22.901/2008 art. 4º §2º · Portaria 380/2026 art. 5º | Direcionar domingos/feriados fora de eleição/plantão para compensação (+100%), vedando pecúnia indevida. |
 | **C8** | **Alerta de Repouso Interjornada < 8h** | 🟢 Pendente | Res. 22.901/2008 art. 7º | Alerta discreto quando intervalo entre última saída e primeira entrada subsequente for < 8h consecutivas. |
 | **C9** | **Documentação / Aviso de Adicional Noturno** | 🟢 Parcial | Lei nº 8.112/1990 art. 75 | Tooltip elucidativo sobre hora ficta noturna de 52m30s e coluna `.h13` não recalculadas sinteticamente. |
 | **C10** | **Atualização da Legislação de Referência Injetada** | 🟢 Pendente | Portarias 490/2022 e 380/2026 | Atualizar bloco injetado no rodapé substituindo normas revogadas pelas portarias vigentes. |
@@ -57,8 +57,8 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 * **C3:** falta o selo na linha de sábado, domingo ou feriado em mês híbrido e conferir a projeção de pecúnia do KPI 4. A supressão no mês inteiro está confirmada empiricamente ([regras §5.2](regras-calculo-frequencia.md#52-pecúnia-em-meses-de-trabalho-híbrido)).
 * **C4:** jornada 7h/8h/5h e selo de recesso já existem, e o mês fechado só credita homologadas (C1). Falta tratar a faixa 7h–8h na projeção do dia corrente. Escopo das 5h depende de [D7](duvidas-normativas.md).
 * **C5:** selos diários e referência de 60h no card já existem. Falta o indicador da faixa de 60h a 90h.
-* **C6:** não implementado. A mensagem depende de [D6](duvidas-normativas.md).
-* **C7:** não implementado. Exige a lista de dias de eleição e plantão ([roadmap-conformidade R7](roadmap-conformidade.md)).
+* **C6:** adiado por decisão do responsável em 10/11/2026, até voltar a ser priorizado. Quando retomado, o selo deve dizer apenas que a parcela além do autorizado "depende de homologação da chefia", o que vale qualquer que seja a resposta de [D6](duvidas-normativas.md).
+* **C7:** cancelado em 10/11/2026. Não haverá regra por dia de eleição ou plantão: o fator ×2 vale para domingo e feriado.
 * **C8:** não implementado.
 * **C9:** as células de adicional noturno têm tooltip, mas falta explicar a hora ficta de 52min30s e que o valor não é recalculado.
 * **C10:** não implementado. A lista desatualizada vem da própria página do portal, e a extensão ainda não acrescenta as normas vigentes.
@@ -180,19 +180,9 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 ---
 
-#### 🟡 C7 — Conceito de Plantão/Eleição para Domingos e Feriados
-* **Norma & Fundamentação:** Resolução-TSE nº 22.901/2008 art. 4º §2º; Portaria-TSE nº 380/2026 art. 5º; [regras §3.4](regras-calculo-frequencia.md#34-tetos-de-fim-de-semana-e-feriado). Pagamento de pecúnia aos domingos e feriados é vedado fora de plantão eleitoral e dias de eleição.
-* **Casos de Testes Automatizados:**
-  * `TC-C7-01`: Domingo trabalhado em mês não eleitoral / fora de plantão $\rightarrow$ 100% compensação (+100% no banco); pecúnia fixada em zero.
-* **Cenário Real & URLs no Meu Espaço:**
-  * *Domingo sem eleição:* Mês 11/2017 (15h29 de domingos que viraram 30h58 de banco, pecúnia 00:00).  
-    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2017&mesSelecionado=11`
-  * *Domingo eleitoral:* Mês 10/2024 (pecúnia autorizada).  
-    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
-* **Visualização Antes vs Depois:**
-  * **Antes (Problema):** Em meses comuns, domingos trabalhados eram projetados com possibilidade de pecúnia sem checar o contexto de plantão eleitoral.
-  * **Depois (Solução):** Encaminhamento automático para compensação (+100%) em meses não eleitorais.
-* **Arquivos Impactados:** `content/modules/balanceCalc.js`, `content/modules/legalConfig.js`, `content/modules/kpiExtractor.js`.
+#### ❌ C7 — Conceito de Plantão/Eleição para Domingos e Feriados (Cancelado em 10/11/2026)
+* **Decisão:** não haverá regra por dia de eleição ou plantão. O tratamento especial é só de domingo e feriado.
+* **Evidência (revisão de 213 meses fechados do histórico):** horas homologadas de domingo/feriado creditaram com fator ×2 também em anos ímpares, e houve pecúnia de domingo/feriado em anos sem eleição. Limitar a pecúnia ao contexto eleitoral contrariaria o que o sistema oficial pratica.
 
 ---
 

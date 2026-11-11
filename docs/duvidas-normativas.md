@@ -59,7 +59,7 @@
 | **Por que importa** | Define se a parcela **não paga** de um mês com HE autorizado pode ser resgatada para o banco. Empiricamente ([regras-calculo-frequencia.md §5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada)): em 12/2015, 01/2016, 09/2025 e 04/2026 a chefia homologou excedente e ele creditou o Extrato **mesmo havendo pecúnia no mês**; já em 03/2024 e 11/2024 o excedente não autorizado foi **100% para "Não Homologadas"** (perda). Não se sabe o que determina um caminho ou outro. |
 | **Em aberto** | A chefia pode homologar excedente **acima** do quantitativo que a DG autorizou via SAEX, ou a homologação fica limitada ao autorizado (e o restante é obrigatoriamente "não homologado")? A Res. 22.901/2008 art. 4º §1º e a Portaria 380/2026 art. 11 preveem deliberação da DG "limitada a 30h" apenas para a extrapolação do **teto mensal de 60h** — não para a diferença entre realizado e autorizado. |
 | **Como resolver** | Num mês fechado com HE autorizado, comparar excedente bruto diário × autorizado (SAEX / `detalharAutorizacao`) × o que entrou como `Horas Excedentes Homologadas`. Confirmar com `frequencia@tse.jus.br`. |
-| **Status** | Aberta. |
+| **Status** | Aberta. Em 10/11/2026 o item C6 foi adiado: o selo não será feito agora e, quando retomado, dirá apenas que a parcela além do autorizado "depende de homologação da chefia". |
 
 ## D7 — Jornada de 5h no recesso: escopo e datas exatas
 
