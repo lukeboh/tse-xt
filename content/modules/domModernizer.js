@@ -807,7 +807,7 @@ window.JEPessoasModernizer = (function () {
   function modernizeMonthlyTable(table, targetHours = 7) {
 
     // Limpa injeções anteriores para garantir idempotência
-    table.querySelectorAll('.je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
+    table.querySelectorAll('.je-destino-mes, .je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
 
     // Desfaz o "preenchimento de linha" (normalização de colspan do resumo do
     // mês, mais abaixo) — restaura o colspan nativo antes de reprocessar.
@@ -861,7 +861,7 @@ window.JEPessoasModernizer = (function () {
     // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
     // re-execução. .je-occ-sem-autorizacao (R6) não é mais criado, mas segue
     // no seletor pra limpar qualquer selo remanescente de uma versão anterior.
-    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto, .je-occ-perda').forEach(el => el.remove());
+    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto, .je-occ-perda, .je-destino-mes').forEach(el => el.remove());
     table.querySelectorAll('td.h16 span.je-occurrence-badge').forEach((el) => {
       if (!el.querySelector('a') && /art\.\s*4|sem autoriza|>\s*10h/i.test(el.textContent || '')) el.remove();
     });
@@ -898,9 +898,10 @@ window.JEPessoasModernizer = (function () {
     const isClosedMonthTable = headerTexts.some(t => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
 
     // Mês fechado: só a parcela homologada do rodapé entra no SALDO ACUM. (C1).
-    const closedMonthLoss = (isClosedMonthTable && window.JEPessoasLostCalc && window.JEPessoasAuthScan)
-      ? window.JEPessoasLostCalc.computeMonthLoss(window.JEPessoasAuthScan.analyzeEspelho(table.ownerDocument || document))
+    const closedMonthAnalysis = (isClosedMonthTable && window.JEPessoasLostCalc && window.JEPessoasAuthScan)
+      ? window.JEPessoasAuthScan.analyzeEspelho(table.ownerDocument || document)
       : null;
+    const closedMonthLoss = closedMonthAnalysis ? window.JEPessoasLostCalc.computeMonthLoss(closedMonthAnalysis) : null;
     const closedMonthHomologPool = isClosedMonthTable
       ? window.JEPessoasBalance.homologPoolFromEspelho(table.ownerDocument || document)
       : null;
@@ -931,7 +932,9 @@ window.JEPessoasModernizer = (function () {
           if (!tr.querySelector('th.je-col-accumulated-balance')) {
             const accumTh = document.createElement('th');
             accumTh.className = 'je-col-accumulated-balance';
-            accumTh.title = 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
+            accumTh.title = isClosedMonthTable
+              ? 'Conta do mês, dia a dia (TSE XT): dia útil soma o que passou da jornada e desconta dia curto e o que foi pago; sábado, domingo e feriado somam só o crédito homologado. O destino final está na linha "Destino do mês".'
+              : 'Saldo Acumulado do Mês (Calculado pelo TSE XT: Saldo Anterior + Horas Exced. - Pecúnia)';
             accumTh.innerHTML = 'SALDO ACUM.';
             anchorTh.parentNode.insertBefore(accumTh, anchorTh.nextSibling);
             anchorTh = accumTh;
@@ -1275,9 +1278,12 @@ window.JEPessoasModernizer = (function () {
             pecuniaMin,
             dayTargetMinutes,
             projectFromTotal: isTodayRow && !isClosedMonthTable,
-            homologPool: closedMonthHomologPool
+            homologPool: closedMonthHomologPool,
+            noturnoPecMin: parseMinutes((robustText(tr.querySelector('td.h13')).match(/\d{1,3}:\d{2}/) || ['00:00'])[0])
           });
-          const dailyDelta = dayResult.delta;
+          // Mês fechado: a coluna é de controle e mostra a conta dia a dia; o crédito
+          // oficial no banco fica na linha "Destino do mês" e no card de KPI.
+          const dailyDelta = (isClosedMonthTable && dayResult.controlDeltaMin !== undefined) ? dayResult.controlDeltaMin : dayResult.delta;
           const isProjectedToday = !!dayResult.projected && isTodayRow;
           let multiplierBadge = '';
           let deltaTooltip = '';
@@ -1406,7 +1412,7 @@ window.JEPessoasModernizer = (function () {
 
       // Linha de Totais da Tabela Principal ("Totais:")
       if (!hasHybridWorkInMonth && tr.classList.contains('total-horas') && robustText(tr).includes('Totais:') && !tr.querySelector('.je-col-accumulated-balance')) {
-        tr.querySelectorAll('.je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
+        tr.querySelectorAll('.je-destino-mes, .je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
         const cells = Array.from(tr.querySelectorAll('td'));
         
         if (cells.length >= 2) {
@@ -1517,6 +1523,42 @@ window.JEPessoasModernizer = (function () {
         }
       }
     });
+
+    // Linha "Destino do mês": para onde foi o excedente acumulado na coluna de controle.
+    if (closedMonthAnalysis && !hasHybridWorkInMonth) {
+      const totalsRow = table.querySelector('tr.total-horas');
+      if (totalsRow && totalsRow.parentNode) {
+        const dest = window.JEPessoasLostCalc.computeMonthDestination(closedMonthAnalysis, closedMonthLoss);
+        const chips = [
+          ['neutro', 'Excedente', dest.excessMin, 'Tudo o que passou da jornada em dia útil, somado às horas de sábado, domingo e feriado.'],
+          ['bom', 'Compensou dias curtos', dest.compensatedMin, 'Excedente de dia útil usado para completar dias curtos do mesmo mês.'],
+          ['bom', 'Pago', dest.paidMin, 'Pecúnia e adicional noturno em pecúnia do rodapé.'],
+          ['bom', 'Banco', dest.homologMin, `Horas homologadas. Crédito no banco com os fatores: +${formatTime(dest.creditMin)}.`],
+          ['ruim', 'Perdido', dest.lostMin, 'Não virou pecúnia nem banco e não compensou dia curto. Os motivos estão nos selos da coluna Ocorrência.'],
+          ['ruim', 'Débito do mês', dest.debitMin, 'Resíduo de Horas negativo no rodapé.']
+        ];
+        if (Math.abs(dest.unexplainedMin) > 0) {
+          chips.push(['aviso', 'Não conciliado', dest.unexplainedMin, 'Diferença entre o excedente e os destinos. Costuma vir de jornada diferente da esperada no dia; vale conferir.']);
+        }
+        const destRow = document.createElement('tr');
+        destRow.className = 'je-destino-mes';
+        const destCell = document.createElement('td');
+        destCell.colSpan = Array.from(totalsRow.children).reduce((acc, c) => acc + (c.colSpan || 1), 0);
+        const label = document.createElement('span');
+        label.className = 'je-destino-rotulo';
+        label.textContent = 'Destino do mês';
+        destCell.appendChild(label);
+        chips.filter((c) => c[2] !== 0 || c[1] === 'Excedente').forEach((c) => {
+          const chip = document.createElement('span');
+          chip.className = `je-destino-chip je-destino-${c[0]}`;
+          chip.textContent = `${c[1]} ${c[2] < 0 ? '-' : ''}${formatTime(Math.abs(c[2]))}`;
+          chip.title = c[3];
+          destCell.appendChild(chip);
+        });
+        destRow.appendChild(destCell);
+        totalsRow.parentNode.insertBefore(destRow, totalsRow.nextSibling);
+      }
+    }
 
     // Normaliza a largura das linhas do "Resumo do mês". Algumas linhas nativas
     // (Horas Utilizadas do Banco / Resíduo de Horas / Saldo Acumulado do Banco)

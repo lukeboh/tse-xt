@@ -245,3 +245,30 @@ test('dia útil acima de 2h em mês aberto continua na reconciliação do mês (
   assert.equal(longo.delta + curto.delta, 0, '+3h num dia paga -3h no outro');
   assert.equal(longo.netExcedenteMin, 120, 'só 2h poderiam virar pecúnia');
 });
+
+test('coluna de controle em mês fechado acompanha excedente e dia curto, mesmo sem homologadas', () => {
+  const pool = B.createHomologPool({ uteis: 0, sab: 0, domfer: 0 });
+  const base = { dayOfWeek: 2, isClosedMonth: true, dayTargetMinutes: 420, exceedMin: 420, homologPool: pool };
+  const longo = B.computeDailyDelta({ ...base, totalMin: 600 });
+  const curto = B.computeDailyDelta({ ...base, totalMin: 300 });
+  assert.equal(longo.delta, 0);
+  assert.equal(longo.controlDeltaMin, 180);
+  assert.equal(curto.controlDeltaMin, -120);
+});
+
+test('coluna de controle desconta pecúnia e adicional noturno pagos', () => {
+  const r = B.computeDailyDelta({ dayOfWeek: 2, isClosedMonth: true, dayTargetMinutes: 420, totalMin: 600, pecuniaMin: 90, noturnoPecMin: 30, exceedMin: 420 });
+  assert.equal(r.controlDeltaMin, 60);
+});
+
+test('fim de semana na coluna de controle só soma o crédito homologado', () => {
+  const semHomolog = B.computeDailyDelta({ dayOfWeek: 0, isClosedMonth: true, totalMin: 300, exceedMin: 300, homologPool: B.createHomologPool({}) });
+  assert.equal(semHomolog.controlDeltaMin, 0);
+  const comHomolog = B.computeDailyDelta({ dayOfWeek: 0, isClosedMonth: true, totalMin: 300, exceedMin: 300, homologPool: B.createHomologPool({ domfer: 120 }) });
+  assert.equal(comHomolog.controlDeltaMin, 240);
+});
+
+test('dia dispensado não mexe na coluna de controle', () => {
+  const r = B.computeDailyDelta({ dayOfWeek: 2, isClosedMonth: true, isDispensed: true, dayTargetMinutes: 420, totalMin: 0, exceedMin: 0 });
+  assert.equal(r.controlDeltaMin, 0);
+});

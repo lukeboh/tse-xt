@@ -143,5 +143,40 @@ window.JEPessoasLostCalc = (function () {
     return result;
   }
 
-  return { computeMonthLoss, CODES };
+  /**
+   * Para onde foi o excedente de um mês fechado: linha "Destino do mês" do
+   * Espelho de Ponto. unexplainedMin expõe o que a conta não fechou.
+   */
+  function computeMonthDestination(a, loss) {
+    const f = a.footer;
+    let surplus = 0;
+    let deficit = 0;
+    let weekendWorked = 0;
+    a.days.forEach((d) => {
+      if (isWeekendOrHoliday(d)) {
+        if (d.totalMin > 0) weekendWorked += d.totalMin;
+      } else if (!d.isDispensed) {
+        const e = d.totalMin - d.targetMin;
+        if (e > 0) surplus += e; else deficit -= e;
+      }
+    });
+    const paidWeekday = f.pecunia.uteis + f.noturnoPec.uteis;
+    const lostWeekday = f.naoHomolog.uteis + loss.p2;
+    const compensatedMin = Math.max(0, Math.min(deficit, surplus - paidWeekday - f.homolog.uteis - lostWeekday));
+    const paid = f.pecunia.total + f.noturnoPec.total;
+    const lost = loss.p1 + loss.p2 + loss.p3 + loss.p5;
+    const excess = surplus + weekendWorked;
+    return {
+      excessMin: excess,
+      compensatedMin,
+      paidMin: paid,
+      homologMin: f.homolog.total,
+      creditMin: Math.round(f.homolog.uteis + f.homolog.sab * 1.5 + f.homolog.domfer * 2),
+      lostMin: lost,
+      debitMin: Math.max(0, -f.residuoMin),
+      unexplainedMin: excess - compensatedMin - paid - f.homolog.total - lost
+    };
+  }
+
+  return { computeMonthLoss, computeMonthDestination, CODES };
 })();

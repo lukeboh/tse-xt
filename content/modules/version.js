@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.9-Snapshot';
+  const CURRENT_VERSION = '1.1.10-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.10-Snapshot',
+      date: '2026-11-10',
+      title: 'Coluna de controle dia a dia em mês fechado',
+      features: [
+        'SALDO ACUM. em mês fechado volta a mostrar a conta do mês dia a dia: soma o excedente de dia útil, desconta dia curto e o que foi pago.',
+        'Nova linha Destino do mês abaixo dos totais: excedente, compensado, pago, banco, perdido e débito.',
+        'A linha avisa quando a conta do mês não fecha, em Não conciliado. O card de KPI continua com o crédito oficial do banco.'
+      ]
+    },
     {
       version: '1.1.9-Snapshot',
       date: '2026-11-10',

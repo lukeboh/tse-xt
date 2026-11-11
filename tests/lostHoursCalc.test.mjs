@@ -130,3 +130,25 @@ test('abono em faixa de horário vale a duração da faixa', () => {
   assert.equal(scan.parseAbonoMin('03:00'), H(3));
   assert.equal(scan.parseAbonoMin(''), 0);
 });
+
+test('destino do mês fecha: excedente = compensado + pago + banco + perdido', () => {
+  const longo = day({ totalMin: H(10) });
+  const curto = day({ totalMin: H(6) });
+  const dom = sun({ totalMin: H(4), pecuniaMin: H(4) });
+  const f = { pecunia: { uteis: 0, sab: 0, domfer: H(4), total: H(4) }, homolog: { uteis: H(1), sab: 0, domfer: 0, total: H(1) } };
+  const a = month([longo, curto, dom], f);
+  const d = calc.computeMonthDestination(a, calc.computeMonthLoss(a));
+  assert.equal(d.excessMin, H(7));
+  assert.equal(d.compensatedMin, H(1));
+  assert.equal(d.paidMin, H(4));
+  assert.equal(d.homologMin, H(1));
+  assert.equal(d.lostMin, H(1));
+  assert.equal(d.unexplainedMin, 0);
+});
+
+test('destino do mês: débito vem do Resíduo negativo', () => {
+  const a = month([day({ totalMin: H(5) })], { residuoMin: -H(2) });
+  const d = calc.computeMonthDestination(a, calc.computeMonthLoss(a));
+  assert.equal(d.debitMin, H(2));
+  assert.equal(d.excessMin, 0);
+});
