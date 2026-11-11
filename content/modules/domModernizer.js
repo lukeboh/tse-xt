@@ -1110,6 +1110,20 @@ window.JEPessoasModernizer = (function () {
         }
 
         // Se NÃO estiver em regime híbrido, injeta as células do TSE XT
+        // Mês híbrido não tem as colunas do TSE XT, mas o descarte fica visível no selo.
+        const hybridLoss = (hasHybridWorkInMonth && closedMonthLoss) ? closedMonthLoss.days[dateText] : null;
+        if (hybridLoss && occCell) {
+          hybridLoss.items.forEach((it) => {
+            const reason = lostReason(it.code, hybridLoss.hasAuth);
+            const tag = document.createElement('span');
+            tag.className = `je-occ-perda je-occ-perda-${reason.tone}`;
+            tag.textContent = `${reason.label} ${formatTime(it.min)}`;
+            tag.title = reason.tip;
+            occCell.appendChild(document.createTextNode(' '));
+            occCell.appendChild(tag);
+          });
+        }
+
         if (!hasHybridWorkInMonth) {
           const pecuniaCell = tr.querySelector('td.h12') || tr.querySelector('td.h11');
           const pecunia = robustText(pecuniaCell).trim();

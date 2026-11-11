@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.7-Snapshot';
+  const CURRENT_VERSION = '1.1.8-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.8-Snapshot',
+      date: '2026-11-10',
+      title: 'Horas perdidas: selo em mês híbrido',
+      features: [
+        'Mês com trabalho híbrido passa a mostrar o selo "Híbrido: descartado" no sábado, domingo ou feriado trabalhado e não pago.',
+        'O selo é informativo: o mês híbrido continua sem as colunas do TSE XT e sem contar como perda.',
+        'Documentado o cruzamento dos dias a conferir com o limite autorizado no SAEX.'
+      ]
+    },
     {
       version: '1.1.7-Snapshot',
       date: '2026-11-10',

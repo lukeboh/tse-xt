@@ -170,6 +170,8 @@ Revisão de 213 meses fechados de um servidor, cruzando o Espelho com o Extrato 
 - **Pecúnia de dia útil acima de 2h** só ocorreu em 22 dias de 2014 e 2016.
 - **Sábado, domingo e feriado têm tratamento próprio em qualquer ano:** homologadas com fator ×2 e pecúnia de domingo/feriado aparecem também em anos sem eleição.
 
+**Cruzamento com o limite do SAEX (10/11/2026):** dos 42 dias com autorização e horas sem destino, 14 tinham limite diário e quantidade do período sobrando (candidatos a pedido de correção, 33h53); 10 eram de autorização de compensação, que depende de homologação; 8 tinham a quantidade do período esgotada; 7 já tinham atingido o limite do dia; 3 tinham autorização que não cobre o tipo de dia. Falta conferir o que foi declarado no Relatório SAEX de cada período.
+
 **Ainda não fechado:** a fórmula exata de "Horas Excedentes Não Homologadas" de dia útil (3 de 15 meses batem com o saldo líquido do mês).
 
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
