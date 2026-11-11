@@ -65,6 +65,8 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 ---
 
+**Horas perdidas (v1.1.7-Snapshot):** a coluna `HORAS PERDIDAS`, os selos da coluna Ocorrência e a Auditoria passaram a usar o mesmo cálculo (`lostHoursCalc.js`), com a nova categoria P5. Aguarda validação na página real.
+
 ### Detalhamento Executivo dos Itens da Trilha C
 
 ---

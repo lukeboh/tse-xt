@@ -30,6 +30,20 @@ window.JEPessoasAuthScan = (function () {
     return isNegative ? -total : total;
   }
 
+  // A coluna de abono traz duração ("03:00") ou faixa ("12:00 a 15:30"). A
+  // faixa é uma liberação parcial cuja duração já está dentro do TOTAL do dia.
+  function parseAbonoMin(text) {
+    const r = /(\d{1,2}):(\d{2})\s*a\s*(\d{1,2}):(\d{2})/i.exec(text || '');
+    if (r) return Math.max(0, (+r[3] * 60 + +r[4]) - (+r[1] * 60 + +r[2]));
+    return parseTimeToMinutes(text);
+  }
+
+  // Primeiro HH:MM da célula: ela pode já ter recebido selo do próprio TSE XT.
+  function firstTimeMin(text) {
+    const r = /\d{1,3}:\d{2}/.exec(text || '');
+    return r ? parseTimeToMinutes(r[0]) : 0;
+  }
+
   function normWs(s) {
     return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
   }
@@ -50,7 +64,7 @@ window.JEPessoasAuthScan = (function () {
   }
 
   const HOLIDAY_RE = /FERIADO|RECESSO|FACULTATIVO/;
-  const LICENSE_RE = /LICEN[ÇC]A|M[ÉE]DICA|LUTO|NOJO|GALA|MATERNIDADE|PATERNIDADE|CAPACITA[ÇC][ÃA]O|PR[ÊE]MIO/;
+  const LICENSE_RE = /LICEN[ÇC]A|M[ÉE]DICA|LUTO|NOJO|GALA|MATERNIDADE|PATERNIDADE|CAPACITA[ÇC][ÃA]O|PR[ÊE]MIO|AFASTAMENTO|ABONO DE PONTO|DOA[ÇC][ÃA]O|GREVE/;
   const VACATION_RE = /F[ÉE]RIAS/;
   const TRAVEL_RE = /VIAGEM|MISS[ÃA]O/;
   const HYBRID_RE = /TRABALHO H[IÍ]BRIDO|TELETRABALHO/;
@@ -131,11 +145,12 @@ window.JEPessoasAuthScan = (function () {
       const ctx = occ + ' ' + rowU;
 
       const isHoliday = HOLIDAY_RE.test(ctx);
-      const isLicense = LICENSE_RE.test(ctx);
+      // "Liberação médica" é parcial: o dia continua devendo a jornada.
+      const isLicense = LICENSE_RE.test(ctx.replace(/LIBERA[ÇC][ÃA]O M[ÉE]DICA/g, ''));
       const isVacation = VACATION_RE.test(ctx);
       const isTravel = TRAVEL_RE.test(ctx);
       const isHybridDay = HYBRID_RE.test(ctx);
-      const abonoMin = parseTimeToMinutes(abono);
+      const abonoMin = parseAbonoMin(abono);
 
       // Jornada-alvo do dia: 8h se houve intervalo (2ª entrada), 5h em mês de
       // recesso reduzido (turno único), senão 7h. Fonte única: legalConfig.
@@ -160,6 +175,7 @@ window.JEPessoasAuthScan = (function () {
         totalMin: parseTimeToMinutes(totalDay),
         h10Min: parseTimeToMinutes(h10),
         pecuniaMin: parseTimeToMinutes(pecunia),
+        noturnoPecMin: firstTimeMin(robustText(tr.querySelector('td.h13'))),
         abonoMin,
         targetMin
       });
@@ -176,7 +192,7 @@ window.JEPessoasAuthScan = (function () {
       const nums = Array.from(tr.children)
         .slice(1)
         .map((td) => robustText(td).trim())
-        .filter((t) => /^\d{1,3}:\d{2}$/.test(t));
+        .filter((t) => /^[-−–]?\d{1,3}:\d{2}$/.test(t));
       return nums;
     }
     function quad(nums) {
@@ -190,8 +206,14 @@ window.JEPessoasAuthScan = (function () {
     }
 
     const pecunia = quad(footerRow('Pecúnia:'));
+    const noturnoPec = quad(footerRow('Adicional Noturno Pecúnia:'));
     const homolog = quad(footerRow('Horas Excedentes Homologadas'));
     const naoHomolog = quad(footerRow('Horas Excedentes Não Homologadas'));
+    const excedeu = ['Excedeu pecúnia autorizada - mensal', 'Excedeu banco autorizado - mensal',
+      'Excedeu pecúnia autorizada - diária', 'Excedeu banco autorizado - diária'].reduce((acc, label) => {
+      const q = quad(footerRow(label));
+      return { uteis: acc.uteis + q.uteis, sab: acc.sab + q.sab, domfer: acc.domfer + q.domfer, total: acc.total + q.total };
+    }, { uteis: 0, sab: 0, domfer: 0, total: 0 });
     const utilNums = footerRow('Horas Utilizadas do Banco');
     const residuoNums = footerRow('Resíduo de Horas');
 
@@ -212,8 +234,10 @@ window.JEPessoasAuthScan = (function () {
       authDayCount,
       footer: {
         pecunia,
+        noturnoPec,
         homolog,
         naoHomolog,
+        excedeu,
         utilBancoMin: parseTimeToMinutes((utilNums && utilNums[0]) || '00:00'),
         residuoMin: parseTimeToMinutes((residuoNums && residuoNums[0]) || '00:00')
       },
@@ -221,5 +245,5 @@ window.JEPessoasAuthScan = (function () {
     };
   }
 
-  return { analyzeEspelho, parseTimeToMinutes, rowHasAuthorization };
+  return { analyzeEspelho, parseTimeToMinutes, parseAbonoMin, rowHasAuthorization };
 })();

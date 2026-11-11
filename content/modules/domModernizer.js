@@ -788,6 +788,22 @@ window.JEPessoasModernizer = (function () {
     });
   }
 
+
+  // Rótulo e explicação de cada motivo de perda (JEPessoasLostCalc.CODES).
+  function lostReason(code, hasAuth) {
+    const map = {
+      'teto-10h': { label: 'Acima de 10h', tone: 'perda', tip: 'Acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º): não gera pecúnia nem banco.' },
+      'nao-homologada': { label: 'Não homologada', tone: 'perda', tip: 'Consta em "Horas Excedentes Não Homologadas" no rodapé: sem homologação da chefia não entra no banco.' },
+      'acima-autorizado': { label: 'Acima do autorizado', tone: 'perda', tip: 'Consta nas linhas "Excedeu" do rodapé: passou da quantidade autorizada no SAEX e não foi paga.' },
+      'sobra-mes': { label: 'Sobra do mês', tone: 'perda', tip: 'Excedente de dia útil que não compensou dia curto, não foi pago e não foi homologado. A divisão entre os dias é estimada.' },
+      'hibrido': { label: 'Híbrido: descartado', tone: 'info', tip: 'Mês de trabalho híbrido: a norma suprime o serviço extraordinário e veda o banco. Não conta como perda.' },
+      'sem-destino': hasAuth
+        ? { label: 'Não paga: conferir', tone: 'conferir', tip: 'Dia com autorização, mas estas horas não foram pagas, nem homologadas, nem aparecem nas linhas "Excedeu". Confira o limite autorizado: se estava dentro dele, cabe pedir correção.' }
+        : { label: 'Sem autorização', tone: 'perda', tip: 'Dia sem autorização de serviço extraordinário: as horas não foram pagas nem homologadas.' }
+    };
+    return map[code] || { label: code, tone: 'info', tip: '' };
+  }
+
   function modernizeMonthlyTable(table, targetHours = 7) {
 
     // Limpa injeções anteriores para garantir idempotência
@@ -845,7 +861,7 @@ window.JEPessoasModernizer = (function () {
     // senão o texto dele é relido como "ocorrência" e vira um 2º badge na
     // re-execução. .je-occ-sem-autorizacao (R6) não é mais criado, mas segue
     // no seletor pra limpar qualquer selo remanescente de uma versão anterior.
-    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach(el => el.remove());
+    table.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto, .je-occ-perda').forEach(el => el.remove());
     table.querySelectorAll('td.h16 span.je-occurrence-badge').forEach((el) => {
       if (!el.querySelector('a') && /art\.\s*4|sem autoriza|>\s*10h/i.test(el.textContent || '')) el.remove();
     });
@@ -870,7 +886,7 @@ window.JEPessoasModernizer = (function () {
       if (!el) return '';
       const clone = el.cloneNode(true);
       clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
-      clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-noturno-rate-tag, .je-noturno-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-app-calc-tag').forEach((n) => n.remove());
+      clone.querySelectorAll('.je-pecunia-rate-tag, .je-pecunia-icon, .je-noturno-rate-tag, .je-noturno-icon, .je-occ-sem-autorizacao, .je-occ-acima-teto, .je-occ-perda, .je-app-calc-tag').forEach((n) => n.remove());
       return clone.textContent;
     };
 
@@ -882,6 +898,9 @@ window.JEPessoasModernizer = (function () {
     const isClosedMonthTable = headerTexts.some(t => t.includes('HORAS AJUST') || t.includes('HORA AJUST'));
 
     // Mês fechado: só a parcela homologada do rodapé entra no SALDO ACUM. (C1).
+    const closedMonthLoss = (isClosedMonthTable && window.JEPessoasLostCalc && window.JEPessoasAuthScan)
+      ? window.JEPessoasLostCalc.computeMonthLoss(window.JEPessoasAuthScan.analyzeEspelho(table.ownerDocument || document))
+      : null;
     const closedMonthHomologPool = isClosedMonthTable
       ? window.JEPessoasBalance.homologPoolFromEspelho(table.ownerDocument || document)
       : null;
@@ -986,7 +1005,7 @@ window.JEPessoasModernizer = (function () {
         let occText = '';
         if (occCell) {
           const occClone = occCell.cloneNode(true);
-          occClone.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto').forEach((n) => n.remove());
+          occClone.querySelectorAll('.je-occ-sem-autorizacao, .je-occ-acima-teto, .je-occ-perda').forEach((n) => n.remove());
           occText = robustText(occClone).trim().toUpperCase();
         }
 
@@ -1098,12 +1117,14 @@ window.JEPessoasModernizer = (function () {
           const exceedMin = parseMinutes(exceedDay);
           const pecuniaMin = parseMinutes(pecunia);
           const totalMin = parseMinutes(totalDay);
-          const abonoMin = parseMinutes(abono);
+          const abonoMin = window.JEPessoasAuthScan ? window.JEPessoasAuthScan.parseAbonoMin(abono) : parseMinutes(abono);
 
           // Detecção de dispensa da jornada ordinária (espelha a lógica do kpiExtractor).
           const occU = (occText + ' ' + rawText).toUpperCase();
           const isHolidayOrRecess = occU.includes('FERIADO') || occU.includes('RECESSO') || occU.includes('FACULTATIVO');
-          const isLicense = occU.includes('LICENÇA') || occU.includes('LICENCA') || occU.includes('MÉDICA') || occU.includes('MEDICA') || occU.includes('LUTO') || occU.includes('NOJO') || occU.includes('GALA') || occU.includes('MATERNIDADE') || occU.includes('PATERNIDADE') || occU.includes('CAPACITAÇÃO') || occU.includes('CAPACITACAO') || occU.includes('PRÊMIO') || occU.includes('PREMIO');
+          // "Liberação médica" é parcial: o dia continua devendo a jornada.
+          const occWithoutRelease = occU.replace(/LIBERA[ÇC][ÃA]O M[ÉE]DICA/g, '');
+          const isLicense = occWithoutRelease.includes('LICENÇA') || occWithoutRelease.includes('LICENCA') || occWithoutRelease.includes('MÉDICA') || occWithoutRelease.includes('MEDICA') || occWithoutRelease.includes('LUTO') || occWithoutRelease.includes('NOJO') || occWithoutRelease.includes('GALA') || occWithoutRelease.includes('MATERNIDADE') || occWithoutRelease.includes('PATERNIDADE') || occWithoutRelease.includes('CAPACITAÇÃO') || occWithoutRelease.includes('CAPACITACAO') || occWithoutRelease.includes('PRÊMIO') || occWithoutRelease.includes('PREMIO');
           const isVacation = occU.includes('FÉRIAS') || occU.includes('FERIAS');
           const isTravel = occU.includes('VIAGEM') || occU.includes('MISSÃO') || occU.includes('MISSAO') || (occU.includes('SERVIÇO') && !occU.includes('TEMPO DE'));
 
@@ -1262,7 +1283,7 @@ window.JEPessoasModernizer = (function () {
 
           if (shouldCount) {
             runningBalance += dailyDelta;
-            totalLostHoursMinutes += (dayResult.lostHoursMin || 0);
+            totalLostHoursMinutes += closedMonthLoss ? ((closedMonthLoss.days[dateText] || {}).lostMin || 0) : (dayResult.lostHoursMin || 0);
           }
 
           const exceedCell = tr.querySelector('td.h10');
@@ -1321,15 +1342,30 @@ window.JEPessoasModernizer = (function () {
           // Célula 3: HORAS PERDIDAS do TSE XT (Injetada ao lado direito de "Compl. Jorn. Mínima" td.h15)
           const tdLost = document.createElement('td');
           tdLost.className = 'je-col-lost-hours';
-          const lostMin = dayResult.lostHoursMin || 0;
+          const dayLoss = closedMonthLoss ? closedMonthLoss.days[dateText] : null;
+          const lostMin = closedMonthLoss ? ((dayLoss && dayLoss.lostMin) || 0) : (dayResult.lostHoursMin || 0);
 
           if (shouldCount && lostMin > 0) {
             tdLost.classList.add('je-lost-hours-positive');
             tdLost.innerHTML = `<strong>+${formatTime(lostMin)}</strong>`;
-            tdLost.title = `Tempo descartado pelo teto legal: +${formatTime(lostMin)} acima do limite do art. 4º da Res. 22.901/2008 (não gera pecúnia nem banco)`;
+            tdLost.title = dayLoss
+              ? dayLoss.items.filter((it) => it.code !== 'hibrido').map((it) => `${formatTime(it.min)}: ${lostReason(it.code, dayLoss.hasAuth).tip}`).join('\n')
+              : `Tempo descartado pelo teto legal: +${formatTime(lostMin)} acima do limite do art. 4º da Res. 22.901/2008 (não gera pecúnia nem banco)`;
           } else {
             tdLost.classList.add('je-lost-hours-zero');
             tdLost.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
+          }
+
+          if (shouldCount && dayLoss && occCell) {
+            dayLoss.items.forEach((it) => {
+              const reason = lostReason(it.code, dayLoss.hasAuth);
+              const tag = document.createElement('span');
+              tag.className = `je-occ-perda je-occ-perda-${reason.tone}`;
+              tag.textContent = `${reason.label} ${formatTime(it.min)}`;
+              tag.title = reason.tip;
+              occCell.appendChild(document.createTextNode(' '));
+              occCell.appendChild(tag);
+            });
           }
 
           const complCell = tr.querySelector('td.h15');
@@ -1450,7 +1486,9 @@ window.JEPessoasModernizer = (function () {
           totalLostTd.className = `cellTotais je-col-lost-hours ${totalLostHoursMinutes > 0 ? 'je-lost-hours-positive' : 'je-lost-hours-zero'}`;
           if (totalLostHoursMinutes > 0) {
             totalLostTd.innerHTML = `<strong>+${formatTime(totalLostHoursMinutes)}</strong>`;
-            totalLostTd.title = `Total de horas descartadas pelo teto legal no mês: +${formatTime(totalLostHoursMinutes)} (Res. 22.901/2008 art. 4º)`;
+            totalLostTd.title = closedMonthLoss
+              ? `Horas do mês que não viraram pecúnia nem banco e não compensaram dia curto: +${formatTime(totalLostHoursMinutes)}. A divisão entre os dias é estimada.`
+              : `Total de horas descartadas pelo teto legal no mês: +${formatTime(totalLostHoursMinutes)} (Res. 22.901/2008 art. 4º)`;
           } else {
             totalLostTd.innerHTML = `<span style="color:#94a3b8; font-weight:500;">--:--</span>`;
           }

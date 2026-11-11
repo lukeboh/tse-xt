@@ -146,7 +146,7 @@ window.JEPessoasKPI = (function () {
           const occurrence = robustText(tr.querySelector('.h16')).trim();
 
           const pecuniaMin = parseTimeToMinutes(pecunia);
-          const abonoMin = parseTimeToMinutes(abono);
+          const abonoMin = window.JEPessoasAuthScan ? window.JEPessoasAuthScan.parseAbonoMin(abono) : parseTimeToMinutes(abono);
           const exceedMin = parseTimeToMinutes(exceedDay);
           const totalMin = parseTimeToMinutes(totalDay);
 
@@ -155,7 +155,9 @@ window.JEPessoasKPI = (function () {
           const occText = (occurrence + ' ' + rawRowText).toUpperCase();
 
           const isHolidayOrRecess = occText.includes('FERIADO') || occText.includes('RECESSO') || occText.includes('FACULTATIVO');
-          const isLicense = occText.includes('LICENÇA') || occText.includes('LICENCA') || occText.includes('MÉDICA') || occText.includes('MEDICA') || occText.includes('LUTO') || occText.includes('NOJO') || occText.includes('GALA') || occText.includes('MATERNIDADE') || occText.includes('PATERNIDADE') || occText.includes('CAPACITAÇÃO') || occText.includes('CAPACITACAO') || occText.includes('PRÊMIO') || occText.includes('PREMIO');
+          // "Liberação médica" é parcial: o dia continua devendo a jornada.
+          const occWithoutRelease = occText.replace(/LIBERA[ÇC][ÃA]O M[ÉE]DICA/g, '');
+          const isLicense = occWithoutRelease.includes('LICENÇA') || occWithoutRelease.includes('LICENCA') || occWithoutRelease.includes('MÉDICA') || occWithoutRelease.includes('MEDICA') || occWithoutRelease.includes('LUTO') || occWithoutRelease.includes('NOJO') || occWithoutRelease.includes('GALA') || occWithoutRelease.includes('MATERNIDADE') || occWithoutRelease.includes('PATERNIDADE') || occWithoutRelease.includes('CAPACITAÇÃO') || occWithoutRelease.includes('CAPACITACAO') || occWithoutRelease.includes('PRÊMIO') || occWithoutRelease.includes('PREMIO');
           const isHybrid = occText.includes('HÍBRIDO') || occText.includes('HIBRIDO') || occText.includes('TELETRABALHO') || occText.includes('REMOTO') || occText.includes('HOME OFFICE');
           const isVacation = occText.includes('FÉRIAS') || occText.includes('FERIAS');
           const isTravel = occText.includes('VIAGEM') || occText.includes('MISSÃO') || occText.includes('MISSAO') || (occText.includes('SERVIÇO') && !occText.includes('TEMPO DE'));

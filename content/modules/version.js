@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.6-Snapshot';
+  const CURRENT_VERSION = '1.1.7-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.7-Snapshot',
+      date: '2026-11-10',
+      title: 'Horas perdidas: onde cada hora se perdeu',
+      features: [
+        'Coluna HORAS PERDIDAS em mês fechado mostra tudo o que não virou pecúnia, banco nem compensação do mês, com o motivo no tooltip.',
+        'Selos na coluna Ocorrência indicam o motivo da perda; "Não paga: conferir" aponta dia com autorização e horas sem destino, candidato a pedido de correção.',
+        'Auditoria: nova categoria P5 (fim de semana e feriado sem destino), coluna Conferir, exportação no CSV e mês aberto fora da apuração. É preciso refazer a varredura uma vez.',
+        'Corrigida a leitura de liberação médica em faixa de horário, que tratava como dispensado um dia só parcialmente liberado.',
+        'Afastamento, abono de ponto, doação de sangue e greve deixam de contar como falta na apuração.'
+      ]
+    },
     {
       version: '1.1.6-Snapshot',
       date: '2026-11-10',

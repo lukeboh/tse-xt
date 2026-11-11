@@ -740,6 +740,41 @@ body.je-xt-disabled .je-occ-acima-teto {
   display: none !important;
 }
 
+/* Motivo da hora perdida na coluna Ocorrência */
+body.je-xt-enabled .je-occ-perda {
+  display: inline-block !important;
+  border-radius: var(--je-radius-full, 999px) !important;
+  border: 1px solid transparent !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+  padding: 1px 7px !important;
+  white-space: nowrap !important;
+  cursor: help !important;
+}
+
+body.je-xt-enabled .je-occ-perda-perda {
+  background: rgba(220, 38, 38, 0.1) !important;
+  color: #b91c1c !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+body.je-xt-enabled .je-occ-perda-conferir {
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #92400e !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+body.je-xt-enabled .je-occ-perda-info {
+  background: rgba(100, 116, 139, 0.12) !important;
+  color: #475569 !important;
+  border-color: rgba(100, 116, 139, 0.35) !important;
+}
+
+body.je-xt-disabled .je-occ-perda {
+  display: none !important;
+}
+
 /* Linhas com Pendência de Ajuste de Ponto (Batida Incompleta em Data Passada) */
 body.je-xt-enabled tr.je-row-ajuste-pendente td,
 body.je-xt-enabled tr.je-row-ajuste-pendente {

@@ -4,14 +4,15 @@
  * Varre o Espelho de Ponto mês a mês e quantifica as horas adicionais
  * trabalhadas que NÃO viraram pecúnia NEM crédito no Banco de Horas.
  *
- * Quatro categorias (ver docs/regras-calculo-frequencia.md §3.9 e §5.3):
+ * Cinco categorias (ver docs/regras-calculo-frequencia.md §3.9, §3.12 e §5.3):
  *   P1  Não Homologadas ....... linha "Horas Excedentes Não Homologadas" do rodapé
  *   P2  Excedente de dia útil .. saldo de dias úteis acima da jornada absorvido
  *                               como HORAS AJUST./Compl. Jorn. Mínima (estimativa)
- *   P3  Descarte de FDS/feriado  acima do teto de 10h, ou trabalho de fim de
- *                               semana em mês híbrido (Portaria 380/2026 art. 12)
+ *   P3  Descarte de FDS/feriado  acima do teto de 10h
  *   P4  Crédito aquém da fórmula homologadas cujo crédito no Extrato ficou
  *                               abaixo de Úteis×1 + Sáb×1,5 + DomFer×2
+ *   P5  FDS/feriado sem destino  até 10h, sem pagamento, homologação nem "Não
+ *                               Homologadas" (passou do autorizado ou a conferir)
  * (P de "Perda". Os registros anteriores usavam b1..b4 — normalizados na leitura.)
  *
  * Persiste o resultado em chrome.storage.local por matrícula. A tela abre
@@ -22,7 +23,7 @@
 window.JEPessoasLostHours = (function () {
   'use strict';
 
-  const STORAGE_VERSION = 1;
+  const STORAGE_VERSION = 2;
   const FIRST_YEAR = 2009;
   const FETCH_THROTTLE_MS = 90;
 
@@ -36,7 +37,7 @@ window.JEPessoasLostHours = (function () {
   // cores já definidas pro app, mesmo abrindo mão da distinção categórica
   // maximizada (CVD) da paleta anterior (#2a78d6/#eb6834/#1baf7a/#eda100).
   // Ordem fixa, nunca reciclada.
-  const CAT_COLOR = { p1: '#0a2540', p2: '#0056b3', p3: '#0077ff', p4: '#00c6ff' };
+  const CAT_COLOR = { p1: '#0a2540', p2: '#0056b3', p3: '#0077ff', p4: '#00c6ff', p5: '#7dd3fc' };
 
   function legalUrl(k) {
     const U = (window.JEPessoasLegal && window.JEPessoasLegal.URLS) || {};
@@ -52,8 +53,10 @@ window.JEPessoasLostHours = (function () {
   const DEF = {
     p1: 'P1 · Não Homologadas — horas que o espelho reconhece como excedente mas a chefia não homologou (linha "Horas Excedentes Não Homologadas" do rodapé). Sem homologação: fator zero, não entram no banco e não são pagas. Valor exato. Base: Res. 22.901/2008 art. 11.',
     p2: 'P2 · Excedente de dia útil absorvido — o que você trabalhou além da jornada (7h/8h) nos dias úteis e o sistema não pagou nem homologou; é absorvido pela coluna HORAS AJUST./Compl. Jorn. Mínima para fechar a jornada do mês. Reconstruído dia a dia (total do dia − jornada, líquido do pago/homologado). Estimativa. Base: Portaria 380/2026 art. 6º §2º e art. 7º §2º.',
-    p3: 'P3 · Descarte de fim de semana/feriado — (a) horas acima do teto de 10h em sábado/domingo/feriado, cortadas; (b) trabalho de fim de semana em mês de regime híbrido/teletrabalho, descartado por inteiro. Estimativa. Base: Res. 22.901/2008 art. 4º; Portaria 380/2026 art. 12; Portaria 490/2022 art. 23.',
+    p3: 'P3 · Descarte de fim de semana/feriado — horas acima do teto de 10h em sábado/domingo/feriado, cortadas. Valor exato. Base: Res. 22.901/2008 art. 4º; Portaria 380/2026 art. 12; Portaria 490/2022 art. 23.',
     p4: 'P4 · Crédito aquém da fórmula — quando a chefia homologou horas mas o Extrato do Banco creditou menos que Dias úteis ×1 + Sábados ×1,5 + Domingos/feriados ×2. Quase sempre 00:00. Valor exato. Base: Res. 22.901/2008 art. 9º.',
+    p5: 'P5 · Fim de semana/feriado sem destino — até 10h trabalhadas que não foram pagas, nem homologadas, nem aparecem em "Não Homologadas". Inclui o que passou da quantidade autorizada (linhas "Excedeu") e dias que merecem conferência. Valor do mês exato; divisão entre os dias estimada.',
+    conferir: 'Dias com autorização de serviço extraordinário em que horas de fim de semana/feriado ficaram sem destino e sem aparecer nas linhas "Excedeu". Verifique o limite autorizado: se o dia estava dentro dele, é candidato a pedido de correção.',
     pecunia: 'Pecúnia — horas de serviço extraordinário autorizadas e pagas no mês (coluna PECÚNIA do espelho). Não entram no banco de horas.',
     homolog: 'Homologadas — horas de excedente aprovadas pela chefia para compensação no mês; entram no banco de horas com fator por tipo de dia.',
     perdido: 'Perdido — soma de P1 + P2 + P3 + P4 no mês: horas trabalhadas além da jornada que não viraram pecúnia nem crédito no banco.',
@@ -189,42 +192,8 @@ window.JEPessoasLostHours = (function () {
   // --------------------------------------------------------------------------
   function computeMonth(a, extrato) {
     const f = a.footer;
-
-    // P1 — rodapé "Não Homologadas"
-    const p1 = f.naoHomolog.total;
-
-    // P2 — excedente líquido de dias úteis não contabilizado
-    let netWeekday = 0;
-    a.days.forEach((d) => {
-      if (d.isWeekend || d.isHoliday || d.isDispensed) return;
-      netWeekday += d.totalMin - d.targetMin;
-    });
-    const contabilizadoUtil = f.pecunia.uteis + f.homolog.uteis + f.naoHomolog.uteis;
-    let p2 = Math.max(0, netWeekday - contabilizadoUtil);
-
-    // P3 — descarte de fim de semana / feriado
-    let p3 = 0;
-    a.days.forEach((d) => {
-      if (!(d.isWeekend || d.isHoliday)) return;
-      const worked = d.totalMin > 0 ? d.totalMin : d.h10Min;
-      if (worked <= 0) return;
-      if (a.hybrid) {
-        if (d.pecuniaMin === 0) p3 += worked; // trabalho de FDS em mês híbrido
-      } else if (worked > 600) {
-        p3 += worked - 600; // acima do teto de 10h
-      }
-    });
-
-    // Mês de regime híbrido/teletrabalho: o serviço extraordinário é suprimido
-    // por norma e não há como adquirir banco (Portaria 490/2022 art. 22-23). O
-    // sistema absorve tudo em HORAS AJUST. e fecha com Resíduo 00:00 — não é
-    // "perda" de um direito, é o regime. Guarda-se o descarte só como informação.
-    let discardedHybridMin = 0;
-    if (a.hybrid) {
-      discardedHybridMin = p2 + p3;
-      p2 = 0;
-      p3 = 0;
-    }
+    const loss = window.JEPessoasLostCalc.computeMonthLoss(a);
+    const { p1, p2, p3, p5, netWeekdayMin: netWeekday, discardedHybridMin } = loss;
 
     // P4 — crédito no Extrato aquém da fórmula
     let p4 = 0;
@@ -237,8 +206,9 @@ window.JEPessoasLostHours = (function () {
     }
 
     return {
-      p1, p2, p3, p4,
-      totalLost: p1 + p2 + p3 + p4,
+      p1, p2, p3, p4, p5,
+      totalLost: p1 + p2 + p3 + p4 + p5,
+      alerts: loss.alerts,
       discardedHybridMin,
       pecuniaMin: f.pecunia.total,
       homologMin: f.homolog.total,
@@ -352,7 +322,7 @@ window.JEPessoasLostHours = (function () {
           snap.months[it.key] = {
             key: it.key, label: monthLabel(it.y, it.m), y: it.y, m: it.m,
             empty: true, reopenable: isReopenable(it.y, it.m, null),
-            p1: 0, p2: 0, p3: 0, p4: 0, totalLost: 0,
+            p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, totalLost: 0,
             pecuniaMin: 0, homologMin: 0, naoHomologMin: 0
           };
         }
@@ -477,10 +447,11 @@ window.JEPessoasLostHours = (function () {
       + (snap.partial ? ' · <span class="je-audit-warn">parcial</span>' : '');
 
     const list = Object.values(snap.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (y.y - x.y) || (y.m - x.m));
-    const withLoss = list.filter((r) => r.totalLost > 0);
+    const withLoss = list.filter((r) => r.totalLost > 0 || (r.alerts && r.alerts.length));
 
     const sum = (k) => list.reduce((acc, r) => acc + (r[k] || 0), 0);
-    const tot = { p1: sum('p1'), p2: sum('p2'), p3: sum('p3'), p4: sum('p4'), totalLost: sum('totalLost') };
+    const tot = { p1: sum('p1'), p2: sum('p2'), p3: sum('p3'), p4: sum('p4'), p5: sum('p5'), totalLost: sum('totalLost') };
+    const alertDays = list.reduce((acc, r) => acc + ((r.alerts && r.alerts.length) || 0), 0);
 
     const banner = flags.loggedOut
       ? `<div class="je-audit-alert">Sessão expirada durante a varredura — o resultado abaixo é parcial. Faça login e rode novamente.</div>`
@@ -497,15 +468,18 @@ window.JEPessoasLostHours = (function () {
       <p class="je-audit-intro">
         Toda hora extra tem três destinos possíveis: vira <strong>pecúnia</strong> (é paga),
         é <strong>homologada</strong> pela chefia e entra no <strong>banco de horas</strong>, ou
-        <strong>se perde</strong>. As 4 categorias abaixo somam tudo que se perdeu.
+        <strong>se perde</strong>. As 5 categorias abaixo somam tudo que se perdeu.
       </p>
 
       <div class="je-audit-cards">
         ${bucketCard('p1', 'P1', 'Não Homologadas', tot.p1, 'exato')}
         ${bucketCard('p2', 'P2', 'Excedente de dia útil', tot.p2, 'estimativa')}
-        ${bucketCard('p3', 'P3', 'Descarte de FDS/feriado', tot.p3, 'estimativa')}
+        ${bucketCard('p3', 'P3', 'Acima de 10h em FDS/feriado', tot.p3, 'exato')}
         ${bucketCard('p4', 'P4', 'Crédito aquém da fórmula', tot.p4, 'exato')}
+        ${bucketCard('p5', 'P5', 'FDS/feriado sem destino', tot.p5, 'exato')}
       </div>
+
+      ${alertDays ? `<div class="je-audit-alert" title="${escapeHTML(DEF.conferir)}">${alertDays} dia(s) com autorização e horas sem destino para conferir. Veja a coluna "Conferir" e o selo no Espelho de Ponto.</div>` : ''}
 
       ${renderChart(list)}
 
@@ -523,7 +497,7 @@ window.JEPessoasLostHours = (function () {
             <p class="je-audit-src">Base: ${lk('prt380_2026', 'Portaria-TSE 380/2026')}, art. 6º §2º e art. 7º §2º · jornada de 5h no recesso: ${lk('prt885_2024', 'Portaria-TSE 885/2024')} e ${lk('res461_2023', 'Res.-TSE 461/2023')} (julho) · <em>regras-calculo-frequencia.md §3.5–3.6 e §3.10</em>.</p>
           </div>
           <div class="je-audit-def">
-            <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Descarte de fim de semana / feriado <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
+            <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Acima de 10h em fim de semana / feriado <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
             <p>Horas trabalhadas <strong>acima do teto de 10h</strong> num sábado, domingo ou feriado — o que passa disso é cortado. <strong>Meses de regime híbrido/teletrabalho não entram aqui</strong>: neles a norma suprime o serviço extraordinário e veda o acúmulo de banco, então o trabalho extra é estrutural do regime, não perda de um direito — aparece só como informação no selo "Híbrido".</p>
             <p class="je-audit-src">Base: ${lk('res22901', 'Res.-TSE 22.901/2008')}, art. 4º (teto de 10h) · ${lk('prt490_2022', 'Portaria-TSE 490/2022')}, art. 22-23 (híbrido) · <em>regras-calculo-frequencia.md §3.4 e §3.7</em>.</p>
           </div>
@@ -531,6 +505,11 @@ window.JEPessoasLostHours = (function () {
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p4}">P4</span> Crédito aquém da fórmula <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
             <p>Quando a chefia <strong>homologou</strong> horas mas o <strong>Extrato do Banco de Horas</strong> creditou <strong>menos</strong> do que a fórmula prevê (<em>Dias úteis ×1 + Sábados ×1,5 + Domingos/feriados ×2</em>). Na prática quase sempre fica em <strong>00:00</strong> — o Extrato costuma creditar igual ou a mais.</p>
             <p class="je-audit-src">Base: ${lk('res22901', 'Res.-TSE 22.901/2008')}, art. 9º (acréscimos de 50%/100%) · confirmado empiricamente em <em>regras-calculo-frequencia.md §5.1</em>.</p>
+          </div>
+          <div class="je-audit-def">
+            <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p5}">P5</span> Fim de semana / feriado sem destino <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
+            <p>Horas <strong>até o teto de 10h</strong> em sábado, domingo ou feriado que não foram pagas, não foram homologadas e não aparecem em <em>"Não Homologadas"</em>. Parte consta nas linhas <em>"Excedeu"</em> do rodapé: passou da quantidade autorizada. O restante, em dia com autorização, recebe o selo <strong>Não paga: conferir</strong> no Espelho de Ponto.</p>
+            <p class="je-audit-src">Base: verificado em <em>regras-calculo-frequencia.md §3.12</em>.</p>
           </div>
           <p class="je-audit-regime-legend">
             <strong>Coluna "Regime":</strong>
@@ -554,13 +533,15 @@ window.JEPessoasLostHours = (function () {
               <th class="je-audit-sortable" title="${escapeHTML(DEF.p2)} · clique para ordenar">P2<span class="je-audit-sort-ind"></span></th>
               <th class="je-audit-sortable" title="${escapeHTML(DEF.p3)} · clique para ordenar">P3<span class="je-audit-sort-ind"></span></th>
               <th class="je-audit-sortable" title="${escapeHTML(DEF.p4)} · clique para ordenar">P4<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.p5)} · clique para ordenar">P5<span class="je-audit-sort-ind"></span></th>
               <th class="je-audit-sortable" title="${escapeHTML(DEF.perdido)} · clique para ordenar">Perdido<span class="je-audit-sort-ind"></span></th>
+              <th class="je-audit-sortable" title="${escapeHTML(DEF.conferir)} · clique para ordenar">Conferir<span class="je-audit-sort-ind"></span></th>
             </tr>
           </thead>
           <tbody id="je-audit-tbody"></tbody>
         </table>
       </div>
-      <p class="je-audit-foot">Clique numa linha para abrir o Espelho de Ponto do mês; clique num cabeçalho para ordenar. P2 e P3 são reconstruções dia a dia — trate como ordem de grandeza. Meses ainda abertos são reprocessados a cada "Atualizar". Base normativa: <em>regras-calculo-frequencia.md §3.9</em>.</p>
+      <p class="je-audit-foot">Clique numa linha para abrir o Espelho de Ponto do mês; clique num cabeçalho para ordenar. P2 é reconstrução dia a dia — trate como ordem de grandeza. Meses ainda abertos são reprocessados a cada "Atualizar". Base normativa: <em>regras-calculo-frequencia.md §3.9</em>.</p>
     `;
 
     auditRows = withLoss;
@@ -582,12 +563,13 @@ window.JEPessoasLostHours = (function () {
   // ------------------------------------------------------------------------
   let auditRows = [];
   let auditSort = { key: 'label', dir: 'desc' };
-  const SORT_KEYS = { 0: 'label', 1: 'regime', 2: 'pecuniaMin', 3: 'homologMin', 4: 'p1', 5: 'p2', 6: 'p3', 7: 'p4', 8: 'totalLost' };
+  const SORT_KEYS = { 0: 'label', 1: 'regime', 2: 'pecuniaMin', 3: 'homologMin', 4: 'p1', 5: 'p2', 6: 'p3', 7: 'p4', 8: 'p5', 9: 'totalLost', 10: 'alertCount' };
   const REGIME_RANK = { norm: 0, rec: 1, he: 2, hib: 3 };
 
   function sortValue(r, key) {
     if (key === 'label') return r.y * 100 + r.m;
     if (key === 'regime') return REGIME_RANK[regimeOf(r).cls] || 0;
+    if (key === 'alertCount') return (r.alerts && r.alerts.length) || 0;
     return r[key] || 0;
   }
 
@@ -601,7 +583,7 @@ window.JEPessoasLostHours = (function () {
       const d = (sortValue(a, key) - sortValue(b, key)) * mul;
       return d !== 0 ? d : ((b.y * 100 + b.m) - (a.y * 100 + a.m)); // desempate: mês mais recente
     });
-    tbody.innerHTML = sorted.map(rowHTML).join('') || `<tr><td colspan="9" class="je-audit-none">Nenhuma hora perdida detectada 🎉</td></tr>`;
+    tbody.innerHTML = sorted.map(rowHTML).join('') || `<tr><td colspan="11" class="je-audit-none">Nenhuma hora perdida detectada 🎉</td></tr>`;
     overlay.querySelectorAll('#je-audit-thead th').forEach((th, i) => {
       const k = SORT_KEYS[i];
       const ind = th.querySelector('.je-audit-sort-ind');
@@ -649,7 +631,9 @@ window.JEPessoasLostHours = (function () {
       <td>${r.p2 ? fmt(r.p2) : '·'}</td>
       <td>${r.p3 ? fmt(r.p3) : '·'}</td>
       <td>${r.p4 ? fmt(r.p4) : '·'}</td>
+      <td>${r.p5 ? fmt(r.p5) : '·'}</td>
       <td><strong>${fmt(r.totalLost)}</strong></td>
+      <td title="${escapeHTML((r.alerts || []).map((x) => x.date + ': ' + fmt(x.min)).join(' · '))}">${(r.alerts && r.alerts.length) || '·'}</td>
     </tr>`;
   }
 
@@ -659,8 +643,8 @@ window.JEPessoasLostHours = (function () {
   function renderChart(list) {
     const byYear = {};
     list.forEach((r) => {
-      const b = byYear[r.y] || (byYear[r.y] = { y: r.y, p1: 0, p2: 0, p3: 0, p4: 0, total: 0 });
-      b.p1 += r.p1 || 0; b.p2 += r.p2 || 0; b.p3 += r.p3 || 0; b.p4 += r.p4 || 0;
+      const b = byYear[r.y] || (byYear[r.y] = { y: r.y, p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, total: 0 });
+      b.p1 += r.p1 || 0; b.p2 += r.p2 || 0; b.p3 += r.p3 || 0; b.p4 += r.p4 || 0; b.p5 += r.p5 || 0;
       b.total += r.totalLost || 0;
     });
     const years = Object.values(byYear).sort((a, b) => a.y - b.y);
@@ -672,7 +656,7 @@ window.JEPessoasLostHours = (function () {
     const base = padT + plotH;
     const slot = plotW / years.length;
     const bw = Math.min(30, slot * 0.6);
-    const cats = ['p1', 'p2', 'p3', 'p4'];
+    const cats = ['p1', 'p2', 'p3', 'p4', 'p5'];
 
     const gridVals = [0, maxT / 2, maxT];
     const grid = gridVals.map((v) => {
@@ -753,15 +737,16 @@ window.JEPessoasLostHours = (function () {
 
   function exportCSV() {
     if (!currentSnapshot || !currentSnapshot.months) return;
-    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'TotalPerdido', 'DescartadoHibrido_info']];
+    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir']];
     Object.values(currentSnapshot.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (x.y - y.y) || (x.m - y.m)).forEach((r) => {
       rows.push([
         r.label,
         r.hybrid ? 'Hibrido' : (r.heAuthorized ? 'HE autorizado' : (r.reducedRecess ? 'Recesso 5h' : 'Normal')),
         r.closed ? 'Sim' : 'Nao',
         fmt(r.pecuniaMin), fmt(r.homologMin),
-        fmt(r.p1), fmt(r.p2), fmt(r.p3), fmt(r.p4), fmt(r.totalLost),
-        fmt(r.discardedHybridMin || 0)
+        fmt(r.p1), fmt(r.p2), fmt(r.p3), fmt(r.p4), fmt(r.p5 || 0), fmt(r.totalLost),
+        fmt(r.discardedHybridMin || 0),
+        (r.alerts || []).map((x) => x.date + ' ' + fmt(x.min)).join(' / ')
       ]);
     });
     const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');

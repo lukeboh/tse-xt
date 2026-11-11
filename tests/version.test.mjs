@@ -13,12 +13,12 @@ test('version — CURRENT_VERSION em version.js corresponde ao manifest.json', (
   const V = versionMod.JEPessoasVersion;
 
   const currentVersion = V.getVersion();
-  assert.equal(currentVersion, '1.1.6-Snapshot');
+  assert.equal(currentVersion, '1.1.7-Snapshot');
 
-  // No manifest.json, version_name deve ser o display version (1.1.6-Snapshot)
-  // e version deve ser o semver numérico aceito pelo Chrome (1.1.6)
+  // No manifest.json, version_name deve ser o display version (1.1.7-Snapshot)
+  // e version deve ser o semver numérico aceito pelo Chrome (1.1.7)
   assert.equal(manifest.version_name, currentVersion);
-  assert.equal(manifest.version, '1.1.6');
+  assert.equal(manifest.version, '1.1.7');
 });
 
 test('version — CHANGELOG tem entrada no topo para a versão corrente', () => {
