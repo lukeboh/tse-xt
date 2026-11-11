@@ -30,7 +30,9 @@ window.JEPessoasPayrollAudit = (function () {
   const MONTH_FIELD = 'contracheque.folhaContracheque.mes';
   const FETCH_THROTTLE_MS = 150;
   const DEFAULT_MONTHS = 60;
-  const MAX_MONTHS = 120;
+  // Previsão de término: um contracheque (lista de folhas + cada folha) custa
+  // cerca de duas consultas de espelho até ser medido.
+  const ETA_FACTORS = { contracheque: { of: 'espelho', x: 2 } };
   // Tantos contracheques seguidos sem leitura: a sessão deve ter caído.
   const MAX_UNREADABLE = 3;
   const COLS = 10;
@@ -288,12 +290,12 @@ window.JEPessoasPayrollAudit = (function () {
     const to = overlay.querySelector('#je-pay-to').value;
     const months = monthRange(from, to);
     if (!months.length) { alert('Informe o período da auditoria (mês inicial e final).'); return; }
-    if (months.length > MAX_MONTHS) { alert(`O período tem ${months.length} meses. O limite é de ${MAX_MONTHS} meses por auditoria.`); return; }
 
     running = true;
     aborted = false;
     openMonths.clear();
     showProgress(true);
+    startProgress();
 
     const today = new Date();
     const matricula = ownMatricula();
@@ -311,11 +313,17 @@ window.JEPessoasPayrollAudit = (function () {
     };
     const flags = { loggedOut: false, aborted: false, wrongServer: false, unreadable: false };
 
-    // 1. Espelhos do período.
+    // 1. Espelhos do período. Os contracheques ainda não são conhecidos: a
+    // previsão os estima pela proporção de meses com pecúnia lidos até aqui.
     let done = 0;
+    const slipsAhead = () => {
+      if (!done) return 0;
+      const seen = P.neededPayslipKeys(result.expected, { today }).length;
+      return Math.round(seen * months.length / done);
+    };
     for (const it of months) {
       if (aborted) break;
-      setProgress(done, months.length, `Espelho de ${periodLabel(it.key)}`);
+      setProgress(done, months.length, `Espelho de ${periodLabel(it.key)}`, { espelho: months.length - done, contracheque: slipsAhead() });
       try {
         const res = await fetchEspelho(it.y, it.m, matricula, unidade);
         if (res.loggedOut) { flags.loggedOut = true; break; }
@@ -332,6 +340,7 @@ window.JEPessoasPayrollAudit = (function () {
       }
       done++;
       await sleep(FETCH_THROTTLE_MS);
+      stepProgress('espelho');
     }
     if (flags.wrongServer) result.expected = [];
 
@@ -342,7 +351,7 @@ window.JEPessoasPayrollAudit = (function () {
       let unreadable = 0;
       for (const key of keys) {
         if (stopped()) break;
-        setProgress(n, keys.length, `${label} de ${periodLabel(key)}`);
+        setProgress(n, keys.length, `${label} de ${periodLabel(key)}`, { contracheque: keys.length - n });
         try {
           const res = await readPayslip(key, matricula, today);
           if (res.loggedOut) { flags.loggedOut = true; break; }
@@ -356,6 +365,7 @@ window.JEPessoasPayrollAudit = (function () {
         if (unreadable >= MAX_UNREADABLE) flags.unreadable = true;
         n++;
         await sleep(FETCH_THROTTLE_MS);
+        stepProgress('contracheque');
       }
     }
 
@@ -456,10 +466,28 @@ window.JEPessoasPayrollAudit = (function () {
     ['#je-pay-run', '#je-pay-csv', '#je-pay-print'].forEach((s) => { overlay.querySelector(s).disabled = on; });
   }
 
-  function setProgress(done, total, label) {
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    overlay.querySelector('#je-pay-progress-fill').style.width = pct + '%';
-    overlay.querySelector('#je-pay-progress-label').textContent = `${label}  (${done + 1}/${total})`;
+  // Barra da varredura inteira (espelhos e contracheques) com previsão de término.
+  let tracker = null;
+  let stepsDone = 0;
+
+  function startProgress() {
+    tracker = window.JEPessoasProgress ? window.JEPessoasProgress.createTracker() : null;
+    stepsDone = 0;
+  }
+
+  function stepProgress(kind) {
+    stepsDone++;
+    if (tracker) tracker.step(kind);
+  }
+
+  function setProgress(done, total, label, plan) {
+    const Pr = window.JEPessoasProgress;
+    const left = Object.keys(plan || {}).reduce((s, k) => s + (plan[k] || 0), 0);
+    const rest = tracker ? tracker.remainingMs(plan, ETA_FACTORS) : null;
+    const frac = (Pr && tracker) ? Pr.fraction(tracker.elapsedMs(), rest, stepsDone, stepsDone + left) : (total > 0 ? done / total : 0);
+    const eta = Pr ? Pr.formatEta(rest) : '';
+    overlay.querySelector('#je-pay-progress-fill').style.width = Math.round(frac * 100) + '%';
+    overlay.querySelector('#je-pay-progress-label').textContent = `${label}  (${done + 1}/${total}) · ${eta ? 'termina em ' + eta : 'calculando a previsão…'}`;
   }
 
   function badge(status) {

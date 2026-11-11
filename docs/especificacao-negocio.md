@@ -189,6 +189,7 @@ Na linha `Totais:` da tabela principal:
 - O relatório destaca o que passou de 10h no dia, os meses acima de 60h e os meses em que a conta não fechou (`Não conciliado`).
 - Se o portal devolver o espelho de outro servidor, nada daquele servidor é contado e a linha recebe o selo **Conferir**.
 - Saídas: tabela expansível (servidor → mês → dia), CSV e versão para impressão em A4 paisagem.
+- Não há limite de meses. Acima de 150 consultas, a tela pede confirmação; durante a varredura, a barra mostra a previsão de término.
 - O cálculo fica em `recognitionCalc.js` (puro, testado) e reaproveita `lostHoursCalc.js`. A tela fica em `recognitionReport.js`.
 
 ### 5.4. Auditoria de Pagamento de Pecúnias
@@ -216,7 +217,7 @@ Na linha `Totais:` da tabela principal:
 - **Valor:** a auditoria não calcula quanto deveria ter sido pago. Mostra o valor bruto das rubricas e o valor da hora-base que elas embutem (valor ÷ horas ÷ 1,5 ou 2), para o servidor comparar com a remuneração ÷ 200 (Res. 22.901/2008, art. 9º). Linhas do mesmo mês com valores de hora diferentes entre si (mais de 2%) são sinalizadas.
 - **Pagamentos sem horas no espelho:** rubricas com referência a mês sem pecúnia, a mês aberto ou a mês fora do período aparecem em quadro próprio.
 - **Conferências de identidade:** o espelho e o contracheque devolvidos pelo portal precisam ser da matrícula logada e do mês pedido. Se não forem, nada é contado.
-- O período padrão é de 60 meses (prazo do art. 1º do Decreto 20.910/1932). O limite é de 120 meses por auditoria.
+- O período padrão é de 60 meses (prazo do art. 1º do Decreto 20.910/1932). Não há limite de meses: a escolha é do servidor, e quanto maior o período, mais demorada a auditoria. A barra mostra o andamento da varredura inteira (espelhos e contracheques) e a previsão de término.
 - Saídas: tabela expansível (mês → lançamentos do contracheque), CSV e versão para impressão em A4 paisagem.
 - O relatório aponta o que conferir com a unidade de pagamento. Não reconhece direito.
 - O cálculo fica em `payrollAuditCalc.js` (puro, testado). A tela e a leitura do portal ficam em `payrollAudit.js`.

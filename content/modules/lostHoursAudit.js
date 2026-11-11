@@ -289,10 +289,12 @@ window.JEPessoasLostHours = (function () {
 
     setProgress(0, months.length, 'Preparando…');
     showProgress(true);
+    tracker = null;
 
     // Extrato do Banco de Horas (uma vez por varredura) para o bucket B4
     setProgress(0, months.length, 'Lendo Extrato do Banco de Horas…');
     const extrato = await fetchExtratoMap();
+    tracker = window.JEPessoasProgress ? window.JEPessoasProgress.createTracker() : null;
 
     let done = 0;
     let loggedOut = false;
@@ -330,8 +332,9 @@ window.JEPessoasLostHours = (function () {
         console.warn('[TSE XT] auditoria: falha em', it.key, e);
       }
       done++;
-      setProgress(done, months.length, 'Consultando ' + monthLabel(it.y, it.m) + '…');
       await sleep(FETCH_THROTTLE_MS);
+      if (tracker) tracker.step('espelho');
+      setProgress(done, months.length, 'Consultando ' + monthLabel(it.y, it.m) + '…');
     }
 
     snap.updatedAt = new Date().toISOString();
@@ -414,13 +417,19 @@ window.JEPessoasLostHours = (function () {
     if (full) full.disabled = on;
   }
 
+  // Barra com previsão de término (JEPessoasProgress).
+  let tracker = null;
+
   function setProgress(done, total, label) {
     if (!overlay) return;
     const fill = overlay.querySelector('#je-audit-progress-fill');
     const lbl = overlay.querySelector('#je-audit-progress-label');
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    if (fill) fill.style.width = pct + '%';
-    if (lbl) lbl.textContent = `${label}  (${done}/${total})`;
+    const Pr = window.JEPessoasProgress;
+    const rest = tracker ? tracker.remainingMs({ espelho: total - done }) : null;
+    const frac = (Pr && tracker) ? Pr.fraction(tracker.elapsedMs(), rest, done, total) : (total > 0 ? done / total : 0);
+    const eta = (Pr && done < total) ? Pr.formatEta(rest) : '';
+    if (fill) fill.style.width = Math.round(frac * 100) + '%';
+    if (lbl) lbl.textContent = `${label}  (${done}/${total})${eta ? ' · termina em ' + eta : ''}`;
   }
 
   let currentSnapshot = null;

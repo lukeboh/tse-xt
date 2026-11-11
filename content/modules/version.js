@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.13-Snapshot';
+  const CURRENT_VERSION = '1.1.14-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.14-Snapshot',
+      date: '2026-11-11',
+      title: 'Relatórios sem limite de meses, com previsão de término',
+      features: [
+        'A Auditoria de Pagamento de Pecúnias e o Relatório de Reconhecimento Posterior não limitam mais o período: a escolha é sua, e quanto maior o período, mais demorada a consulta.',
+        'A barra de progresso da Auditoria de Pagamento acompanha a varredura inteira (espelhos e contracheques), sem recomeçar a cada etapa.',
+        'Os três relatórios (Reconhecimento Posterior, Pagamento de Pecúnias e Horas Perdidas) mostram quanto falta e a hora prevista de término.'
+      ]
+    },
     {
       version: '1.1.13-Snapshot',
       date: '2026-11-11',

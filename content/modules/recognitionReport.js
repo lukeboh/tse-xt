@@ -20,7 +20,6 @@ window.JEPessoasRecognitionReport = (function () {
   const STORAGE_KEY = 'je_xt_recog_v1';
   const ESPELHO_URL = '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
   const FETCH_THROTTLE_MS = 120;
-  const MAX_MONTHS = 60;
   const CONFIRM_REQUESTS = 150;
   const COLS = 12;
 
@@ -210,16 +209,16 @@ window.JEPessoasRecognitionReport = (function () {
     const picked = team.filter((s) => s.checked);
 
     if (!months.length) { alert('Informe o período do relatório (mês inicial e final).'); return; }
-    if (months.length > MAX_MONTHS) { alert(`O período tem ${months.length} meses. O limite é de ${MAX_MONTHS} meses por relatório.`); return; }
     if (!picked.length) { alert('Selecione ao menos um servidor.'); return; }
     const total = months.length * picked.length;
-    if (total > CONFIRM_REQUESTS && !confirm(`Serão ${total} consultas ao Espelho de Ponto (${picked.length} servidores × ${months.length} meses). Pode levar alguns minutos. Continuar?`)) return;
+    if (total > CONFIRM_REQUESTS && !confirm(`Serão ${total} consultas ao Espelho de Ponto (${picked.length} servidores × ${months.length} meses). Pode levar alguns minutos; a barra mostra a previsão de término. Continuar?`)) return;
 
     running = true;
     aborted = false;
     openServers.clear();
     openMonths.clear();
     showProgress(true);
+    tracker = window.JEPessoasProgress ? window.JEPessoasProgress.createTracker() : null;
 
     const unit = currentUnit;
     const result = {
@@ -249,6 +248,7 @@ window.JEPessoasRecognitionReport = (function () {
             entry.error = 'O portal devolveu o espelho de outro servidor. Nada deste servidor foi contado.';
             entry.months = [];
             done += months.length - months.indexOf(it);
+            if (tracker) tracker.step('espelho');
             break;
           }
           const a = window.JEPessoasAuthScan.analyzeEspelho(res.doc, { year: it.y, month: it.m });
@@ -262,6 +262,7 @@ window.JEPessoasRecognitionReport = (function () {
         }
         done++;
         await sleep(FETCH_THROTTLE_MS);
+        if (tracker) tracker.step('espelho');
       }
     }
 
@@ -381,10 +382,16 @@ window.JEPessoasRecognitionReport = (function () {
     ['#je-recog-run', '#je-recog-csv', '#je-recog-print'].forEach((s) => { overlay.querySelector(s).disabled = on; });
   }
 
+  // Barra com previsão de término (JEPessoasProgress).
+  let tracker = null;
+
   function setProgress(done, total, label) {
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    overlay.querySelector('#je-recog-progress-fill').style.width = pct + '%';
-    overlay.querySelector('#je-recog-progress-label').textContent = `${label}  (${done}/${total})`;
+    const Pr = window.JEPessoasProgress;
+    const rest = tracker ? tracker.remainingMs({ espelho: total - done }) : null;
+    const frac = (Pr && tracker) ? Pr.fraction(tracker.elapsedMs(), rest, done, total) : (total > 0 ? done / total : 0);
+    const eta = Pr ? Pr.formatEta(rest) : '';
+    overlay.querySelector('#je-recog-progress-fill').style.width = Math.round(frac * 100) + '%';
+    overlay.querySelector('#je-recog-progress-label').textContent = `${label}  (${done}/${total}) · ${eta ? 'termina em ' + eta : 'calculando a previsão…'}`;
   }
 
   // Totais por servidor e da equipe, a partir do relatório guardado.

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TSE XT",
-  "version": "1.1.13",
-  "version_name": "1.1.13-Snapshot",
+  "version": "1.1.14",
+  "version_name": "1.1.14-Snapshot",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",
@@ -70,6 +70,7 @@
         "content/modules/tableModernizer.js",
         "content/modules/pointAdjustmentModal.js",
         "content/modules/monthPlanner.js",
+        "content/modules/progressEta.js",
         "content/modules/lostHoursAudit.js",
         "content/modules/recognitionReport.js",
         "content/modules/payrollAudit.js",
