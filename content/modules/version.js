@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.8-Snapshot';
+  const CURRENT_VERSION = '1.1.9-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.9-Snapshot',
+      date: '2026-11-10',
+      title: 'Roadmap: alerta de repouso cancelado e conciliação SAEX',
+      features: [
+        'Sem mudança de comportamento: esta versão só atualiza a documentação.',
+        'Item C8 cancelado: o alerta de repouso abaixo de 8h só dispararia por batida logo após a meia-noite.',
+        'Documentada a conciliação com o Relatório SAEX: horas realizadas iguais à pecúnia mais adicional noturno em 30 de 31 meses.'
+      ]
+    },
     {
       version: '1.1.8-Snapshot',
       date: '2026-11-10',

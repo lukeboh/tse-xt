@@ -97,7 +97,7 @@
 - **Regra oficial:** pagamento aos domingos e feriados é **vedado** fora de plantão eleitoral / dias de eleição (art. 4º §2º da Res. 22.901/2008; art. 5º da Portaria 380/2026). Fora desse contexto a pecúnia de domingo/feriado é normalmente `00:00` e o excedente vai para **compensação** (fator 2,0).
 - **Ação:** introduzir o conceito de "dia de plantão/eleição" (lista de datas ou toggle); fora dele, direcionar excedente de domingo/feriado para compensação, não para a linha de pecúnia.
 
-## R8 — 🟢 Alerta de repouso interjornada < 8h
+## R8 — ❌ Cancelado em 10/11/2026 — Alerta de repouso interjornada < 8h
 
 - **Regra oficial:** mínimo de 8h ininterruptas entre jornadas (art. 7º da Res. 22.901/2008).
 - **Ação:** alertar quando o intervalo entre a última saída de um dia e a primeira entrada do dia seguinte for < 8h.

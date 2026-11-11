@@ -45,7 +45,7 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 | **C5** | **Alertas de Tetos Legais de Horas Extras** | 🟡 Parcial | Res. 22.901/2008 · Portaria 380/2026 art. 4º | Badges e alertas para > 2h em dia útil, > 10h em FDS/feriado, > 60h acumuladas no mês e faixa 60h–90h. |
 | **C6** | **Selo Diário de Excedente Além do Autorizado** | ⏸️ Adiado | Portaria 380/2026 art. 3º e 10 | Cruzar excedente com limites diários lidos do SAEX via `heAuthFetch.js`; sinalizar quando realizado superar autorizado. |
 | **C7** | **Conceito de Plantão/Eleição para Domingos e Feriados** | ❌ Cancelado | Res. 22.901/2008 art. 4º §2º · Portaria 380/2026 art. 5º | Direcionar domingos/feriados fora de eleição/plantão para compensação (+100%), vedando pecúnia indevida. |
-| **C8** | **Alerta de Repouso Interjornada < 8h** | 🟢 Pendente | Res. 22.901/2008 art. 7º | Alerta discreto quando intervalo entre última saída e primeira entrada subsequente for < 8h consecutivas. |
+| **C8** | **Alerta de Repouso Interjornada < 8h** | ❌ Cancelado | Res. 22.901/2008 art. 7º | Alerta discreto quando intervalo entre última saída e primeira entrada subsequente for < 8h consecutivas. |
 | **C9** | **Documentação / Aviso de Adicional Noturno** | 🟢 Parcial | Lei nº 8.112/1990 art. 75 | Tooltip elucidativo sobre hora ficta noturna de 52m30s e coluna `.h13` não recalculadas sinteticamente. |
 | **C10** | **Atualização da Legislação de Referência Injetada** | 🟢 Pendente | Portarias 490/2022 e 380/2026 | Atualizar bloco injetado no rodapé substituindo normas revogadas pelas portarias vigentes. |
 
@@ -59,7 +59,7 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 * **C5:** selos diários e referência de 60h no card já existem. Falta o indicador da faixa de 60h a 90h.
 * **C6:** adiado por decisão do responsável em 10/11/2026, até voltar a ser priorizado. Quando retomado, o selo deve dizer apenas que a parcela além do autorizado "depende de homologação da chefia", o que vale qualquer que seja a resposta de [D6](duvidas-normativas.md).
 * **C7:** cancelado em 10/11/2026. Não haverá regra por dia de eleição ou plantão: o fator ×2 vale para domingo e feriado.
-* **C8:** não implementado.
+* **C8:** cancelado em 10/11/2026: na revisão do histórico o caso só ocorreu 2 vezes, ambas por batida logo após a meia-noite.
 * **C9:** as células de adicional noturno têm tooltip, mas falta explicar a hora ficta de 52min30s e que o valor não é recalculado.
 * **C10:** não implementado. A lista desatualizada vem da própria página do portal, e a extensão ainda não acrescenta as normas vigentes.
 
@@ -188,7 +188,7 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 ---
 
-#### 🟢 C8 — Alerta de Repouso Interjornada < 8h
+#### ❌ C8 — Alerta de Repouso Interjornada < 8h (Cancelado em 10/11/2026)
 * **Norma & Fundamentação:** Resolução-TSE nº 22.901/2008 art. 7º. Mínimo de 8h ininterruptas entre o fim de uma jornada e o início da seguinte.
 * **Casos de Testes Automatizados:**
   * `TC-C8-01`: $E_1(Dia_{N+1}) - S_{fim}(Dia_N) < 480\text{min}$ $\rightarrow$ emissão de badge `⚠️ Repouso interjornada < 8h (art. 7º)`.
