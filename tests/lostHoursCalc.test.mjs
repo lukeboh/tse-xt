@@ -152,3 +152,15 @@ test('destino do mês: débito vem do Resíduo negativo', () => {
   assert.equal(d.debitMin, H(2));
   assert.equal(d.excessMin, 0);
 });
+
+test('vocabulário comum: termos do Destino do mês e selos dos motivos de perda', () => {
+  const { JEPessoasLostCalc: L } = loadModule('lostHoursCalc.js');
+  assert.deepEqual(['excedente', 'compensou', 'pago', 'banco', 'perdido', 'debito', 'naoConciliado'].map((k) => L.TERMS[k].label),
+    ['Excedente', 'Compensou dias curtos', 'Pago', 'Banco', 'Perdido', 'Débito do mês', 'Não conciliado']);
+  Object.values(L.TERMS).forEach((t) => assert.ok(t.tip.length > 20, t.label));
+  assert.equal(L.reasonInfo('teto-10h').label, 'Acima de 10h');
+  assert.equal(L.reasonInfo('sobra-mes').label, 'Sobra do mês');
+  assert.equal(L.reasonInfo('sem-destino', true).label, 'Não paga: conferir');
+  assert.equal(L.reasonInfo('sem-destino', false).label, 'Sem autorização');
+  assert.equal(L.reasonInfo('codigo-novo').label, 'codigo-novo');
+});

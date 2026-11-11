@@ -3,7 +3,7 @@
  *
  * Varre o Espelho de Ponto de cada servidor da equipe, mês a mês, e mostra as
  * horas feitas além da jornada ao lado das que foram pagas em pecúnia. O que
- * não foi pago, não virou banco e não compensou dia curto fica "a reconhecer".
+ * não foi pago, não virou banco e não compensou dia curto é o "Perdido" (mesmos nomes da linha "Destino do mês" do Espelho de Ponto).
  *
  * Serve de anexo ao pedido de reconhecimento posterior, com as duas saídas:
  *   (a) pagamento em pecúnia (acréscimo de 50% ou 100%, Res. 22.901/2008 art. 9º)
@@ -24,22 +24,60 @@ window.JEPessoasRecognitionReport = (function () {
   const COLS = 12;
 
   const KIND_LABEL = { uteis: 'Dia útil', sab: 'Sábado', domfer: 'Domingo/feriado' };
-  const REASON_LABEL = {
-    'teto-10h': 'Acima de 10h no dia',
-    'nao-homologada': 'Não homologada',
-    'acima-autorizado': 'Acima do autorizado',
-    'sem-destino': 'Sem pagamento nem banco',
-    'sobra-mes': 'Excedente que sobrou no mês',
-    'hibrido': 'Mês híbrido'
-  };
 
   let overlay = null;
   let running = false;
   let aborted = false;
   let team = [];
   let current = null;
+  // Agrupamento da tabela: 'server' (servidor → mês) ou 'month' (mês → servidor).
+  let groupBy = 'server';
   const openServers = new Set();
+  const openGroups = new Set();
   const openMonths = new Set();
+
+  // Termos e selos do Espelho de Ponto (linha "Destino do mês" e coluna Ocorrência).
+  const terms = () => window.JEPessoasLostCalc.TERMS;
+  const reason = (code, hasAuth) => window.JEPessoasLostCalc.reasonInfo(code, hasAuth);
+
+  // Colunas da tabela principal. O mesmo texto vai no título da coluna, na
+  // explicação da tela e na versão para impressão.
+  function mainColumns() {
+    const T = terms();
+    const byMonth = groupBy === 'month';
+    return [
+      { head: byMonth ? 'Mês / servidor' : 'Servidor / mês',
+        tip: byMonth ? 'Clique num mês para ver os servidores e num servidor para ver os dias.' : 'Clique num servidor para ver os meses e num mês para ver os dias.' },
+      { head: byMonth ? 'Servidores' : 'Meses',
+        tip: byMonth ? 'Servidores com o mês fechado e fora do regime híbrido: os que entram no total.' : 'Meses fechados e fora do regime híbrido: os que entram no total.' },
+      { head: T.excedente.label, tip: T.excedente.tip },
+      { head: T.compensou.label, tip: T.compensou.tip },
+      { head: T.pago.label, tip: T.pago.tip },
+      { head: T.banco.label, tip: T.banco.tip },
+      { head: T.perdido.label, tip: T.perdido.tip + ' É o que este relatório pede para reconhecer.' },
+      { head: 'Dia útil', tip: 'Parte do Perdido em dia útil. O total do mês é exato; a divisão entre os dias é estimada.' },
+      { head: 'Sábado', tip: 'Parte do Perdido em sábado.' },
+      { head: 'Dom./fer.', tip: 'Parte do Perdido em domingo, feriado, recesso ou ponto facultativo.' },
+      { head: reason('teto-10h').label, tip: reason('teto-10h').tip + ' Já está somado no Perdido.' },
+      { head: 'Crédito (b)', tip: 'Opção (b): o Perdido convertido em crédito no banco de horas, com os fatores ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' }
+    ];
+  }
+
+  function dayColumns() {
+    const T = terms();
+    return [
+      { head: 'Dia', tip: 'Data do Espelho de Ponto.' },
+      { head: 'Tipo', tip: 'Dia útil, sábado ou domingo/feriado (inclui recesso e ponto facultativo).' },
+      { head: 'Total', tip: 'Coluna TOTAL do Espelho: horas trabalhadas no dia.' },
+      { head: 'Jornada', tip: 'Jornada do dia útil: 7h em turno único, 8h com intervalo, 5h no recesso. Sábado, domingo e feriado não têm jornada.' },
+      { head: T.excedente.label, tip: 'Em dia útil, o que passou da jornada; em sábado, domingo e feriado, todas as horas trabalhadas.' },
+      { head: T.pago.label, tip: 'Colunas PECÚNIA e ADIC. NOTURNO PECÚNIA do dia.' },
+      { head: T.perdido.label, tip: T.perdido.tip },
+      { head: 'Motivo', tip: 'Os mesmos selos da coluna Ocorrência do Espelho. Passe o mouse em cada um para ver a explicação.' }
+    ];
+  }
+
+  const thRow = (cols) => cols.map((c) => `<th title="${escapeHTML(c.tip)}">${escapeHTML(c.head)}</th>`).join('');
 
   // --------------------------------------------------------------------------
   // Utilidades
@@ -216,6 +254,7 @@ window.JEPessoasRecognitionReport = (function () {
     running = true;
     aborted = false;
     openServers.clear();
+    openGroups.clear();
     openMonths.clear();
     showProgress(true);
     tracker = window.JEPessoasProgress ? window.JEPessoasProgress.createTracker() : null;
@@ -303,6 +342,11 @@ window.JEPessoasRecognitionReport = (function () {
           <div class="je-recog-period">
             <label>De <input type="month" id="je-recog-from"></label>
             <label>até <input type="month" id="je-recog-to"></label>
+            <span class="je-recog-group" role="radiogroup" aria-label="Agrupar resultados">
+              <span class="je-recog-group-h">Agrupar:</span>
+              <label title="Um bloco por servidor, com os meses dele"><input type="radio" name="je-recog-group" value="server" checked> Servidor → mês</label>
+              <label title="Um bloco por mês, com os servidores daquele mês"><input type="radio" name="je-recog-group" value="month"> Mês → servidor</label>
+            </span>
           </div>
           <div class="je-audit-actions">
             <button type="button" class="je-audit-btn je-audit-btn-primary" id="je-recog-run" title="Consulta o Espelho de Ponto de cada servidor no período">Gerar relatório</button>
@@ -344,10 +388,15 @@ window.JEPessoasRecognitionReport = (function () {
       team[+i].checked = e.target.checked;
       paintTeamSummary();
     });
+    overlay.querySelectorAll('input[name="je-recog-group"]').forEach((r) => r.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      groupBy = e.target.value === 'month' ? 'month' : 'server';
+      paintTable();
+    }));
     overlay.querySelector('#je-recog-body').addEventListener('click', onBodyClick);
     overlay.querySelector('#je-recog-body').addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      if (!e.target.matches || !e.target.matches('tr[data-server], tr[data-month]')) return;
+      if (!e.target.matches || !e.target.matches('tr[data-server], tr[data-group], tr[data-month]')) return;
       e.preventDefault();
       onBodyClick(e);
     });
@@ -420,10 +469,11 @@ window.JEPessoasRecognitionReport = (function () {
       ? '<div class="je-audit-alert">Sessão expirada durante a consulta. O resultado abaixo é parcial. Faça login e gere de novo.</div>'
       : ((flags.aborted || result.partial) ? '<div class="je-audit-alert">Consulta interrompida. O resultado abaixo é parcial.</div>' : '');
 
+    const T = terms();
     const notes = [];
-    if (t.aboveCap.total > 0) notes.push(`Das horas a reconhecer, <strong>${fmt(t.aboveCap.total)}</strong> passaram do limite de 10h por dia em sábado, domingo ou feriado.`);
+    if (t.aboveCap.total > 0) notes.push(`Do Perdido, <strong>${fmt(t.aboveCap.total)}</strong> passaram do limite de 10h por dia em sábado, domingo ou feriado (selo <em>${escapeHTML(reason('teto-10h').label)}</em>).`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário. O que passou soma <strong>${fmt(t.overMonthlyMin)}</strong>.`);
-    if (t.unexplainedMin !== 0) notes.push(`Em parte dos meses a conta não fechou: <strong>${fmt(t.unexplainedMin)}</strong> sem conciliação. Confira esses meses no Espelho de Ponto.`);
+    if (t.unexplainedMin !== 0) notes.push(`${T.naoConciliado.label}: <strong>${fmt(t.unexplainedMin)}</strong> em parte dos meses (selo <em>Conferir</em>). Confira esses meses no Espelho de Ponto.`);
     if (t.hybridMonths > 0) notes.push(`${t.hybridMonths} mês(es) em regime híbrido ficaram fora do total (${fmt(t.hybridMin)} de trabalho além da jornada, só informativo).`);
     if (t.openMonths > 0) notes.push(`${t.openMonths} mês(es) ainda abertos ficaram fora do total (${fmt(t.openPendingMin)} em estimativa parcial).`);
     servers.filter((s) => s.error).forEach((s) => notes.push(`${escapeHTML(s.name)}: ${escapeHTML(s.error)}`));
@@ -431,17 +481,18 @@ window.JEPessoasRecognitionReport = (function () {
     body.innerHTML = `
       ${banner}
       <div class="je-audit-hero">
-        <div class="je-audit-hero-num">${fmt(t.pending.total)}</div>
-        <div class="je-audit-hero-cap">horas feitas além da jornada que <strong>não</strong> foram pagas, <strong>não</strong> viraram banco e <strong>não</strong> compensaram dia curto</div>
+        <div class="je-audit-hero-num" title="${escapeHTML(T.perdido.tip)}">${fmt(t.pending.total)}</div>
+        <div class="je-audit-hero-cap"><strong>${T.perdido.label}</strong>: horas além da jornada que <strong>não</strong> foram pagas, <strong>não</strong> viraram banco e <strong>não</strong> compensaram dias curtos. É o que este relatório pede para reconhecer.</div>
         <div class="je-audit-hero-sub">${servers.length} servidor(es) · ${periodLabel(result.from)} a ${periodLabel(result.to)} · ${t.months} mês(es) fechado(s)${result.unit ? ' · ' + escapeHTML(result.unit) : ''}${when ? ' · gerado em ' + when : ''}</div>
       </div>
 
       <div class="je-audit-cards">
-        ${card('Feitas além da jornada', t.worked.total, 'Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas.')}
-        ${card('Pagas em pecúnia', t.paid.total, 'Linhas Pecúnia e Adicional Noturno Pecúnia do rodapé do espelho.')}
-        ${card('Registradas em banco', t.bank.total, 'Linha Horas Excedentes Homologadas do rodapé do espelho.')}
-        ${card('Compensaram dia curto', t.compensatedMin, 'Excedente de dia útil usado para fechar a jornada de dias mais curtos do mesmo mês.')}
+        ${card(T.excedente.label, t.worked.total, T.excedente.tip)}
+        ${card(T.compensou.label, t.compensatedMin, T.compensou.tip)}
+        ${card(T.pago.label, t.paid.total, T.pago.tip)}
+        ${card(T.banco.label, t.bank.total, T.banco.tip)}
       </div>
+      <p class="je-audit-foot je-recog-equation">Os mesmos nomes da linha <em>Destino do mês</em> do Espelho de Ponto: ${T.excedente.label} = ${T.compensou.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}.</p>
 
       <div class="je-recog-options">
         <div class="je-recog-option">
@@ -460,30 +511,15 @@ window.JEPessoasRecognitionReport = (function () {
 
       <div class="je-audit-tablewrap">
         <table class="je-audit-table je-recog-table">
-          <thead>
-            <tr>
-              <th>Servidor / mês</th>
-              <th title="Meses fechados no período">Meses</th>
-              <th title="Horas feitas além da jornada">Feitas</th>
-              <th title="Pecúnia + adicional noturno em pecúnia">Pagas</th>
-              <th title="Horas excedentes homologadas">Banco</th>
-              <th title="Compensaram dia curto do mesmo mês">Compens.</th>
-              <th title="Feitas e sem pagamento, banco ou compensação">A reconhecer</th>
-              <th title="A reconhecer em dia útil (estimativa)">Dia útil</th>
-              <th title="A reconhecer em sábado">Sábado</th>
-              <th title="A reconhecer em domingo e feriado">Dom./fer.</th>
-              <th title="Parte de sábado, domingo e feriado que passou de 10h no dia">Acima 10h</th>
-              <th title="Opção (b): crédito no banco de horas com os fatores ×1, ×1,5 e ×2">Crédito (b)</th>
-            </tr>
-          </thead>
+          <thead id="je-recog-thead"></thead>
           <tbody id="je-recog-tbody"></tbody>
         </table>
       </div>
-      <p class="je-audit-foot">Clique num servidor para ver os meses e num mês para ver os dias. Só mês fechado e fora do regime híbrido entra nos totais. O valor de dia útil é reconstruído dia a dia (total do dia menos a jornada) e deve ser lido como estimativa.</p>
+      <p class="je-audit-foot">Clique numa linha para abrir o nível seguinte, até os dias. Passe o mouse no título de cada coluna para ver o que ela mostra. Só mês fechado e fora do regime híbrido entra nos totais. A divisão do Perdido em dia útil entre os dias é estimada; o total do mês é exato.</p>
 
       <details class="je-audit-explain">
         <summary>📖 Como ler e base normativa</summary>
-        <div class="je-audit-explain-body">
+        <div class="je-audit-explain-body" id="je-recog-explain">
           ${explainHTML()}
         </div>
       </details>
@@ -499,13 +535,25 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function explainHTML() {
+    const T = terms();
+    const seals = ['nao-homologada', 'acima-autorizado', 'teto-10h', 'sobra-mes'].map((c) => reason(c).label)
+      .concat([reason('sem-destino', false).label, reason('sem-destino', true).label]);
+    const list = (cols) => cols.map((c) => `<li><strong>${escapeHTML(c.head)}:</strong> ${escapeHTML(c.tip)}</li>`).join('');
     return `
       <div class="je-audit-def">
         <div class="je-audit-def-h">Como os números foram apurados</div>
-        <p><strong>Feitas além da jornada:</strong> em dia útil, o que passou da jornada do dia (7h em turno único, 8h com intervalo, 5h no recesso). Em sábado, domingo e feriado, todas as horas trabalhadas.</p>
-        <p><strong>Pagas em pecúnia:</strong> linhas <em>Pecúnia</em> e <em>Adicional Noturno Pecúnia</em> do rodapé do espelho. <strong>Banco:</strong> linha <em>Horas Excedentes Homologadas</em>. <strong>Compensaram dia curto:</strong> excedente de dia útil que fechou a jornada de dias mais curtos do mesmo mês.</p>
-        <p><strong>A reconhecer:</strong> o que sobra. Reúne as horas não homologadas, as que passaram da quantidade autorizada, as acima de 10h em fim de semana e feriado e o excedente de dia útil que sobrou no mês.</p>
+        <p>Os nomes são os do Espelho de Ponto: os da linha <em>Destino do mês</em> e os selos da coluna <em>Ocorrência</em>. A conta de cada mês é a mesma do Espelho e da Auditoria de Horas Perdidas.</p>
+        <p><strong>${T.excedente.label}:</strong> em dia útil, o que passou da jornada do dia (7h em turno único, 8h com intervalo, 5h no recesso). Em sábado, domingo e feriado, todas as horas trabalhadas.</p>
+        <p><strong>${T.pago.label}:</strong> linhas <em>Pecúnia</em> e <em>Adicional Noturno Pecúnia</em> do rodapé do espelho. <strong>${T.banco.label}:</strong> linha <em>Horas Excedentes Homologadas</em>. <strong>${T.compensou.label}:</strong> excedente de dia útil que completou a jornada de dias mais curtos do mesmo mês.</p>
+        <p><strong>${T.perdido.label}:</strong> o que sobra, e é o que se pede para reconhecer. Em cada mês fechado, ${T.excedente.label} = ${T.compensou.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}; quando a conta não fecha, o mês recebe o selo <em>Conferir</em> (${T.naoConciliado.label}). Os motivos do Perdido são os selos do Espelho: ${seals.map((s) => `<em>${escapeHTML(s)}</em>`).join(', ')}.</p>
         <p>Mês em regime híbrido e mês ainda aberto aparecem na lista, mas ficam fora dos totais.</p>
+      </div>
+      <div class="je-audit-def">
+        <div class="je-audit-def-h">O que cada coluna mostra</div>
+        <p><strong>Tabela de ${groupBy === 'month' ? 'meses e servidores' : 'servidores e meses'}</strong></p>
+        <ul>${list(mainColumns().slice(1))}</ul>
+        <p><strong>Tabela de dias</strong> (abre ao clicar num mês)</p>
+        <ul>${list(dayColumns())}</ul>
       </div>
       <div class="je-audit-def">
         <div class="je-audit-def-h">Base normativa</div>
@@ -515,11 +563,12 @@ window.JEPessoasRecognitionReport = (function () {
       </div>`;
   }
 
+  // Mesma ordem da linha "Destino do mês": Excedente, Compensou, Pago, Banco, Perdido.
   function numCells(o) {
     return `<td>${dot(o.worked.total)}</td>
+      <td>${dot(o.compensatedMin)}</td>
       <td>${dot(o.paid.total)}</td>
       <td>${dot(o.bank.total)}</td>
-      <td>${dot(o.compensatedMin)}</td>
       <td><strong>${fmt(o.pending.total)}</strong></td>
       <td>${dot(o.pending.uteis)}</td>
       <td>${dot(o.pending.sab)}</td>
@@ -531,19 +580,24 @@ window.JEPessoasRecognitionReport = (function () {
   function statusBadge(s) {
     if (s.status === 'hibrido') return ` <span class="je-audit-badge je-audit-badge-hib" title="Mês em regime híbrido: fora do total. ${fmt(s.hybridMin)} de trabalho além da jornada, só informativo.">Híbrido</span>`;
     if (s.status === 'aberto') return ' <span class="je-audit-badge je-audit-badge-rec" title="Mês ainda aberto: estimativa parcial, fora do total.">Aberto</span>';
-    if (s.unexplainedMin !== 0) return ` <span class="je-audit-badge je-audit-badge-he" title="A conta do mês não fechou: ${fmt(s.unexplainedMin)} sem conciliação.">Conferir</span>`;
+    if (s.unexplainedMin !== 0) return ` <span class="je-audit-badge je-audit-badge-he" title="${escapeHTML(terms().naoConciliado.label)}: ${fmt(s.unexplainedMin)}. ${escapeHTML(terms().naoConciliado.tip)}">Conferir</span>`;
     return '';
   }
 
+  // Motivos do Perdido com os selos do Espelho: texto (impressão) e selo com explicação (tela).
   function reasonText(d) {
+    return d.items.map((it) => `${reason(it.code, d.hasAuth).label} (${fmt(it.min)})`).join(' · ');
+  }
+
+  function reasonHTML(d) {
     return d.items.map((it) => {
-      const label = (it.code === 'sem-destino' && d.hasAuth) ? 'Autorizado e não pago: conferir' : (REASON_LABEL[it.code] || it.code);
-      return `${label} (${fmt(it.min)})`;
-    }).join(' · ');
+      const r = reason(it.code, d.hasAuth);
+      return `<span class="je-occ-perda je-occ-perda-${r.tone}" title="${escapeHTML(r.tip)}">${escapeHTML(r.label)} ${fmt(it.min)}</span>`;
+    }).join(' ');
   }
 
   function daysHTML(s) {
-    if (!s.days.length && !s.undistributedMin) return '<div class="je-recog-days-none">Nenhum dia com horas a reconhecer neste mês.</div>';
+    if (!s.days.length && !s.undistributedMin) return `<div class="je-recog-days-none">Nenhum dia com ${terms().perdido.label.toLowerCase()} neste mês.</div>`;
     const rows = s.days.map((d) => `<tr>
         <td>${escapeHTML(d.date)}</td>
         <td>${KIND_LABEL[d.kind]}</td>
@@ -552,22 +606,66 @@ window.JEPessoasRecognitionReport = (function () {
         <td>${fmt(d.workedMin)}</td>
         <td>${dot(d.paidMin)}</td>
         <td><strong>${dot(d.pendingMin)}</strong></td>
-        <td>${escapeHTML(reasonText(d))}</td>
+        <td>${reasonHTML(d)}</td>
       </tr>`).join('');
+    const sobra = reason('sobra-mes');
     const rest = s.undistributedMin > 0
-      ? `<tr><td colspan="6">Excedente de dia útil sem dia identificado</td><td><strong>${fmt(s.undistributedMin)}</strong></td><td>Saldo do mês</td></tr>`
+      ? `<tr><td colspan="6">Excedente de dia útil sem dia identificado</td><td><strong>${fmt(s.undistributedMin)}</strong></td><td><span class="je-occ-perda je-occ-perda-${sobra.tone}" title="${escapeHTML(sobra.tip)}">${escapeHTML(sobra.label)}</span></td></tr>`
       : '';
     return `<table class="je-recog-days">
-      <thead><tr><th>Dia</th><th>Tipo</th><th>Trabalhado</th><th>Jornada</th><th>Além da jornada</th><th>Pago</th><th>A reconhecer</th><th>Motivo</th></tr></thead>
+      <thead><tr>${thRow(dayColumns())}</tr></thead>
       <tbody>${rows}${rest}</tbody>
     </table>`;
+  }
+
+  function monthRows(html, i, s, label) {
+    const id = i + ':' + s.key;
+    const mOpen = openMonths.has(id);
+    html.push(`<tr class="je-audit-row je-recog-month" data-month="${id}" role="button" tabindex="0" aria-expanded="${mOpen}">
+      <td><span class="je-recog-caret">${mOpen ? '▾' : '▸'}</span> ${escapeHTML(label)}${statusBadge(s)}</td>
+      <td></td>
+      ${numCells(s)}
+    </tr>`);
+    if (mOpen) html.push(`<tr class="je-recog-daysrow"><td colspan="${COLS}">${daysHTML(s)}</td></tr>`);
+  }
+
+  // Selo do mês no agrupamento mês → servidor: quantos ficaram fora do total e
+  // quantos não conciliaram.
+  function groupBadge(g) {
+    const out = g.rows.filter((r) => r.month.status !== 'fechado').length;
+    const off = g.rows.filter((r) => r.month.status === 'fechado' && r.month.unexplainedMin !== 0).length;
+    return (out ? ` <span class="je-audit-badge je-audit-badge-hib" title="Servidores com o mês híbrido ou ainda aberto: aparecem na lista, fora do total.">${out} fora do total</span>` : '')
+      + (off ? ` <span class="je-audit-badge je-audit-badge-he" title="${escapeHTML(terms().naoConciliado.tip)}">Conferir</span>` : '');
+  }
+
+  function paintByMonth(html, servers) {
+    calc().groupByMonth(servers).forEach((g) => {
+      const open = openGroups.has(g.key);
+      html.push(`<tr class="je-audit-row je-recog-server" data-group="${g.key}" role="button" tabindex="0" aria-expanded="${open}">
+        <td><span class="je-recog-caret">${open ? '▾' : '▸'}</span> ${escapeHTML(g.label)}${groupBadge(g)}</td>
+        <td>${g.totals.months}</td>
+        ${numCells(g.totals)}
+      </tr>`);
+      if (open) g.rows.forEach((r) => monthRows(html, r.index, r.month, r.name));
+    });
   }
 
   function paintTable() {
     const tbody = overlay.querySelector('#je-recog-tbody');
     if (!tbody || !current) return;
+    const thead = overlay.querySelector('#je-recog-thead');
+    if (thead) thead.innerHTML = `<tr>${thRow(mainColumns())}</tr>`;
+    const explain = overlay.querySelector('#je-recog-explain');
+    if (explain) explain.innerHTML = explainHTML();
     const { servers, team: t } = withTotals(current);
     const html = [];
+    if (groupBy === 'month') {
+      paintByMonth(html, servers);
+      // A contagem por mês é de servidores; no total ela não tem soma que faça sentido.
+      html.push(`<tr class="je-recog-total"><td>Total da equipe</td><td></td>${numCells(t)}</tr>`);
+      tbody.innerHTML = html.join('');
+      return;
+    }
     servers.forEach((srv, i) => {
       const open = openServers.has(i);
       html.push(`<tr class="je-audit-row je-recog-server" data-server="${i}" role="button" tabindex="0" aria-expanded="${open}">
@@ -580,16 +678,7 @@ window.JEPessoasRecognitionReport = (function () {
         html.push(`<tr class="je-recog-month"><td colspan="${COLS}" class="je-recog-days-none">${escapeHTML(srv.error || 'Nenhum espelho encontrado no período.')}</td></tr>`);
         return;
       }
-      srv.months.forEach((s) => {
-        const id = i + ':' + s.key;
-        const mOpen = openMonths.has(id);
-        html.push(`<tr class="je-audit-row je-recog-month" data-month="${id}" role="button" tabindex="0" aria-expanded="${mOpen}">
-          <td><span class="je-recog-caret">${mOpen ? '▾' : '▸'}</span> ${escapeHTML(s.label)}${statusBadge(s)}</td>
-          <td></td>
-          ${numCells(s)}
-        </tr>`);
-        if (mOpen) html.push(`<tr class="je-recog-daysrow"><td colspan="${COLS}">${daysHTML(s)}</td></tr>`);
-      });
+      srv.months.forEach((s) => monthRows(html, i, s, s.label));
     });
     html.push(`<tr class="je-recog-total">
       <td>Total da equipe</td>
@@ -600,16 +689,20 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function onBodyClick(e) {
-    const tr = e.target.closest ? e.target.closest('tr[data-server], tr[data-month]') : null;
+    const tr = e.target.closest ? e.target.closest('tr[data-server], tr[data-group], tr[data-month]') : null;
     if (!tr) return;
+    const toggle = (set, v) => { if (set.has(v)) set.delete(v); else set.add(v); };
+    let sel;
     if (tr.dataset.server != null) {
-      const i = +tr.dataset.server;
-      if (openServers.has(i)) openServers.delete(i); else openServers.add(i);
+      toggle(openServers, +tr.dataset.server);
+      sel = `tr[data-server="${tr.dataset.server}"]`;
+    } else if (tr.dataset.group != null) {
+      toggle(openGroups, tr.dataset.group);
+      sel = `tr[data-group="${tr.dataset.group}"]`;
     } else {
-      const id = tr.dataset.month;
-      if (openMonths.has(id)) openMonths.delete(id); else openMonths.add(id);
+      toggle(openMonths, tr.dataset.month);
+      sel = `tr[data-month="${tr.dataset.month}"]`;
     }
-    const sel = tr.dataset.server != null ? `tr[data-server="${tr.dataset.server}"]` : `tr[data-month="${tr.dataset.month}"]`;
     paintTable();
     // A tabela é redesenhada: devolve o foco à linha para quem navega por teclado.
     if (e.type === 'keydown') {
@@ -632,17 +725,19 @@ window.JEPessoasRecognitionReport = (function () {
 
   function exportCSV() {
     if (!current || !current.servers || !current.servers.length) { alert('Gere o relatório antes de exportar.'); return; }
-    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'FeitasAlemJornada', 'PagasPecunia', 'Banco', 'CompensaramDiaCurto',
-      'AReconhecer', 'AReconhecer_DiaUtil', 'AReconhecer_Sabado', 'AReconhecer_DomFer', 'AcimaDe10h',
+    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'Pago', 'Banco',
+      'Perdido', 'Perdido_DiaUtil', 'Perdido_Sabado', 'Perdido_DomFer', 'AcimaDe10h',
       'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoBanco', 'NaoConciliado', 'Hibrido_info']];
-    current.servers.forEach((srv) => {
-      srv.months.forEach((s) => {
-        rows.push([srv.name, srv.matricula, s.label, STATUS_CSV[s.status] || s.status,
-          fmt(s.worked.total), fmt(s.paid.total), fmt(s.bank.total), fmt(s.compensatedMin),
-          fmt(s.pending.total), fmt(s.pending.uteis), fmt(s.pending.sab), fmt(s.pending.domfer), fmt(s.aboveCap.total),
-          fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin)]);
-      });
-    });
+    const line = (srv, s) => rows.push([srv.name, srv.matricula, s.label, STATUS_CSV[s.status] || s.status,
+      fmt(s.worked.total), fmt(s.compensatedMin), fmt(s.paid.total), fmt(s.bank.total),
+      fmt(s.pending.total), fmt(s.pending.uteis), fmt(s.pending.sab), fmt(s.pending.domfer), fmt(s.aboveCap.total),
+      fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin)]);
+    // A ordem das linhas segue o agrupamento escolhido na tela.
+    if (groupBy === 'month') {
+      calc().groupByMonth(current.servers).forEach((g) => g.rows.forEach((r) => line(current.servers[r.index], r.month)));
+    } else {
+      current.servers.forEach((srv) => srv.months.forEach((s) => line(srv, s)));
+    }
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
@@ -659,41 +754,64 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function printCells(o) {
-    return [fmt(o.worked.total), fmt(o.paid.total), fmt(o.bank.total), fmt(o.compensatedMin), `<strong>${fmt(o.pending.total)}</strong>`,
+    return [fmt(o.worked.total), fmt(o.compensatedMin), fmt(o.paid.total), fmt(o.bank.total), `<strong>${fmt(o.pending.total)}</strong>`,
       fmt(o.pending.uteis), fmt(o.pending.sab), fmt(o.pending.domfer), fmt(o.aboveCap.total)].map((c) => `<td>${c}</td>`).join('');
+  }
+
+  // Dias com Perdido de um mês fechado, para as tabelas de detalhe da impressão.
+  function printDayRows(m, prefix) {
+    const rows = m.days.map((d) => `<tr><td>${escapeHTML(d.date)}</td><td class="l">${KIND_LABEL[d.kind]}</td><td>${fmt(d.totalMin)}</td><td>${d.targetMin ? fmt(d.targetMin) : '—'}</td><td>${fmt(d.workedMin)}</td><td>${fmt(d.paidMin)}</td><td><strong>${fmt(d.pendingMin)}</strong></td><td class="l">${escapeHTML(reasonText(d))}</td></tr>`);
+    if (m.undistributedMin > 0) rows.push(`<tr><td colspan="6" class="l">${escapeHTML(prefix)}: excedente de dia útil sem dia identificado</td><td><strong>${fmt(m.undistributedMin)}</strong></td><td class="l">${escapeHTML(reason('sobra-mes').label)}</td></tr>`);
+    return rows;
   }
 
   // Versão para anexar ao pedido: documento próprio, sem a tela do portal.
   function printHTML() {
     const { servers, team: t } = withTotals(current);
+    const T = terms();
+    const byMonth = groupBy === 'month';
     const version = (window.JEPessoasVersion && window.JEPessoasVersion.getVersion && window.JEPessoasVersion.getVersion()) || '';
     const when = current.generatedAt ? new Date(current.generatedAt).toLocaleString('pt-BR') : '';
-    const head = ['Servidor', 'Meses', 'Feitas além da jornada', 'Pagas em pecúnia', 'Banco de horas', 'Compensaram dia curto', 'A reconhecer', 'Dia útil', 'Sábado', 'Domingo/feriado', 'Acima de 10h'];
+    const cols = mainColumns().slice(0, 11).map((c) => c.head);
+    const head = [byMonth ? 'Mês' : 'Servidor'].concat(cols.slice(1));
+    const dayHead = dayColumns().map((c) => c.head);
+    const hasLoss = (m) => m.status === 'fechado' && m.pending.total > 0;
+    const who = (name, mat) => `${escapeHTML(name)}<br><small>Matrícula ${escapeHTML(mat || '—')}</small>`;
 
-    const summaryRows = servers.map((s) => `<tr><td>${escapeHTML(s.name)}<br><small>Matrícula ${escapeHTML(s.matricula || '—')}</small></td><td>${s.totals.months}</td>${printCells(s.totals)}</tr>`);
-    summaryRows.push(`<tr class="total"><td>Total da equipe</td><td>${t.months}</td>${printCells(t)}</tr>`);
+    const groups = byMonth ? calc().groupByMonth(servers) : [];
+    const summaryRows = byMonth
+      ? groups.map((g) => `<tr><td>${escapeHTML(g.label)}</td><td>${g.totals.months}</td>${printCells(g.totals)}</tr>`)
+      : servers.map((s) => `<tr><td>${who(s.name, s.matricula)}</td><td>${s.totals.months}</td>${printCells(s.totals)}</tr>`);
+    summaryRows.push(`<tr class="total"><td>Total da equipe</td><td>${byMonth ? '' : t.months}</td>${printCells(t)}</tr>`);
 
     const optionRows = servers.filter((s) => s.totals.pending.total > 0).map((s) => `<tr><td>${escapeHTML(s.name)}</td><td>${fmt(s.totals.pending.total)}</td><td>${fmt(s.totals.pay50Min)}</td><td>${fmt(s.totals.pay100Min)}</td><td>${fmt(s.totals.creditMin)}</td></tr>`);
     optionRows.push(`<tr class="total"><td>Total da equipe</td><td>${fmt(t.pending.total)}</td><td>${fmt(t.pay50Min)}</td><td>${fmt(t.pay100Min)}</td><td>${fmt(t.creditMin)}</td></tr>`);
 
-    const detail = servers.filter((s) => s.months.some((m) => m.status === 'fechado' && m.pending.total > 0)).map((srv) => {
-      const months = srv.months.filter((m) => m.status === 'fechado' && m.pending.total > 0);
-      const monthRows = months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printCells(m)}</tr>`);
-      const dayRows = [];
-      months.forEach((m) => {
-        m.days.forEach((d) => dayRows.push(`<tr><td>${escapeHTML(d.date)}</td><td class="l">${KIND_LABEL[d.kind]}</td><td>${fmt(d.totalMin)}</td><td>${d.targetMin ? fmt(d.targetMin) : '—'}</td><td>${fmt(d.workedMin)}</td><td>${fmt(d.paidMin)}</td><td><strong>${fmt(d.pendingMin)}</strong></td><td class="l">${escapeHTML(reasonText(d))}</td></tr>`));
-        if (m.undistributedMin > 0) dayRows.push(`<tr><td colspan="6" class="l">${escapeHTML(m.label)}: excedente de dia útil sem dia identificado</td><td><strong>${fmt(m.undistributedMin)}</strong></td><td class="l">Saldo do mês</td></tr>`);
-      });
-      return `<h3>${escapeHTML(srv.name)} · matrícula ${escapeHTML(srv.matricula || '—')}</h3>
-        ${printTable(head.filter((h) => h !== 'Meses').map((h) => (h === 'Servidor' ? 'Mês' : h)), monthRows)}
-        ${dayRows.length ? printTable(['Dia', 'Tipo', 'Trabalhado', 'Jornada', 'Além da jornada', 'Pago', 'A reconhecer', 'Motivo'], dayRows) : ''}`;
-    }).join('');
+    const detail = byMonth
+      ? groups.filter((g) => g.rows.some((r) => hasLoss(r.month))).map((g) => {
+        const rows = g.rows.filter((r) => hasLoss(r.month));
+        const days = rows.map((r) => {
+          const dr = printDayRows(r.month, r.name);
+          return dr.length ? `<p><strong>${escapeHTML(r.name)}</strong></p>${printTable(dayHead, dr)}` : '';
+        }).join('');
+        return `<h3>${escapeHTML(g.label)}</h3>
+          ${printTable(['Servidor'].concat(cols.slice(2)), rows.map((r) => `<tr><td>${who(r.name, r.matricula)}</td>${printCells(r.month)}</tr>`))}
+          ${days}`;
+      }).join('')
+      : servers.filter((s) => s.months.some(hasLoss)).map((srv) => {
+        const months = srv.months.filter(hasLoss);
+        const dayRows = [];
+        months.forEach((m) => dayRows.push(...printDayRows(m, m.label)));
+        return `<h3>${escapeHTML(srv.name)} · matrícula ${escapeHTML(srv.matricula || '—')}</h3>
+          ${printTable(['Mês'].concat(cols.slice(2)), months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printCells(m)}</tr>`))}
+          ${dayRows.length ? printTable(dayHead, dayRows) : ''}`;
+      }).join('');
 
     const notes = [];
     if (current.partial) notes.push('A consulta foi interrompida antes do fim: este relatório é parcial.');
-    if (t.aboveCap.total > 0) notes.push(`Das horas a reconhecer, ${fmt(t.aboveCap.total)} passaram do limite de 10h por dia em sábado, domingo ou feriado.`);
+    if (t.aboveCap.total > 0) notes.push(`Do ${T.perdido.label}, ${fmt(t.aboveCap.total)} passaram do limite de 10h por dia em sábado, domingo ou feriado.`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário; o que passou soma ${fmt(t.overMonthlyMin)}.`);
-    if (t.unexplainedMin !== 0) notes.push(`Em parte dos meses a conta não fechou: ${fmt(t.unexplainedMin)} sem conciliação.`);
+    if (t.unexplainedMin !== 0) notes.push(`${T.naoConciliado.label}: ${fmt(t.unexplainedMin)} em parte dos meses.`);
     if (t.hybridMonths > 0) notes.push(`${t.hybridMonths} mês(es) em regime híbrido ficaram fora do total (${fmt(t.hybridMin)} de trabalho além da jornada).`);
     if (t.openMonths > 0) notes.push(`${t.openMonths} mês(es) ainda abertos ficaram fora do total.`);
     servers.filter((s) => s.error).forEach((s) => notes.push(`${escapeHTML(s.name)}: ${escapeHTML(s.error)}`));
@@ -703,20 +821,20 @@ window.JEPessoasRecognitionReport = (function () {
       <p class="meta">${current.unit ? 'Unidade: ' + escapeHTML(current.unit) + ' · ' : ''}Período: ${periodLabel(current.from)} a ${periodLabel(current.to)} · Emitido em ${when}${current.issuer ? ' por ' + escapeHTML(current.issuer) : ''}</p>
       <p class="meta">Fonte: Espelho de Ponto do Meu Espaço TSE, lido pelo TSE XT ${escapeHTML(version)}. Documento de apoio; não substitui os registros oficiais.</p>
 
-      <h2>1. Resumo por servidor</h2>
-      <p>Horas no formato hh:mm. Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe fez <strong>${fmt(t.worked.total)}</strong> além da jornada e recebeu <strong>${fmt(t.paid.total)}</strong> em pecúnia. Ficaram <strong>${fmt(t.pending.total)}</strong> sem pagamento, sem registro em banco e sem compensação.</p>
+      <h2>1. Resumo por ${byMonth ? 'mês' : 'servidor'}</h2>
+      <p>Horas no formato hh:mm, com os nomes do Espelho de Ponto (linha <em>Destino do mês</em>). Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe teve <strong>${fmt(t.worked.total)}</strong> de ${T.excedente.label}: <strong>${fmt(t.compensatedMin)}</strong> compensaram dias curtos, <strong>${fmt(t.paid.total)}</strong> foram pagas em pecúnia (${T.pago.label}) e <strong>${fmt(t.bank.total)}</strong> foram para o ${T.banco.label}. Ficaram <strong>${fmt(t.pending.total)}</strong> como ${T.perdido.label}: sem pagamento, sem registro em banco e sem compensação.</p>
       ${printTable(head, summaryRows)}
 
       <h2>2. Opções de reconhecimento</h2>
       <p><strong>(a) Pagamento em pecúnia:</strong> horas com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados). <strong>(b) Registro em banco de horas:</strong> crédito com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados).</p>
-      ${printTable(['Servidor', 'A reconhecer', '(a) Horas a 50%', '(a) Horas a 100%', '(b) Crédito em banco'], optionRows)}
+      ${printTable(['Servidor', T.perdido.label, '(a) Horas a 50%', '(a) Horas a 100%', '(b) Crédito no banco'], optionRows)}
 
       ${notes.length ? `<h2>3. Observações</h2><ul>${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
 
-      <h2>${notes.length ? 4 : 3}. Detalhe por servidor</h2>
-      ${detail || '<p>Nenhum servidor com horas a reconhecer no período.</p>'}
+      <h2>${notes.length ? 4 : 3}. Detalhe por ${byMonth ? 'mês' : 'servidor'}</h2>
+      ${detail || `<p>Nenhum ${byMonth ? 'mês' : 'servidor'} com ${T.perdido.label.toLowerCase()} no período.</p>`}
 
-      <h2>${notes.length ? 5 : 4}. Como os números foram apurados e base normativa</h2>
+      <h2>${notes.length ? 5 : 4}. Como os números foram apurados, o que cada coluna mostra e base normativa</h2>
       ${explainHTML()}
     `;
   }

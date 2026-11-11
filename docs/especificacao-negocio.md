@@ -175,20 +175,26 @@ Na linha `Totais:` da tabela principal:
 ### 5.3. Relatório de Reconhecimento Posterior
 **Introduzido na v1.1.11.** Modal para a chefia, aberto pelo botão de ações rápidas ou pela busca (Ctrl+K). Varre o Espelho de Ponto de cada servidor da equipe no período escolhido e serve de anexo ao pedido de reconhecimento posterior das horas excedentes.
 
+Desde a v1.1.15 o relatório usa os nomes do Espelho de Ponto: os da linha **Destino do mês** e os selos da coluna Ocorrência. Os nomes e as explicações ficam num só lugar (`TERMS` e `reasonInfo` em `lostHoursCalc.js`), usado pelo Espelho e pelo relatório. Cada coluna tem a explicação no título (tooltip) e na seção "O que cada coluna mostra", na tela e na versão para impressão.
+
 | Coluna | Como é apurada |
 | :--- | :--- |
-| **Feitas além da jornada** | Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas. |
-| **Pagas em pecúnia** | `Pecúnia` + `Adicional Noturno Pecúnia` do rodapé do espelho. |
+| **Excedente** | Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas. |
+| **Compensou dias curtos** | Excedente de dia útil usado para completar dias curtos do mesmo mês. |
+| **Pago** | `Pecúnia` + `Adicional Noturno Pecúnia` do rodapé do espelho. |
 | **Banco** | `Horas Excedentes Homologadas` do rodapé. |
-| **Compensaram dia curto** | Excedente de dia útil usado para fechar dias mais curtos do mesmo mês. |
-| **A reconhecer** | O que sobra: não homologadas, acima do autorizado, acima de 10h em fim de semana e feriado e excedente de dia útil que sobrou no mês. |
+| **Perdido** | O que sobra, e é o que se pede para reconhecer. Os motivos são os selos do Espelho: Não homologada, Acima do autorizado, Acima de 10h, Sobra do mês, Sem autorização e Não paga: conferir. |
+
+Em cada mês fechado, Excedente = Compensou dias curtos + Pago + Banco + Perdido. Quando a conta não fecha, o mês recebe o selo **Conferir** (Não conciliado).
+
+- **Agrupamento:** servidor → mês (padrão) ou mês → servidor. A escolha vale para a tabela, o CSV e a versão para impressão.
 
 - **Opção (a), pecúnia:** horas a reconhecer com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados), conforme o art. 9º da Res. 22.901/2008. O relatório mostra horas, não valores em reais.
 - **Opção (b), banco de horas:** crédito com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados).
 - Só mês **fechado** e **fora do regime híbrido** entra nos totais. Mês híbrido e mês aberto aparecem na lista com selo, fora da soma.
 - O relatório destaca o que passou de 10h no dia, os meses acima de 60h e os meses em que a conta não fechou (`Não conciliado`).
 - Se o portal devolver o espelho de outro servidor, nada daquele servidor é contado e a linha recebe o selo **Conferir**.
-- Saídas: tabela expansível (servidor → mês → dia), CSV e versão para impressão em A4 paisagem.
+- Saídas: tabela expansível (servidor → mês → dia ou mês → servidor → dia), CSV e versão para impressão em A4 paisagem.
 - Não há limite de meses. Acima de 150 consultas, a tela pede confirmação; durante a varredura, a barra mostra a previsão de término.
 - O cálculo fica em `recognitionCalc.js` (puro, testado) e reaproveita `lostHoursCalc.js`. A tela fica em `recognitionReport.js`.
 

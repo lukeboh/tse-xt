@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.14-Snapshot';
+  const CURRENT_VERSION = '1.1.15-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.15-Snapshot',
+      date: '2026-11-11',
+      title: 'Reconhecimento Posterior com os nomes do Espelho',
+      features: [
+        'O Relatório de Reconhecimento Posterior usa os mesmos nomes do Espelho de Ponto: Excedente, Compensou dias curtos, Pago, Banco e Perdido, na ordem da linha "Destino do mês", e os mesmos selos para os motivos.',
+        'Cada coluna explica o que mostra ao passar o mouse no título, e a seção "O que cada coluna mostra" repete as explicações na tela e na versão para impressão.',
+        'Novo agrupamento mês → servidor, ao lado de servidor → mês. A escolha vale para a tabela, o CSV e a versão para impressão.'
+      ]
+    },
     {
       version: '1.1.14-Snapshot',
       date: '2026-11-11',

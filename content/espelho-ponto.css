@@ -2358,6 +2358,18 @@ body:not(.je-xt-enabled) .je-col-accumulated-balance {
   color: #475569 !important;
 }
 
+.je-audit-def ul {
+  margin: 2px 0 8px 18px !important;
+  padding: 0 !important;
+}
+
+.je-audit-def li {
+  font-size: 11.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+  list-style: disc !important;
+}
+
 .je-audit-def em { font-style: normal !important; color: #0f172a !important; font-weight: 600 !important; }
 
 .je-audit-regime-legend {
@@ -3082,6 +3094,40 @@ body.je-xt-enabled .je-heauth-limit span {
   color: #64748b !important;
 }
 
+.je-recog-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding-left: 10px !important;
+  border-left: 1px solid rgba(10, 37, 64, 0.12) !important;
+}
+
+.je-recog-group-h {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+}
+
+.je-recog-group label {
+  cursor: pointer !important;
+  font-weight: 600 !important;
+}
+
+.je-recog-group input[type="radio"] {
+  margin: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.je-recog-equation {
+  margin: -8px 0 14px !important;
+  text-align: center !important;
+}
+
+.je-recog-days .je-occ-perda {
+  margin: 1px 4px 1px 0 !important;
+}
+
 .je-recog-notes {
   font-weight: 500 !important;
   line-height: 1.6 !important;
@@ -3240,6 +3286,7 @@ body.je-xt-enabled .je-heauth-limit span {
   #je-recog-printdoc .je-audit-def { margin-bottom: 6pt; }
   #je-recog-printdoc .je-audit-def-h { font-size: 9pt !important; color: #000 !important; }
   #je-recog-printdoc .je-audit-def p { font-size: 8.5pt !important; color: #000 !important; margin-bottom: 4pt !important; }
+  #je-recog-printdoc .je-audit-def li { font-size: 8.5pt !important; color: #000 !important; }
   #je-recog-printdoc .je-audit-def em { color: #000 !important; }
   #je-recog-printdoc .je-audit-src { font-size: 8pt !important; color: #333 !important; }
   #je-recog-printdoc a { color: #000 !important; text-decoration: none !important; }

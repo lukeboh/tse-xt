@@ -789,19 +789,9 @@ window.JEPessoasModernizer = (function () {
   }
 
 
-  // Rótulo e explicação de cada motivo de perda (JEPessoasLostCalc.CODES).
+  // Rótulo e explicação de cada motivo de perda: vocabulário comum em lostHoursCalc.js.
   function lostReason(code, hasAuth) {
-    const map = {
-      'teto-10h': { label: 'Acima de 10h', tone: 'perda', tip: 'Acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º): não gera pecúnia nem banco.' },
-      'nao-homologada': { label: 'Não homologada', tone: 'perda', tip: 'Consta em "Horas Excedentes Não Homologadas" no rodapé: sem homologação da chefia não entra no banco.' },
-      'acima-autorizado': { label: 'Acima do autorizado', tone: 'perda', tip: 'Consta nas linhas "Excedeu" do rodapé: passou da quantidade autorizada no SAEX e não foi paga.' },
-      'sobra-mes': { label: 'Sobra do mês', tone: 'perda', tip: 'Excedente de dia útil que não compensou dia curto, não foi pago e não foi homologado. A divisão entre os dias é estimada.' },
-      'hibrido': { label: 'Híbrido: descartado', tone: 'info', tip: 'Mês de trabalho híbrido: a norma suprime o serviço extraordinário e veda o banco. Não conta como perda.' },
-      'sem-destino': hasAuth
-        ? { label: 'Não paga: conferir', tone: 'conferir', tip: 'Dia com autorização, mas estas horas não foram pagas, nem homologadas, nem aparecem nas linhas "Excedeu". Confira o limite autorizado: se estava dentro dele, cabe pedir correção.' }
-        : { label: 'Sem autorização', tone: 'perda', tip: 'Dia sem autorização de serviço extraordinário: as horas não foram pagas nem homologadas.' }
-    };
-    return map[code] || { label: code, tone: 'info', tip: '' };
+    return window.JEPessoasLostCalc.reasonInfo(code, hasAuth);
   }
 
   function modernizeMonthlyTable(table, targetHours = 7) {
@@ -1529,16 +1519,17 @@ window.JEPessoasModernizer = (function () {
       const totalsRow = table.querySelector('tr.total-horas');
       if (totalsRow && totalsRow.parentNode) {
         const dest = window.JEPessoasLostCalc.computeMonthDestination(closedMonthAnalysis, closedMonthLoss);
+        const T = window.JEPessoasLostCalc.TERMS;
         const chips = [
-          ['neutro', 'Excedente', dest.excessMin, 'Tudo o que passou da jornada em dia útil, somado às horas de sábado, domingo e feriado.'],
-          ['bom', 'Compensou dias curtos', dest.compensatedMin, 'Excedente de dia útil usado para completar dias curtos do mesmo mês.'],
-          ['bom', 'Pago', dest.paidMin, 'Pecúnia e adicional noturno em pecúnia do rodapé.'],
-          ['bom', 'Banco', dest.homologMin, `Horas homologadas. Crédito no banco com os fatores: +${formatTime(dest.creditMin)}.`],
-          ['ruim', 'Perdido', dest.lostMin, 'Não virou pecúnia nem banco e não compensou dia curto. Os motivos estão nos selos da coluna Ocorrência.'],
-          ['ruim', 'Débito do mês', dest.debitMin, 'Resíduo de Horas negativo no rodapé.']
+          ['neutro', T.excedente.label, dest.excessMin, T.excedente.tip],
+          ['bom', T.compensou.label, dest.compensatedMin, T.compensou.tip],
+          ['bom', T.pago.label, dest.paidMin, T.pago.tip],
+          ['bom', T.banco.label, dest.homologMin, `${T.banco.tip} Crédito neste mês: +${formatTime(dest.creditMin)}.`],
+          ['ruim', T.perdido.label, dest.lostMin, T.perdido.tip],
+          ['ruim', T.debito.label, dest.debitMin, T.debito.tip]
         ];
         if (Math.abs(dest.unexplainedMin) > 0) {
-          chips.push(['aviso', 'Não conciliado', dest.unexplainedMin, 'Diferença entre o excedente e os destinos. Costuma vir de jornada diferente da esperada no dia; vale conferir.']);
+          chips.push(['aviso', T.naoConciliado.label, dest.unexplainedMin, T.naoConciliado.tip]);
         }
         const destRow = document.createElement('tr');
         destRow.className = 'je-destino-mes';

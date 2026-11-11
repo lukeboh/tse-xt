@@ -183,3 +183,30 @@ test('monthRange lista os meses do período, inclusive, em qualquer ordem', () =
   assert.deepEqual(rec.monthRange('2026-02', '2025-12').map((m) => m.key), ['2025-12', '2026-01', '2026-02']);
   assert.deepEqual(rec.monthRange('', '2026-02'), []);
 });
+
+test('agrupamento mês → servidor soma cada mês e conta os servidores com o mês fechado', () => {
+  const m = (key, label, extra, days) => Object.assign(rec.summarizeMonth(month(days, {}, extra)), { key, label });
+  const ana = { name: 'Servidora Fictícia A', matricula: '0001', months: [
+    m('2024-03', '03/2024', {}, [sat({ totalMin: H(2) })]),
+    m('2024-04', '04/2024', { month: 4 }, [sat({ totalMin: H(1) })])
+  ] };
+  const bia = { name: 'Servidor Fictício B', matricula: '0002', months: [
+    m('2024-03', '03/2024', { hybrid: true }, [sat({ totalMin: H(3) })]),
+    m('2024-04', '04/2024', { month: 4 }, [sun({ totalMin: H(1) })])
+  ] };
+  const g = rec.groupByMonth([ana, bia, { name: 'Sem espelho', matricula: '0003', months: [] }]);
+  assert.deepEqual(g.map((x) => x.key), ['2024-03', '2024-04']);
+  assert.deepEqual(g[0].rows.map((r) => [r.index, r.name]), [[0, 'Servidora Fictícia A'], [1, 'Servidor Fictício B']]);
+  assert.equal(g[0].totals.months, 1, 'só um servidor com 03/2024 fechado fora do híbrido');
+  assert.equal(g[0].totals.hybridMonths, 1);
+  assert.equal(g[0].totals.pending.total, H(2));
+  assert.equal(g[1].totals.months, 2);
+  assert.equal(g[1].totals.pending.sab, H(1));
+  assert.equal(g[1].totals.pending.domfer, H(1));
+  assert.equal(g[1].totals.creditMin, Math.round(H(1) * 1.5 + H(1) * 2));
+});
+
+test('agrupamento mês → servidor sem servidores devolve lista vazia', () => {
+  assert.deepEqual(rec.groupByMonth([]), []);
+  assert.deepEqual(rec.groupByMonth(null), []);
+});

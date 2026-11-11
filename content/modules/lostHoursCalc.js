@@ -23,6 +23,33 @@ window.JEPessoasLostCalc = (function () {
     HIBRIDO: 'hibrido'
   };
 
+  // Vocabulário comum: linha "Destino do mês" do Espelho de Ponto, selos da
+  // coluna Ocorrência e relatórios usam o mesmo nome e a mesma explicação.
+  const TERMS = {
+    excedente: { label: 'Excedente', tip: 'Tudo o que passou da jornada em dia útil, somado às horas de sábado, domingo e feriado.' },
+    compensou: { label: 'Compensou dias curtos', tip: 'Excedente de dia útil usado para completar dias curtos do mesmo mês.' },
+    pago: { label: 'Pago', tip: 'Pecúnia e adicional noturno em pecúnia do rodapé.' },
+    banco: { label: 'Banco', tip: 'Horas homologadas. Entram no banco com os fatores ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' },
+    perdido: { label: 'Perdido', tip: 'Não virou pecúnia nem banco e não compensou dia curto. Os motivos estão nos selos da coluna Ocorrência.' },
+    debito: { label: 'Débito do mês', tip: 'Resíduo de Horas negativo no rodapé.' },
+    naoConciliado: { label: 'Não conciliado', tip: 'Diferença entre o excedente e os destinos. Costuma vir de jornada diferente da esperada no dia; vale conferir.' }
+  };
+
+  /** Rótulo, tom e explicação de cada motivo de perda (selo da coluna Ocorrência). */
+  function reasonInfo(code, hasAuth) {
+    const map = {
+      'teto-10h': { label: 'Acima de 10h', tone: 'perda', tip: 'Acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º): não gera pecúnia nem banco.' },
+      'nao-homologada': { label: 'Não homologada', tone: 'perda', tip: 'Consta em "Horas Excedentes Não Homologadas" no rodapé: sem homologação da chefia não entra no banco.' },
+      'acima-autorizado': { label: 'Acima do autorizado', tone: 'perda', tip: 'Consta nas linhas "Excedeu" do rodapé: passou da quantidade autorizada no SAEX e não foi paga.' },
+      'sobra-mes': { label: 'Sobra do mês', tone: 'perda', tip: 'Excedente de dia útil que não compensou dia curto, não foi pago e não foi homologado. A divisão entre os dias é estimada.' },
+      'hibrido': { label: 'Híbrido: descartado', tone: 'info', tip: 'Mês de trabalho híbrido: a norma suprime o serviço extraordinário e veda o banco. Não conta como perda.' },
+      'sem-destino': hasAuth
+        ? { label: 'Não paga: conferir', tone: 'conferir', tip: 'Dia com autorização, mas estas horas não foram pagas, nem homologadas, nem aparecem nas linhas "Excedeu". Confira o limite autorizado: se estava dentro dele, cabe pedir correção.' }
+        : { label: 'Sem autorização', tone: 'perda', tip: 'Dia sem autorização de serviço extraordinário: as horas não foram pagas nem homologadas.' }
+    };
+    return map[code] || { label: code, tone: 'info', tip: '' };
+  }
+
   function weekendCapMin() {
     const L = (typeof window !== 'undefined') ? window.JEPessoasLegal : null;
     return (L && L.MAX_HE_FDS_MIN && L.MAX_HE_FDS_MIN.valor) || 600;
@@ -178,5 +205,5 @@ window.JEPessoasLostCalc = (function () {
     };
   }
 
-  return { computeMonthLoss, computeMonthDestination, CODES };
+  return { computeMonthLoss, computeMonthDestination, CODES, TERMS, reasonInfo };
 })();

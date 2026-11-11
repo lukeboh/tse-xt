@@ -302,6 +302,26 @@ window.JEPessoasRecognition = (function () {
     return t;
   }
 
+  /**
+   * Agrupamento mês → servidor: um grupo por mês, em ordem cronológica, com os
+   * meses de cada servidor e os totais do mês. Em `totals.months` fica o número
+   * de servidores com o mês fechado (os que entram no total).
+   * @param {Array<{name:string, matricula:string, months:Array}>} servers
+   */
+  function groupByMonth(servers) {
+    const groups = new Map();
+    (servers || []).forEach((srv, index) => {
+      (srv.months || []).forEach((s) => {
+        if (!s || !s.found) return;
+        if (!groups.has(s.key)) groups.set(s.key, { key: s.key, label: s.label, rows: [] });
+        groups.get(s.key).rows.push({ index, name: srv.name, matricula: srv.matricula, month: s });
+      });
+    });
+    return Array.from(groups.values())
+      .sort((x, y) => (x.key < y.key ? -1 : (x.key > y.key ? 1 : 0)))
+      .map((g) => Object.assign(g, { totals: summarizeServer(g.rows.map((r) => r.month)) }));
+  }
+
   /** Meses de "AAAA-MM" a "AAAA-MM", inclusive, em ordem cronológica. */
   function monthRange(from, to) {
     const p = (v) => { const m = /^(\d{4})-(\d{1,2})$/.exec(v || ''); return m ? { y: +m[1], m: +m[2] } : null; };
@@ -318,5 +338,5 @@ window.JEPessoasRecognition = (function () {
     return out;
   }
 
-  return { summarizeMonth, summarizeServer, summarizeTeam, monthRange, dayKind, STATUS };
+  return { summarizeMonth, summarizeServer, summarizeTeam, groupByMonth, monthRange, dayKind, STATUS };
 })();
