@@ -191,6 +191,36 @@ Na linha `Totais:` da tabela principal:
 - Saídas: tabela expansível (servidor → mês → dia), CSV e versão para impressão em A4 paisagem.
 - O cálculo fica em `recognitionCalc.js` (puro, testado) e reaproveita `lostHoursCalc.js`. A tela fica em `recognitionReport.js`.
 
+### 5.4. Auditoria de Pagamento de Pecúnias
+**Introduzida na v1.1.12.** Modal para o próprio servidor, aberto pelo botão de ações rápidas ou pela busca (Ctrl+K). Confere se as horas que o Espelho de Ponto mostra como pagas em pecúnia aparecem nos contracheques.
+
+| Etapa | O que é lido |
+| :--- | :--- |
+| **Espelho** | Linhas `Pecúnia` e `Adicional Noturno Pecúnia` do rodapé de cada mês fechado do período, por faixa: dia útil, sábado e domingo/feriado. |
+| **Contracheque** | Todas as folhas (normal e suplementares) dos 3 meses seguintes a cada mês com pecúnia. Só as rubricas de serviço extraordinário e de adicional noturno. |
+| **Ligação** | Cada rubrica é ligada ao espelho pelo mês da coluna `Ref.` e comparada pela coluna `Qtd.` Lançamento de desconto (tipo D) é abatido. |
+| **Busca estendida** | Mês pago a menor ou não localizado: a leitura segue até 12 meses depois. |
+
+| Situação | Quando |
+| :--- | :--- |
+| **Conferido** | A quantidade do contracheque é a do espelho, com folga de 3 minutos. |
+| **Faixa a conferir** | O total bate, mas a divisão entre acréscimo de 50% e de 100% não. |
+| **Pago a maior** | O contracheque traz mais horas que o espelho do mês de referência. |
+| **Pago a menor** | Faltam horas depois de lidos todos os contracheques da busca. |
+| **Não localizado** | Nenhum pagamento com referência ao mês nos contracheques lidos. |
+| **Sem quantidade** | Há pagamento com referência ao mês, mas sem quantidade de horas. |
+| **Contracheque não lido** | Um contracheque da janela não pôde ser lido. Não é falha de pagamento. |
+| **Aguardando contracheque** | O contracheque em que o mês costuma ser pago ainda não foi publicado. |
+
+- **Adicional noturno:** a hora noturna tem 52min30s (Lei 8.112/1990, art. 75). Cada hora de `Adicional Noturno Pecúnia` do espelho deve aparecer como 8/7 de hora na rubrica de adicional noturno sobre serviço extraordinário.
+- **Valor:** a auditoria não calcula quanto deveria ter sido pago. Mostra o valor bruto das rubricas e o valor da hora-base que elas embutem (valor ÷ horas ÷ 1,5 ou 2), para o servidor comparar com a remuneração ÷ 200 (Res. 22.901/2008, art. 9º). Linhas do mesmo mês com valores de hora diferentes entre si (mais de 2%) são sinalizadas.
+- **Pagamentos sem horas no espelho:** rubricas com referência a mês sem pecúnia, a mês aberto ou a mês fora do período aparecem em quadro próprio.
+- **Conferências de identidade:** o espelho e o contracheque devolvidos pelo portal precisam ser da matrícula logada e do mês pedido. Se não forem, nada é contado.
+- O período padrão é de 60 meses (prazo do art. 1º do Decreto 20.910/1932). O limite é de 120 meses por auditoria.
+- Saídas: tabela expansível (mês → lançamentos do contracheque), CSV e versão para impressão em A4 paisagem.
+- O relatório aponta o que conferir com a unidade de pagamento. Não reconhece direito.
+- O cálculo fica em `payrollAuditCalc.js` (puro, testado). A tela e a leitura do portal ficam em `payrollAudit.js`.
+
 ---
 
 ## 6. Arquitetura de Módulos da Extensão

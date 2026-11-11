@@ -5,9 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.11-Snapshot';
+  const CURRENT_VERSION = '1.1.12-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.12-Snapshot',
+      date: '2026-11-11',
+      title: 'Auditoria de Pagamento de Pecúnias',
+      features: [
+        'Nova auditoria, no botão de ações rápidas e na busca: confere se as horas de pecúnia do espelho de cada mês aparecem nos seus contracheques.',
+        'Compara por faixa (dia útil, sábado, domingo e feriado) e pelo mês de referência de cada rubrica, em todas as folhas, inclusive suplementares.',
+        'Aponta mês pago a menor, não localizado ou pago a maior, e pagamento sem horas correspondentes no espelho.',
+        'Confere o adicional noturno sobre o serviço extraordinário e mostra o valor da hora-base embutido nos pagamentos.',
+        'Detalhe dos lançamentos por mês, exportação em CSV e versão para impressão, para apoiar um pedido de revisão.'
+      ]
+    },
     {
       version: '1.1.11-Snapshot',
       date: '2026-11-11',

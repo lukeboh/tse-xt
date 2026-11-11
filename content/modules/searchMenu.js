@@ -123,6 +123,15 @@ window.JEPessoasSearch = (function () {
         }
       },
       {
+        title: 'Auditoria de Pagamento de Pecúnias',
+        category: 'Ações Rápidas',
+        action: () => {
+          if (window.JEPessoasPayrollAudit) {
+            window.JEPessoasPayrollAudit.open();
+          }
+        }
+      },
+      {
         title: 'Frequência - Alteração de Ponto',
         category: 'Navegação',
         action: () => {

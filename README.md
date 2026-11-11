@@ -33,6 +33,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 - **Colunas analíticas na tabela**: `SALDO ACUM.` (saldo excedente dia a dia) e `HORAS EXCED.` (meses fechados), com coloração verde/vermelho/neutro e badges de teto legal (`> 2h`/`> 10h`, art. 4º).
 - **Auditoria de Horas Perdidas**: varre o Espelho desde 2009 e quantifica as horas que nunca viraram pecúnia nem banco de horas, em quatro categorias explicadas com base normativa.
 - **Relatório de Reconhecimento Posterior** (chefia): para cada servidor da equipe, compara as horas feitas além da jornada com as pagas em pecúnia e mostra o que ficou a reconhecer, em pecúnia (50% / 100%) ou em banco de horas. Tem CSV e versão para impressão, para anexar ao pedido.
+- **Auditoria de Pagamento de Pecúnias**: confere se as horas de pecúnia do espelho de cada mês aparecem nos seus contracheques, por faixa (dia útil, sábado, domingo/feriado). Aponta mês pago a menor, não localizado ou pago a maior, para você conferir e, se for o caso, pedir a revisão. Tem CSV e versão para impressão.
 - **Ajuste de Ponto Inline** (incluindo **visão de chefia para servidores subordinados**) e **modal de Autorização de Hora Extra**: incluir/excluir marcações diretamente pela tabela e ver o detalhe de autorização do dia sem sair da tela, via actions oficiais do Struts.
 - **Auto-Consulta Instantânea** e **exportação** completa para Excel/CSV.
 

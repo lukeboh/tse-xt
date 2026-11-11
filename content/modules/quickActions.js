@@ -49,6 +49,15 @@ window.JEPessoasQuickActions = (function () {
           <span>Reconhecimento Posterior</span>
         </button>
 
+        <button type="button" class="je-fab-item" id="je-fab-pay" title="Auditoria de Pagamento de Pecúnias (horas do espelho × contracheques)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <circle cx="12" cy="12" r="2.5"></circle>
+            <path d="M6 12h.01M18 12h.01"></path>
+          </svg>
+          <span>Pagamento de Pecúnias</span>
+        </button>
+
         <button type="button" class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -124,6 +133,16 @@ window.JEPessoasQuickActions = (function () {
         e.preventDefault();
         e.stopPropagation();
         if (window.JEPessoasRecognitionReport) window.JEPessoasRecognitionReport.open();
+        fabContainer.classList.remove('active');
+      });
+    }
+
+    const payBtn = fabContainer.querySelector('#je-fab-pay');
+    if (payBtn) {
+      payBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.JEPessoasPayrollAudit) window.JEPessoasPayrollAudit.open();
         fabContainer.classList.remove('active');
       });
     }
