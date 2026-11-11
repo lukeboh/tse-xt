@@ -147,6 +147,31 @@ Regra de controle de frequência (redação: *"não cumprida a carga horária me
 
 **Consequência para a Auditoria:** a categoria **P2** já usa o **saldo líquido do mês** (`Σ total − jornada` dos dias úteis, com os déficits entrando como negativos), então o excedente que "pagou" um dia curto do mesmo mês **não** é contado como perda — só o remanescente líquido sem destino. Horas **acima do teto diário** (2h útil / 10h FDS) entram normalmente nessa conta do mês; o que não entra é o descarte de fim de semana acima de 10h (**P3**, §3.4) e o excedente não homologado (**P1**).
 
+### 3.12. Destino de cada hora — revisão do histórico (10/11/2026)
+
+Revisão de 213 meses fechados de um servidor, cruzando o Espelho com o Extrato do Banco de Horas (105 meses com movimento). Só números agregados aqui.
+
+| Situação | Destino | Evidência |
+| :--- | :--- | :--- |
+| Excedente de dia útil, de qualquer tamanho, cobrindo dia curto do mês | **Útil** | Nos 17 meses que separam as hipóteses, o `Resíduo` bate ao minuto em 8 com o excedente completo e em 0 com o limite de 2h |
+| Sobra do mês homologada | **Banco** | 56 de 56 meses com homologadas creditaram o Extrato |
+| Sobra do mês sem pagamento nem homologação | **Perdida** | Sem crédito no Extrato |
+| Sábado, domingo ou feriado acima de 10h | **Perdida** | 48 de 48 dias limitados a 10h |
+| Sábado, domingo ou feriado até 10h, sem pagamento, homologação nem "Não Homologadas" | **Perdida, sem aviso no espelho** | 44 meses. Parte consta nas linhas "Excedeu"; 42 dias com autorização não têm explicação no espelho |
+| Qualquer trabalho em mês híbrido | **Descartado pela norma** | 16 de 16 meses sem pecúnia, homologação ou crédito |
+
+**Regras complementares confirmadas:**
+
+- **Linhas "Excedeu pecúnia/banco autorizado" (mensal e diária):** o rodapé registra nelas o que passou da quantidade autorizada. Essas horas não aparecem em pecúnia, homologadas ou não homologadas.
+- **Adicional noturno pagável soma com a pecúnia:** em 188 de 200 dias de fim de semana pagos, `PECÚNIA` + `Adic. Noturno Pecúnia` = `HORAS AJUST.`. O espelho mostra horas de relógio (100 de 154 dias noturnos), não hora ficta.
+- **`Compl. Jorn. Mínima` só ocorre em dia com autorização** (163 de 163) e, em 141 deles, é o trecho entre 7h e 8h.
+- **Liberação médica em faixa de horário** (`12:00 a 15:30`) já está dentro do `TOTAL` e não dispensa o dia.
+- **Sábado que é feriado** entra na coluna de domingos e feriados.
+- **Pecúnia de dia útil acima de 2h** só ocorreu em 22 dias de 2014 e 2016.
+- **Sábado, domingo e feriado têm tratamento próprio em qualquer ano:** homologadas com fator ×2 e pecúnia de domingo/feriado aparecem também em anos sem eleição.
+
+**Ainda não fechado:** a fórmula exata de "Horas Excedentes Não Homologadas" de dia útil (3 de 15 meses batem com o saldo líquido do mês).
+
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
 
 Meses híbridos fecham com `Resíduo de Horas` de **−70h a −98h** (ex.: 03/2026 = −98:04) porque os dias híbridos não somam horas ao `TOTAL` mensal, mas a meta ordinária continua contando os dias. Esse débito **não é levado ao banco** (`Horas Utilizadas do Banco = 00:00`, saldo do Extrato inalterado) — é um número de exibição, não uma dívida real.

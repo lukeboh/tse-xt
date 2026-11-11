@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.5-Snapshot';
+  const CURRENT_VERSION = '1.1.6-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.6-Snapshot',
+      date: '2026-11-10',
+      title: 'Regras: revisão do histórico de horas',
+      features: [
+        'Sem mudança de comportamento: esta versão só atualiza a documentação.',
+        'Novo capítulo com o destino de cada hora, verificado em 213 meses fechados: o excedente acima de 2h em dia útil compensa dia curto do mês.',
+        'Registradas as linhas "Excedeu" do rodapé e quatro dúvidas novas: vencimento do banco, saldo negativo, crédito sem homologação e jornada de 8h.'
+      ]
+    },
     {
       version: '1.1.5-Snapshot',
       date: '2026-11-10',

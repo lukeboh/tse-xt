@@ -59,6 +59,7 @@
 | **Por que importa** | Define se a parcela **não paga** de um mês com HE autorizado pode ser resgatada para o banco. Empiricamente ([regras-calculo-frequencia.md §5.3](regras-calculo-frequencia.md#53-excedente-em-meses-com-he-autorizada)): em 12/2015, 01/2016, 09/2025 e 04/2026 a chefia homologou excedente e ele creditou o Extrato **mesmo havendo pecúnia no mês**; já em 03/2024 e 11/2024 o excedente não autorizado foi **100% para "Não Homologadas"** (perda). Não se sabe o que determina um caminho ou outro. |
 | **Em aberto** | A chefia pode homologar excedente **acima** do quantitativo que a DG autorizou via SAEX, ou a homologação fica limitada ao autorizado (e o restante é obrigatoriamente "não homologado")? A Res. 22.901/2008 art. 4º §1º e a Portaria 380/2026 art. 11 preveem deliberação da DG "limitada a 30h" apenas para a extrapolação do **teto mensal de 60h** — não para a diferença entre realizado e autorizado. |
 | **Como resolver** | Num mês fechado com HE autorizado, comparar excedente bruto diário × autorizado (SAEX / `detalharAutorizacao`) × o que entrou como `Horas Excedentes Homologadas`. Confirmar com `frequencia@tse.jus.br`. |
+| **Evidência nova** | Revisão de 10/11/2026: o rodapé tem linhas "Excedeu pecúnia/banco autorizado" (mensal e diária), que registram a parcela além do autorizado fora de pecúnia, homologadas e não homologadas ([regras §3.12](regras-calculo-frequencia.md)). |
 | **Status** | Aberta. Em 10/11/2026 o item C6 foi adiado: o selo não será feito agora e, quando retomado, dirá apenas que a parcela além do autorizado "depende de homologação da chefia". |
 
 ## D7 — Jornada de 5h no recesso: escopo e datas exatas
@@ -70,3 +71,39 @@
 | **Em aberto** | (a) A redução para 5h vale também para quem cumpre jornada **com intervalo** (8h), ou só para o turno único? (b) Quais os dias exatos de janeiro (todo o mês? a partir de 07/01?). (c) Confirmar que julho de **ano par** (eleitoral) nunca tem redução. (d) A cada dezembro, cadastrar a portaria do ano seguinte. |
 | **Como resolver** | Inspecionar via CDP um espelho fechado de janeiro e de julho ímpar (ex.: 01/2025, 07/2025) e ver o alvo diário que o sistema aplicou; confirmar com `frequencia@tse.jus.br`. |
 | **Status** | Aberta — implementação atual assume mês inteiro e só turno único. |
+## D8 — Qual é a regra de vencimento do banco de horas?
+
+| | |
+| :--- | :--- |
+| **Por que importa** | Horas vencidas somem do saldo. O TSE XT não prevê vencimento. |
+| **O que se sabe** | 8 vencimentos no histórico revisado (10/11/2026). Nenhum prazo entre 6 e 60 meses, consumindo o saldo do mais antigo ou do mais novo, reproduz esses valores. |
+| **Como resolver** | Confirmar com `frequencia@tse.jus.br` prazo, ordem de consumo e norma. |
+| **Status** | Aberta. |
+
+## D9 — O que acontece quando o banco de horas fica negativo?
+
+| | |
+| :--- | :--- |
+| **Por que importa** | [Regras §3.11](regras-calculo-frequencia.md#311-compensação-intra-mês--o-excedente-de-um-dia-paga-o-débito-de-outro) supõe que, sem saldo, o débito vira `Resíduo`. |
+| **O que se sabe** | O `Saldo Atualizado` do Extrato ficou negativo em 8 meses do histórico revisado. |
+| **Como resolver** | Confirmar com `frequencia@tse.jus.br` se há limite, prazo de reposição ou desconto em folha. |
+| **Status** | Aberta. |
+
+## D10 — De onde vem crédito no banco sem homologação no espelho?
+
+| | |
+| :--- | :--- |
+| **Por que importa** | Homologação é tida como a única porta para o banco ([regras §3.9](regras-calculo-frequencia.md)). |
+| **O que se sabe** | 12 meses, o último em 2020, têm `Horas Adquiridas` sem homologadas no rodapé. Em vários, o valor é igual ao consumido no mesmo mês. Pode estar ligado a [D4](#d4--por-que-alguns-meses-têm-horas-adquiridas-maior-que-a-fórmula-de-multiplicador). |
+| **Como resolver** | Perguntar à área de frequência quais lançamentos manuais ou compensações geram esse crédito. |
+| **Status** | Aberta. |
+
+## D11 — Dia com intervalo tem jornada de 8h no fechamento?
+
+| | |
+| :--- | :--- |
+| **Por que importa** | O TSE XT usa 8h quando há intervalo ([regras §3.6](regras-calculo-frequencia.md)). Cada dia nessa situação muda o saldo em 1h. |
+| **O que se sabe** | Inconclusivo: nos dias com intervalo, `HORAS AJUST.` trava em 8h em 45 e em 7h em 29; nos 10 meses com débito que permitem o teste, 7h fecha 2 ao minuto e 8h nenhum. |
+| **Como resolver** | Confirmar a regra vigente com `frequencia@tse.jus.br`. |
+| **Status** | Aberta. |
+
