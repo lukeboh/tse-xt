@@ -95,7 +95,7 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 🔒 PRIVACIDADE & SEGURANÇA POR DESIGN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, resultado da Auditoria de Horas Perdidas e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
+• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, resultado da Auditoria de Horas Perdidas, último Relatório de Reconhecimento Posterior e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
 • Zero Requisições Externas: A extensão não se conecta a nenhum servidor de terceiros; a comunicação ocorre apenas com os próprios sistemas do TSE, no seu contexto de sessão.
 • Manifest V3 Conforme: Construída seguindo os mais altos padrões de segurança do Google Chrome (sem scripts inline inseguros e com sanitização rigorosa de DOM contra XSS).
 • Permissões Mínimas: apenas armazenamento local (preferências e resultados calculados), acesso à aba ativa para recarregá-la ao aplicar preferências e acesso restrito aos domínios oficiais do TSE.
@@ -147,7 +147,7 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 
 | Permissão | Justificativa |
 |---|---|
-| `storage` | Guardar localmente preferências de aparência, a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
+| `storage` | Guardar localmente preferências de aparência, a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
 | `activeTab` | Recarregar a aba ativa quando o usuário pede, na janela da extensão, para aplicar as preferências escolhidas. |
 | Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas do portal Meu Espaço e ler, com a sessão do próprio usuário, as páginas do portal usadas nos cálculos (Espelho de Ponto, autorizações de hora extra). Nenhum outro domínio é acessado. |
 | Código remoto | Não usa. Todo o JavaScript está no pacote. |

@@ -2950,3 +2950,297 @@ body.je-xt-enabled .je-heauth-limit span {
 }
 
 
+
+/* ==========================================================================
+   Relatório de Reconhecimento Posterior (v1.1.11)
+   Reaproveita o visual da Auditoria de Horas Perdidas (.je-audit-*).
+   ========================================================================== */
+
+.je-modal-overlay.je-recog-modal {
+  padding-top: 5vh !important;
+}
+
+.je-recog-modal.je-audit-modal .je-audit-content {
+  max-width: 1080px !important;
+  width: calc(100% - 32px) !important;
+  max-height: 90vh !important;
+}
+
+.je-recog-period {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.je-recog-period label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  margin: 0 !important;
+}
+
+.je-recog-period input[type="month"] {
+  font-family: var(--je-font) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--je-primary-dark) !important;
+  padding: 5px 8px !important;
+  border: 1px solid rgba(10, 37, 64, 0.18) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  height: auto !important;
+  width: auto !important;
+  box-shadow: none !important;
+}
+
+.je-recog-team {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+  padding: 0 18px !important;
+}
+
+.je-recog-team > summary {
+  cursor: pointer !important;
+  font-size: 12px !important;
+  color: #475569 !important;
+  padding: 8px 0 !important;
+  list-style: none !important;
+  user-select: none !important;
+}
+
+.je-recog-team > summary::-webkit-details-marker { display: none !important; }
+.je-recog-team > summary::before { content: '▸ '; color: #94a3b8 !important; }
+.je-recog-team[open] > summary::before { content: '▾ '; }
+
+.je-recog-team-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 4px 14px !important;
+  padding: 2px 0 12px !important;
+  max-height: 150px !important;
+  overflow-y: auto !important;
+}
+
+.je-recog-team-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+}
+
+.je-recog-team-item input {
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.je-recog-options {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+  margin-bottom: 16px !important;
+}
+
+.je-recog-option {
+  border: 1px solid rgba(0, 119, 255, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  background: rgba(0, 119, 255, 0.05) !important;
+}
+
+.je-recog-option-h {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+  color: var(--je-primary) !important;
+  margin-bottom: 4px !important;
+}
+
+.je-recog-option-row {
+  font-size: 12.5px !important;
+  color: #334155 !important;
+  line-height: 1.7 !important;
+}
+
+.je-recog-option-row strong {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  font-variant-numeric: tabular-nums !important;
+  margin-right: 4px !important;
+}
+
+.je-recog-option-row span {
+  font-size: 11.5px !important;
+  color: #64748b !important;
+}
+
+.je-recog-notes {
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+}
+
+.je-recog-table td:nth-child(2),
+.je-recog-table th:nth-child(2) {
+  text-align: right !important;
+}
+
+.je-recog-caret {
+  display: inline-block !important;
+  width: 12px !important;
+  color: #94a3b8 !important;
+}
+
+.je-recog-server td {
+  font-weight: 700 !important;
+  color: var(--je-primary-dark) !important;
+}
+
+.je-recog-month td {
+  background: rgba(248, 250, 252, 0.7) !important;
+  color: #475569 !important;
+}
+
+.je-recog-month td:first-child {
+  padding-left: 28px !important;
+}
+
+.je-recog-daysrow > td {
+  padding: 8px 12px 12px 44px !important;
+  background: rgba(241, 245, 249, 0.7) !important;
+  white-space: normal !important;
+  text-align: left !important;
+}
+
+.je-recog-days {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 11.5px !important;
+  background: #fff !important;
+  border: 1px solid rgba(10, 37, 64, 0.1) !important;
+}
+
+.je-recog-days th,
+.je-recog-days td {
+  padding: 4px 8px !important;
+  text-align: right !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+  font-variant-numeric: tabular-nums !important;
+  position: static !important;
+  background: transparent !important;
+}
+
+.je-recog-days th {
+  color: #64748b !important;
+  font-weight: 700 !important;
+}
+
+.je-recog-days th:nth-child(-n+2),
+.je-recog-days td:nth-child(-n+2),
+.je-recog-days th:last-child,
+.je-recog-days td:last-child,
+.je-recog-days td[colspan] {
+  text-align: left !important;
+}
+
+.je-recog-days td:last-child {
+  white-space: normal !important;
+  color: #64748b !important;
+}
+
+.je-recog-days-none {
+  font-size: 11.5px !important;
+  color: #94a3b8 !important;
+  text-align: left !important;
+}
+
+.je-recog-total td {
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  background: rgba(0, 119, 255, 0.06) !important;
+  border-top: 2px solid rgba(10, 37, 64, 0.15) !important;
+}
+
+@media (max-width: 760px) {
+  .je-recog-options { grid-template-columns: 1fr !important; }
+}
+
+/* Versão para impressão: só existe enquanto o relatório é impresso. */
+#je-recog-printdoc {
+  display: none;
+}
+
+@media print {
+  body.je-recog-printing {
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.je-recog-printing > *:not(#je-recog-printdoc) {
+    display: none !important;
+  }
+
+  body.je-recog-printing > #je-recog-printdoc {
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #000;
+  }
+
+  #je-recog-printdoc h1 { font-size: 15pt; margin: 0 0 4pt; color: #000; }
+  #je-recog-printdoc h2 { font-size: 11pt; margin: 14pt 0 4pt; color: #000; break-after: avoid; }
+  #je-recog-printdoc h3 { font-size: 10pt; margin: 12pt 0 4pt; color: #000; break-after: avoid; }
+  #je-recog-printdoc p { margin: 0 0 5pt; color: #000; }
+  #je-recog-printdoc .meta { font-size: 8pt; color: #333; margin: 0 0 2pt; }
+  #je-recog-printdoc ul { margin: 0 0 6pt 14pt; padding: 0; }
+  #je-recog-printdoc small { font-size: 7.5pt; color: #333; }
+
+  #je-recog-printdoc table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4pt 0 8pt;
+    font-size: 8pt;
+  }
+
+  #je-recog-printdoc th,
+  #je-recog-printdoc td {
+    border: 0.5pt solid #555;
+    padding: 2pt 4pt;
+    text-align: right;
+    color: #000;
+    background: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #je-recog-printdoc th {
+    font-weight: 700;
+    text-align: center;
+  }
+
+  #je-recog-printdoc td:first-child,
+  #je-recog-printdoc td.l {
+    text-align: left;
+  }
+
+  #je-recog-printdoc tr { break-inside: avoid; }
+  #je-recog-printdoc thead { display: table-header-group; }
+  #je-recog-printdoc tr.total td { font-weight: 700; border-top: 1.2pt solid #000; }
+
+  #je-recog-printdoc .je-audit-def { margin-bottom: 6pt; }
+  #je-recog-printdoc .je-audit-def-h { font-size: 9pt !important; color: #000 !important; }
+  #je-recog-printdoc .je-audit-def p { font-size: 8.5pt !important; color: #000 !important; margin-bottom: 4pt !important; }
+  #je-recog-printdoc .je-audit-def em { color: #000 !important; }
+  #je-recog-printdoc .je-audit-src { font-size: 8pt !important; color: #333 !important; }
+  #je-recog-printdoc a { color: #000 !important; text-decoration: none !important; }
+}

@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.10-Snapshot';
+  const CURRENT_VERSION = '1.1.11-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.11-Snapshot',
+      date: '2026-11-11',
+      title: 'Relatório de Reconhecimento Posterior',
+      features: [
+        'Novo relatório para a chefia, no botão de ações rápidas e na busca: horas feitas além da jornada e horas pagas em pecúnia, por servidor da equipe.',
+        'Mostra o que ficou a reconhecer nas duas saídas: pecúnia com acréscimo de 50% ou 100%, ou crédito em banco de horas.',
+        'Detalhe por mês e por dia, exportação em CSV e versão para impressão, para anexar ao pedido.',
+        'Só mês fechado e fora do regime híbrido entra nos totais. Mês aberto e mês híbrido aparecem com selo, fora da soma.'
+      ]
+    },
     {
       version: '1.1.10-Snapshot',
       date: '2026-11-10',

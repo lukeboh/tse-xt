@@ -172,6 +172,25 @@ Na linha `Totais:` da tabela principal:
 - Tabela ordenável por qualquer coluna (mês, regime, pecúnia, homologadas, P1–P4, perdido); clicar numa linha abre o Espelho de Ponto do mês correspondente (com confirmação).
 - Resultado persistido por matrícula em `chrome.storage.local`: a tela sempre reabre com a última varredura e, por padrão, atualiza só o delta (meses ainda não varridos); **Full Update** refaz a varredura completa.
 
+### 5.3. Relatório de Reconhecimento Posterior
+**Introduzido na v1.1.11.** Modal para a chefia, aberto pelo botão de ações rápidas ou pela busca (Ctrl+K). Varre o Espelho de Ponto de cada servidor da equipe no período escolhido e serve de anexo ao pedido de reconhecimento posterior das horas excedentes.
+
+| Coluna | Como é apurada |
+| :--- | :--- |
+| **Feitas além da jornada** | Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas. |
+| **Pagas em pecúnia** | `Pecúnia` + `Adicional Noturno Pecúnia` do rodapé do espelho. |
+| **Banco** | `Horas Excedentes Homologadas` do rodapé. |
+| **Compensaram dia curto** | Excedente de dia útil usado para fechar dias mais curtos do mesmo mês. |
+| **A reconhecer** | O que sobra: não homologadas, acima do autorizado, acima de 10h em fim de semana e feriado e excedente de dia útil que sobrou no mês. |
+
+- **Opção (a), pecúnia:** horas a reconhecer com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados), conforme o art. 9º da Res. 22.901/2008. O relatório mostra horas, não valores em reais.
+- **Opção (b), banco de horas:** crédito com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados).
+- Só mês **fechado** e **fora do regime híbrido** entra nos totais. Mês híbrido e mês aberto aparecem na lista com selo, fora da soma.
+- O relatório destaca o que passou de 10h no dia, os meses acima de 60h e os meses em que a conta não fechou (`Não conciliado`).
+- Se o portal devolver o espelho de outro servidor, nada daquele servidor é contado e a linha recebe o selo **Conferir**.
+- Saídas: tabela expansível (servidor → mês → dia), CSV e versão para impressão em A4 paisagem.
+- O cálculo fica em `recognitionCalc.js` (puro, testado) e reaproveita `lostHoursCalc.js`. A tela fica em `recognitionReport.js`.
+
 ---
 
 ## 6. Arquitetura de Módulos da Extensão

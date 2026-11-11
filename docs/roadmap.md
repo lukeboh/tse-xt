@@ -252,6 +252,9 @@ Evolução de telas secundárias do portal para o status de *Módulo com Lógica
 | **M1** | **Extrato do Banco de Horas Inteligente & Alerta de Validade** | • Dashboard de acompanhamento da validade de horas acumuladas.<br>• Painel preditivo de **prescrição/expiração** (alertando sobre horas prestes a vencer em 30/60/90 dias com base na tela `BancoHorasAction_recuperarValidade`).<br>• Gráfico de evolução histórica de acúmulo vs. usufruto. |
 | **M2** | **Assistente de Férias e Afastamentos** | • Cálculo automático de períodos aquisitivos abertos e saldo de dias restantes.<br>• Simulador de parcelamento e sugestão de melhor janela de usufruto.<br>• Linha do tempo visual de afastamentos programados na equipe. |
 | **M3** | **Central de Contracheque & Ficha Financeira** | • Comparativo mês a mês de proventos, descontos e remuneração líquida.<br>• Destaque visual de rubricas variáveis (horas extras pagas, gratificações, substituições). |
+| **M4** | **Relatório de Reconhecimento Posterior** ✅ v1.1.11 | • Por servidor da equipe: horas feitas além da jornada × horas pagas em pecúnia, banco e compensação.<br>• Horas a reconhecer nas duas saídas: pecúnia (50% / 100%) ou banco de horas (×1 / ×1,5 / ×2).<br>• Versão para impressão, para anexar ao pedido, e CSV. |
+
+**M4 — Relatório de Reconhecimento Posterior (v1.1.11-Snapshot):** entregue no botão de ações rápidas e na busca (Ctrl+K). A conta de cada mês está em `recognitionCalc.js`, sobre o mesmo cálculo das horas perdidas (`lostHoursCalc.js`), com testes. A equipe vem do seletor de servidores do Espelho de Ponto. Só mês fechado e fora do regime híbrido entra nos totais. O relatório não calcula valores em reais nem afirma direito: a decisão é da Diretoria-Geral (Res. 22.901/2008 art. 4º §1º e art. 11; Portaria 380/2026 art. 11). **Aguarda validação na página real**, em especial a leitura do espelho de outros servidores e a conferência de que a resposta do portal é do servidor pedido.
 
 ---
 

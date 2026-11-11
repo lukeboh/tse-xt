@@ -114,6 +114,15 @@ window.JEPessoasSearch = (function () {
         }
       },
       {
+        title: 'Relatório de Reconhecimento Posterior',
+        category: 'Ações Rápidas',
+        action: () => {
+          if (window.JEPessoasRecognitionReport) {
+            window.JEPessoasRecognitionReport.open();
+          }
+        }
+      },
+      {
         title: 'Frequência - Alteração de Ponto',
         category: 'Navegação',
         action: () => {

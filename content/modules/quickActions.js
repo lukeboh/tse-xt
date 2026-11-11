@@ -40,6 +40,15 @@ window.JEPessoasQuickActions = (function () {
           <span>Horas Perdidas</span>
         </button>
 
+        <button type="button" class="je-fab-item" id="je-fab-recog" title="Relatório de Reconhecimento Posterior (horas feitas × horas pagas, por servidor)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <polyline points="9 15 11 17 15 13"></polyline>
+          </svg>
+          <span>Reconhecimento Posterior</span>
+        </button>
+
         <button type="button" class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -105,6 +114,16 @@ window.JEPessoasQuickActions = (function () {
         } else {
           alert('A Auditoria de Horas Perdidas só está disponível na tela do Espelho de Ponto Mensal.');
         }
+        fabContainer.classList.remove('active');
+      });
+    }
+
+    const recogBtn = fabContainer.querySelector('#je-fab-recog');
+    if (recogBtn) {
+      recogBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.JEPessoasRecognitionReport) window.JEPessoasRecognitionReport.open();
         fabContainer.classList.remove('active');
       });
     }

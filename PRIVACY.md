@@ -15,7 +15,7 @@ O **TSE XT** é uma extensão de navegador desenvolvida para aprimorar a usabili
 O TSE XT adota o princípio de **Privacidade por Design (*Privacy by Design*)**:
 - **Zero Coleta:** A extensão **NÃO** coleta, **NÃO** armazena fora do navegador, **NÃO** rastreia e **NÃO** transmite nenhuma informação pessoal, funcional, matrícula, dados de folha de ponto, horários ou credenciais de acesso.
 - **Processamento 100% Local (*Client-Side*):** Todo o processamento de regras de negócio, cálculos dos 5 KPIs e renderização visual ocorre única e exclusivamente na memória local do navegador do próprio usuário.
-- **Sem Servidores Externos:** A extensão não se comunica com nenhum servidor remoto ou banco de dados externo. As únicas requisições que faz são aos próprios sistemas do TSE, com a sessão já aberta pelo usuário, para ler páginas do portal usadas nos cálculos (por exemplo, meses anteriores do Espelho de Ponto na Auditoria de Horas Perdidas e as autorizações de hora extra do SAEX).
+- **Sem Servidores Externos:** A extensão não se comunica com nenhum servidor remoto ou banco de dados externo. As únicas requisições que faz são aos próprios sistemas do TSE, com a sessão já aberta pelo usuário, para ler páginas do portal usadas nos cálculos (por exemplo, meses anteriores do Espelho de Ponto na Auditoria de Horas Perdidas, o Espelho de Ponto dos servidores da equipe no Relatório de Reconhecimento Posterior e as autorizações de hora extra do SAEX).
 
 ---
 
@@ -25,6 +25,7 @@ As permissões declaradas no manifesto seguem o **Princípio do Menor Privilégi
   - preferências de configuração (tema ativo/desligado, estilo e destaque dos cards de KPI, modo de abertura do menu de serviços);
   - a versão em que o aviso de aplicação experimental foi confirmado;
   - o resultado da Auditoria de Horas Perdidas, por matrícula, para reabrir sem refazer a varredura;
+  - o último Relatório de Reconhecimento Posterior gerado pela chefia (nome, matrícula e horas dos servidores da equipe no período), para reabrir sem refazer a consulta;
   - um cache das autorizações de hora extra e do excedente apurado (inclusive, na visão de chefia, dos servidores da unidade), para não repetir as mesmas consultas ao portal.
 
   Esses dados nunca saem do navegador e são apagados ao remover a extensão. A extensão também usa `localStorage`/`sessionStorage` da página do portal para lembrar o tema e o estado da tela de login entre uma página e outra.
