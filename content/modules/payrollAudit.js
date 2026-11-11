@@ -139,8 +139,8 @@ window.JEPessoasPayrollAudit = (function () {
   }
 
   function issuerName() {
-    const el = document.querySelector('#divTopServidorNome, .usuario-logado');
-    return el ? (el.innerText || '').replace(/\s+/g, ' ').trim() : '';
+    const el = document.querySelector('.servidor, #divTopServidorNome, .usuario-logado');
+    return el ? (el.innerText || '').replace(/\s+/g, ' ').replace(/^\s*Nome:\s*/i, '').trim() : '';
   }
 
   function ownMatricula() {
@@ -894,8 +894,10 @@ window.JEPessoasPayrollAudit = (function () {
     const own = ownMatricula();
     // Resultado guardado por outro login neste navegador não é mostrado.
     const mine = stored && (!stored.matricula || !own || stored.matricula === own);
+    // Resultado guardado antes da v1.1.13 ficou sem o nome do servidor.
+    if (mine && !stored.issuer && own && stored.matricula === own) stored.issuer = issuerName();
     render(mine ? stored : null);
   }
 
-  return { open, close };
+  return { open, close, issuerName };
 })();

@@ -126,8 +126,8 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function issuerName() {
-    const el = document.querySelector('#divTopServidorNome, .usuario-logado');
-    return el ? (el.innerText || '').replace(/\s+/g, ' ').trim() : '';
+    const el = document.querySelector('.servidor, #divTopServidorNome, .usuario-logado');
+    return el ? (el.innerText || '').replace(/\s+/g, ' ').replace(/^\s*Nome:\s*/i, '').trim() : '';
   }
 
   function ownMatricula() {
@@ -757,5 +757,5 @@ window.JEPessoasRecognitionReport = (function () {
     }
   }
 
-  return { open, close };
+  return { open, close, issuerName };
 })();

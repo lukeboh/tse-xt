@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.12-Snapshot';
+  const CURRENT_VERSION = '1.1.13-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.13-Snapshot',
+      date: '2026-11-11',
+      title: 'Nome do servidor nos relatórios',
+      features: [
+        'A versão para impressão do Relatório de Reconhecimento Posterior volta a mostrar quem emitiu o relatório.',
+        'A versão para impressão da Auditoria de Pagamento de Pecúnias volta a mostrar o nome do servidor ao lado da matrícula.',
+        'A Auditoria de Horas Perdidas identifica o servidor logado também nas telas sem a lista de servidores.'
+      ]
+    },
     {
       version: '1.1.12-Snapshot',
       date: '2026-11-11',

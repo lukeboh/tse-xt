@@ -129,8 +129,8 @@ window.JEPessoasLostHours = (function () {
       const t = sel.options[sel.selectedIndex].text.trim();
       if (t && !/selecione|--nome--/i.test(t)) return t;
     }
-    const el = document.querySelector('#divTopServidorNome, .usuario-logado');
-    return el ? el.innerText.trim() : '';
+    const el = document.querySelector('.servidor, #divTopServidorNome, .usuario-logado');
+    return el ? (el.innerText || '').replace(/\s+/g, ' ').replace(/^\s*Nome:\s*/i, '').trim() : '';
   }
 
   function getUnidade() {
@@ -777,5 +777,5 @@ window.JEPessoasLostHours = (function () {
     }
   }
 
-  return { init: createDOM, open, close };
+  return { init: createDOM, open, close, getServerLabel };
 })();
