@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.1-Snapshot';
+  const CURRENT_VERSION = '1.2.2-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.2-Snapshot',
+      date: '2026-11-12',
+      title: 'Compatibilidade do empacotamento no GitHub Actions',
+      features: [
+        'As etapas que executam o empacotador Windows usam o Windows PowerShell, preservando os módulos necessários aos testes da versão estável.',
+        'A versão estável continua sendo obtida da tag escolhida; esta correção não altera a tag 1.2.0.',
+        'Corrigida a incompatibilidade de ambiente identificada na primeira execução real da automação.'
+      ]
+    },
     {
       version: '1.2.1-Snapshot',
       date: '2026-11-12',

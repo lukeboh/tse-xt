@@ -1,5 +1,11 @@
 # Changelog — TSE XT
 
+## 1.2.2-Snapshot — 12/11/2026
+
+- Executar testes e empacotamento da tag com Windows PowerShell no GitHub Actions, evitando herdar o ambiente de módulos do PowerShell 7.
+- A primeira execução real identificou `Get-FileHash` indisponível no subprocesso; parou antes de autenticar, fazer upload ou submeter revisão.
+- A tag estável 1.2.0 permanece inalterada.
+
 ## 1.2.1-Snapshot — 12/11/2026
 
 - Workflow da Chrome Web Store com operações separadas de status, upload e submissão para revisão.

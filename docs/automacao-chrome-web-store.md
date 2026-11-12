@@ -45,7 +45,7 @@ O workflow [.github/workflows/chrome-web-store.yml](../.github/workflows/chrome-
 | `upload` | Envia o ZIP e aguarda o processamento; não solicita revisão. |
 | `submit` | Envia o ZIP e solicita revisão com `STAGED_PUBLISH`, `skipReview: false` e `blockOnWarnings: true`. |
 
-O workflow usa Windows porque o empacotador e seu teste executam PowerShell. As Actions são fixadas por SHA. Antes de autenticar, valida a tag, sua versão no manifesto e a inclusão do commit no histórico da main, executa os testes e guarda o pacote como artefato.
+O workflow usa Windows porque o empacotador e seu teste executam Windows PowerShell. Essas etapas usam `shell: powershell`, evitando o ambiente de módulos herdado do PowerShell 7. As Actions são fixadas por SHA. Antes de autenticar, valida a tag, sua versão no manifesto e a inclusão do commit no histórico da main, executa os testes e guarda o pacote como artefato.
 
 O cliente [cws-api.mjs](../tools/loja/cws-api.mjs) não imprime tokens, chaves públicas ou respostas brutas. Não reenvia uma versão já em revisão/aprovada, não substitui outra revisão ativa e impede downgrade. Uma versão aprovada em `STAGED` não é publicada por uma repetição de `submit`.
 

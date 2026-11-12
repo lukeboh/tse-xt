@@ -89,7 +89,8 @@ jobs:
           "commit=$commit" >> $env:GITHUB_OUTPUT
 
       - name: Testar a versao da extensao
-        shell: pwsh
+        # O teste do pacote inicia powershell.exe e precisa do PSModulePath do Windows PowerShell.
+        shell: powershell
         working-directory: release
         run: |
           npm test
@@ -103,7 +104,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Gerar pacote da tag
-        shell: pwsh
+        shell: powershell
         working-directory: release
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
 
