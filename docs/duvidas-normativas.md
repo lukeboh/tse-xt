@@ -103,7 +103,9 @@
 | | |
 | :--- | :--- |
 | **Por que importa** | O TSE XT usa 8h quando há intervalo ([regras §3.6](regras-calculo-frequencia.md)). Cada dia nessa situação muda o saldo em 1h. |
-| **O que se sabe** | Inconclusivo: nos dias com intervalo, `HORAS AJUST.` trava em 8h em 45 e em 7h em 29; nos 10 meses com débito que permitem o teste, 7h fecha 2 ao minuto e 8h nenhum. |
+| **O que se sabe** | Inconclusivo: nos dias com intervalo, `HORAS AJUST.` trava em 8h em 45 e em 7h em 29. A análise de 11/11/2026 encontrou melhor encaixe do fechamento com 7h fixas e cobertura de fim de semana (30 de 32 meses, contra 29 com a jornada atual). Isso não demonstra que a jornada exigida mudou. |
 | **Como resolver** | Confirmar a regra vigente com `frequencia@tse.jus.br`. |
 | **Status** | Aberta. |
+
+**Decisão de 11/11/2026 (v1.1.16-Snapshot):** implementar a cobertura de dias curtos pelo fim de semana (§3.13), mantendo separada a dúvida da jornada. O responsável reafirmou a exigência de 7h ininterruptas ou 8h com intervalo; não autorizou trocar a jornada para 7h fixas. `legalConfig.dailyTargetMinutes` e os KPIs de mês aberto permanecem com o comportamento vigente. Confirmar a diferença do fechamento antes de alterar essa regra.
 

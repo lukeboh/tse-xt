@@ -67,6 +67,10 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 **Horas perdidas (v1.1.7-Snapshot):** a coluna `HORAS PERDIDAS`, os selos da coluna Ocorrência e a Auditoria passaram a usar o mesmo cálculo (`lostHoursCalc.js`), com a nova categoria P5. Aguarda validação na página real.
 
+**Cobertura de dias curtos (v1.1.16-Snapshot, 12/11/2026):** implementada a cobertura pelo fim de semana não pago com ×1,5/×2, inclusive acima de 10h, antes de classificar P3/P5. Espelho, Auditoria de Horas Perdidas e M4 usam a mesma conta; tempo trabalhado e cobertura equivalente ficam separados. Testes de regressão para os meses decisivos e conferência autenticada de oito meses; 10/2026 fecha sem perda nem débito. D11 permanece aberta e a jornada atual foi preservada. Aprovação visual e merge continuam pendentes. Ver [regras §3.13](regras-calculo-frequencia.md#313-fim-de-semana-não-pago-cobre-a-falta-de-dia-útil-11112026).
+
+Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 meses** e Reconhecimento Posterior de **6 servidores em 10/2026**. O Perdido da equipe caiu de **51:36 para 14:20**; CSV e impressão conferidos nos dois agrupamentos. Registro completo em [handoff de 12/11](handoff-2026-11-12.md).
+
 ### Detalhamento Executivo dos Itens da Trilha C
 
 ---

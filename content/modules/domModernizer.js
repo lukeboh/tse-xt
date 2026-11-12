@@ -1239,7 +1239,7 @@ window.JEPessoasModernizer = (function () {
 
             // R5 — excedente acima do teto legal por jornada, mesmo autorizado:
             // 2h em dia útil, 10h em sábado/domingo/feriado (Res. 22.901/2008 art. 4º).
-            // O que passa disso não é compensável.
+            // O teto de pecúnia não impede a cobertura de dias curtos (§3.13).
             const L = window.JEPessoasLegal;
             const capMin = isWeekendOrHoliday
               ? ((L && L.MAX_HE_FDS_MIN.valor) || 600)
@@ -1250,7 +1250,7 @@ window.JEPessoasModernizer = (function () {
               const tag2 = document.createElement('span');
               tag2.className = 'je-occ-acima-teto';
               tag2.textContent = isWeekendOrHoliday ? '> 10h (art. 4º)' : '> 2h (art. 4º)';
-              tag2.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} — ${formatSigned(over).replace('+', '')} acima do teto de ${isWeekendOrHoliday ? '10h' : '2h'} por jornada (Res. 22.901/2008 art. 4º). O que passa do teto não é compensável.`;
+              tag2.title = `Excedente de ${formatSigned(grossExcessMin).replace('+', '')} — ${formatSigned(over).replace('+', '')} acima do teto de ${isWeekendOrHoliday ? '10h' : '2h'} por jornada (Res. 22.901/2008 art. 4º). O que passou do teto ainda pode cobrir dias curtos do mês.`;
               occCell.appendChild(document.createTextNode(' '));
               occCell.appendChild(tag2);
             }
@@ -1269,6 +1269,8 @@ window.JEPessoasModernizer = (function () {
             dayTargetMinutes,
             projectFromTotal: isTodayRow && !isClosedMonthTable,
             homologPool: closedMonthHomologPool,
+            weekendCoverageMin: closedMonthLoss && closedMonthLoss.coverageByDate[dateText]
+              ? closedMonthLoss.coverageByDate[dateText].coverageMin : 0,
             noturnoPecMin: parseMinutes((robustText(tr.querySelector('td.h13')).match(/\d{1,3}:\d{2}/) || ['00:00'])[0])
           });
           // Mês fechado: a coluna é de controle e mostra a conta dia a dia; o crédito
@@ -1286,6 +1288,10 @@ window.JEPessoasModernizer = (function () {
             const amount = formatSigned(dailyDelta).replace('+', '');
             multiplierBadge = `<span class="je-multiplier-tag je-multiplier-tag-sat" title="Sábado com +50% no saldo (+${amount})">+50%</span>`;
             deltaTooltip = `Sábado (+50%): ${totalDay || exceedDay} bruto com acréscimo de 50% = +${amount} no saldo acumulado`;
+          }
+          if (closedMonthLoss && closedMonthLoss.coverageByDate[dateText]) {
+            const covered = closedMonthLoss.coverageByDate[dateText];
+            deltaTooltip = `${formatTime(covered.workedMin)} não pagas cobriram ${formatTime(covered.coverageMin)} de dias curtos com ${isHolidayOrRecess || dayOfWeek === 0 ? '×2' : '×1,5'}. Somadas apenas à coluna de controle; o crédito homologado do banco é separado.`;
           }
 
           const hasRecord = !!(e1 || totalDay || (exceedDay && exceedDay !== '00:00' && exceedDay !== '--:--') || (pecunia && pecunia !== '00:00') || abono);
@@ -1523,6 +1529,7 @@ window.JEPessoasModernizer = (function () {
         const chips = [
           ['neutro', T.excedente.label, dest.excessMin, T.excedente.tip],
           ['bom', T.compensou.label, dest.compensatedMin, T.compensou.tip],
+          ['bom', T.cobriuFds.label, dest.weekendCompensatedMin, `${T.cobriuFds.tip} Cobertura equivalente: ${formatTime(dest.weekendCoverageMin)}.`],
           ['bom', T.pago.label, dest.paidMin, T.pago.tip],
           ['bom', T.banco.label, dest.homologMin, `${T.banco.tip} Crédito neste mês: +${formatTime(dest.creditMin)}.`],
           ['ruim', T.perdido.label, dest.lostMin, T.perdido.tip],
@@ -1530,6 +1537,10 @@ window.JEPessoasModernizer = (function () {
         ];
         if (Math.abs(dest.unexplainedMin) > 0) {
           chips.push(['aviso', T.naoConciliado.label, dest.unexplainedMin, T.naoConciliado.tip]);
+        }
+        if (dest.debitDifferenceMin !== 0) {
+          chips.push(['aviso', T.debitoDivergente.label, dest.debitDifferenceMin,
+            `${T.debitoDivergente.tip} Calculado: ${formatTime(dest.calculatedDebitMin)}; oficial: ${formatTime(dest.debitMin)}.`]);
         }
         const destRow = document.createElement('tr');
         destRow.className = 'je-destino-mes';

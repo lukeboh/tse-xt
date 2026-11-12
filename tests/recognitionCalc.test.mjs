@@ -34,6 +34,28 @@ function month(days, f, extra = {}) {
 }
 const q = (o) => [o.uteis, o.sab, o.domfer, o.total];
 
+test('fim de semana que cobriu falta sai do pedido e soma igual nos agrupamentos', () => {
+  const a = month([
+    day({ totalMin: 0 }), day({ totalMin: 196 }),
+    sat({ totalMin: 701, pecuniaMin: 298 }), sun({ totalMin: 20 })
+  ], { pecunia: quad(0, 298, 0) });
+  const s = rec.summarizeMonth(a);
+  assert.equal(s.pending.total, 0);
+  assert.equal(s.aboveCap.total, 0);
+  assert.equal(s.creditMin, 0);
+  assert.equal(s.weekendCompensatedMin, 423);
+  assert.equal(s.weekendCoverageMin, 644);
+  assert.equal(s.unexplainedMin, 0);
+  assert.deepEqual(s.days, []);
+  const total = rec.summarizeServer([s]);
+  const team = rec.summarizeTeam([total, total]);
+  assert.equal(team.weekendCompensatedMin, 846);
+  assert.equal(team.weekendCoverageMin, 1288);
+  assert.equal(team.pending.total, 0);
+  const groups = rec.groupByMonth([{ name: 'Servidor Modelo', months: [{ ...s, key: '2026-10', label: '10/2026' }] }]);
+  assert.equal(groups[0].totals.weekendCompensatedMin, 423);
+});
+
 test('mês fechado separa feitas, pagas, banco, compensadas e a reconhecer', () => {
   seq = 0;
   const s = rec.summarizeMonth(month([

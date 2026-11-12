@@ -106,7 +106,7 @@ São os mesmos percentuais do art. 9º da Res. 22.901/2008 (que os cita para o *
 
 ### 3.4. Tetos de fim de semana e feriado
 
-- Limite de **10h por dia** aos sábados, domingos e feriados (art. 4º). O que passa disso é **descartado**: ex. **06/10/2016 (domingo)** — trabalhadas 11h52, reconhecidas 10h00 (08h13 pecúnia + 01h47 adic. noturno), 1h52 perdidas.
+- Limite de **10h por dia** aos sábados, domingos e feriados (art. 4º). A parcela acima de 10h fica fora do pagamento e do crédito automático de banco; pode cobrir dias curtos do mês com os fatores (§3.13). Só a sobra é classificada como P3. A interpretação anterior, que chamava toda essa parcela de descartada, foi corrigida na v1.1.16.
 - **Pagamento aos domingos e feriados é vedado** fora de plantão eleitoral / dias de eleição (art. 4º §2º; art. 5º da Portaria 380/2026).
 
 ### 3.5. Mês fechado — coluna "HORAS AJUST."
@@ -145,7 +145,7 @@ Regra de controle de frequência (redação: *"não cumprida a carga horária me
 2. **Mês net positivo** — dias curtos são completados sozinhos (`HORAS AJUST. = jornada`, sem débito, `Horas Utilizadas do Banco = 00:00`); o **excedente líquido que sobra** vai para `Horas Excedentes Não Homologadas` (perdido) a menos que a chefia homologue (→ banco, com fator). Ex.: **01/2018** (jornada 5h de recesso) — dias de 4h48/4h54 completados a 5h sem consumir banco, e as 08h05 de excedente líquido do mês foram para "Não Homologadas".
 3. **Mês net negativo** — o débito é coberto **consumindo o banco de horas** (`Horas Utilizadas do Banco`); sem saldo, vira `Resíduo de Horas` negativo. Nesse caso os dias de excedente são travados na jornada (`HORAS AJUST. = 07:00`). Ex.: **12/2019** — `Utilizadas 08:43`, `Resíduo −08:43`, dias de 8h57 travados em 7h.
 
-**Consequência para a Auditoria:** a categoria **P2** já usa o **saldo líquido do mês** (`Σ total − jornada` dos dias úteis, com os déficits entrando como negativos), então o excedente que "pagou" um dia curto do mesmo mês **não** é contado como perda — só o remanescente líquido sem destino. Horas **acima do teto diário** (2h útil / 10h FDS) entram normalmente nessa conta do mês; o que não entra é o descarte de fim de semana acima de 10h (**P3**, §3.4) e o excedente não homologado (**P1**).
+**Consequência para a Auditoria:** a categoria **P2** usa o **saldo líquido do mês** (`Σ total − jornada` dos dias úteis, com os déficits entrando como negativos), então o excedente que completou um dia curto do mesmo mês **não** é contado como perda. Horas úteis acima de 2h também entram nessa compensação. Desde a v1.1.16, o fim de semana sem destino cobre a falta restante com os fatores, inclusive acima de 10h (§3.13); só a sobra entra em **P3/P5**. Horas explicitamente não homologadas continuam em **P1**.
 
 ### 3.12. Destino de cada hora — revisão do histórico (10/11/2026)
 
@@ -156,8 +156,8 @@ Revisão de 213 meses fechados de um servidor, cruzando o Espelho com o Extrato 
 | Excedente de dia útil, de qualquer tamanho, cobrindo dia curto do mês | **Útil** | Nos 17 meses que separam as hipóteses, o `Resíduo` bate ao minuto em 8 com o excedente completo e em 0 com o limite de 2h |
 | Sobra do mês homologada | **Banco** | 56 de 56 meses com homologadas creditaram o Extrato |
 | Sobra do mês sem pagamento nem homologação | **Perdida** | Sem crédito no Extrato |
-| Sábado, domingo ou feriado acima de 10h | **Perdida** | 48 de 48 dias limitados a 10h |
-| Sábado, domingo ou feriado até 10h, sem pagamento, homologação nem "Não Homologadas" | **Perdida, sem aviso no espelho** | 44 meses. Parte consta nas linhas "Excedeu"; 42 dias com autorização não têm explicação no espelho |
+| Sábado, domingo ou feriado acima de 10h | **Cobertura de dia curto; a sobra é perdida** | Limite de 10h no pagamento; a revisão de 11/11 distinguiu cobertura e perda (§3.13) |
+| Sábado, domingo ou feriado até 10h, sem pagamento, homologação nem "Não Homologadas" | **Cobertura de dia curto; a sobra é perdida** | Parte consta em "Excedeu"; abater primeiro a cobertura (§3.13) |
 | Qualquer trabalho em mês híbrido | **Descartado pela norma** | 16 de 16 meses sem pecúnia, homologação ou crédito |
 
 **Regras complementares confirmadas:**
@@ -173,6 +173,29 @@ Revisão de 213 meses fechados de um servidor, cruzando o Espelho com o Extrato 
 **Cruzamento com o limite do SAEX (10/11/2026):** dos 42 dias com autorização e horas sem destino, 14 tinham limite diário e quantidade do período sobrando (candidatos a pedido de correção, 33h53); 10 eram de autorização de compensação, que depende de homologação; 8 tinham a quantidade do período esgotada; 7 já tinham atingido o limite do dia; 3 tinham autorização que não cobre o tipo de dia. Na conciliação com o Relatório SAEX (31 meses com autorização, desde 08/2016), as "horas realizadas" são iguais a `Pecúnia` + `Adicional Noturno Pecúnia` do rodapé em 30 meses. Períodos anteriores a 08/2016 não constam nesse relatório.
 
 **Ainda não fechado:** a fórmula exata de "Horas Excedentes Não Homologadas" de dia útil (3 de 15 meses batem com o saldo líquido do mês).
+
+### 3.13. Fim de semana não pago cobre a falta de dia útil (11/11/2026)
+
+Implementado na **v1.1.16-Snapshot**, por decisão do responsável em 11/11/2026. Primeiro o excedente dos dias úteis compensa os dias curtos do próprio mês. A falta restante pode ser coberta pelas horas de sábado, domingo e feriado que não foram pagas, homologadas para banco ou explicitamente classificadas como não homologadas. O fator é **×1,5 no sábado** e **×2 no domingo/feriado**, inclusive para a parcela trabalhada **acima de 10h**. Sábado feriado usa ×2. A cobertura não é crédito no banco: completa a jornada do mês. Só a sobra sem destino entra em P3/P5.
+
+A evidência original abrangeu 71 meses após excluir 35 meses remotos da pandemia. Nos 32 meses com fim de semana não pago, a hipótese de cobertura com esses fatores explicou 30 ao minuto usando jornada fixa de 7h; isso é uma observação do fechamento, não uma alteração da jornada exigida. **D11 continua aberta:** a implementação preserva 7h em turno único, 8h quando há intervalo e a regra atual de recesso. Portanto, não se presume que todos os meses históricos conciliem.
+
+| Mês | Falta útil após compensação entre úteis | Fim de semana usado | Cobertura equivalente | Débito oficial |
+| :--- | :--- | :--- | :--- | :--- |
+| 04/2009 | 24:22 | Domingo 07:08 | 14:16 | 10:06 |
+| 01/2014 | 25:00 | Domingo 04:34 | 09:08 | 15:52 |
+| 12/2019 | 19:21 | Domingo 05:19 | 10:38 | 08:43 |
+| 10/2026 | 10:44 | Sábado 06:43 + domingos 00:20 | 10:44:30 antes do limite | 00:00 |
+
+Em 10/2026, as 06:43 de sábado incluem 01:41 acima de 10h. As **07:03 trabalhadas** deixam de ser perda; o `SALDO ACUM.` de controle fecha em **00:00**. A cobertura é limitada à falta, sem gerar crédito pelos 30 segundos restantes.
+
+**Precisão e atribuição:** o portal só fornece minutos e totais mensais por tipo de dia. Pagas, homologadas e não homologadas são reservadas antes da cobertura. Os dias são percorridos na ordem do espelho; usa-se primeiro a parcela disponível até 10h, depois a parcela acima do teto. O último minuto trabalhado pode ser usado integralmente, mas a cobertura equivalente é limitada à falta. Os meios minutos são arredondados no acumulado, evitando somar arredondamentos de cada sábado. A divisão diária e entre P3/P5 é estimada.
+
+**Conciliação:** `Excedente = Compensou dias curtos (úteis) + Cobriu dias curtos (fim de semana, horas trabalhadas) + Pago + Banco + Perdido`. A cobertura equivalente com fator aparece na explicação e nos CSVs; não deve ser somada como tempo trabalhado nessa igualdade. `Débito do mês` continua sendo o **Resíduo de Horas negativo oficial**; `Horas Utilizadas do Banco` também inclui folgas e não é usado como medida da falta. O débito calculado é comparado ao oficial e divergências recebem aviso, sem ajustar valores para forçar fechamento.
+
+Conferência autenticada da implementação: 04/2009, 01/2014 e 12/2019 batem com o débito oficial; 08/2026 e 10/2026 fecham sem débito nem perda. Persistem 02/2013 (com a jornada atual de 8h, diferença de 02:00; com 7h, 01:00), 06/2025 (00:11) e 10/2011 (00:01 nesta reconstrução). Não se atribui causa definitiva a essas diferenças.
+
+Espelho, Auditoria de Horas Perdidas e Reconhecimento Posterior usam `lostHoursCalc.js`. Histórico salvo da Auditoria exige **Full Update**; o Reconhecimento Posterior pede nova geração e impede a exportação do resultado anterior à regra.
 
 ### 3.8. "Resíduo de Horas" em mês híbrido é cosmético
 

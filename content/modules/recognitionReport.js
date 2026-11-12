@@ -21,7 +21,8 @@ window.JEPessoasRecognitionReport = (function () {
   const ESPELHO_URL = '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
   const FETCH_THROTTLE_MS = 120;
   const CONFIRM_REQUESTS = 150;
-  const COLS = 12;
+  const COLS = 13;
+  const CALCULATION_VERSION = 1;
 
   const KIND_LABEL = { uteis: 'Dia útil', sab: 'Sábado', domfer: 'Domingo/feriado' };
 
@@ -52,6 +53,7 @@ window.JEPessoasRecognitionReport = (function () {
         tip: byMonth ? 'Servidores com o mês fechado e fora do regime híbrido: os que entram no total.' : 'Meses fechados e fora do regime híbrido: os que entram no total.' },
       { head: T.excedente.label, tip: T.excedente.tip },
       { head: T.compensou.label, tip: T.compensou.tip },
+      { head: T.cobriuFds.label, tip: T.cobriuFds.tip },
       { head: T.pago.label, tip: T.pago.tip },
       { head: T.banco.label, tip: T.banco.tip },
       { head: T.perdido.label, tip: T.perdido.tip + ' É o que este relatório pede para reconhecer.' },
@@ -262,6 +264,7 @@ window.JEPessoasRecognitionReport = (function () {
     const unit = currentUnit;
     const result = {
       version: 1,
+      calculationVersion: CALCULATION_VERSION,
       from: months[0].key,
       to: months[months.length - 1].key,
       unit: unit.label,
@@ -463,6 +466,14 @@ window.JEPessoasRecognitionReport = (function () {
       return;
     }
 
+    if (result.calculationVersion !== CALCULATION_VERSION) {
+      body.innerHTML = '<div class="je-audit-alert">O relatório salvo foi calculado antes da cobertura de dias curtos pelo fim de semana. Clique em <strong>Gerar relatório</strong> para recalcular o período.</div>';
+      current = null;
+      overlay.querySelector('#je-recog-csv').disabled = true;
+      overlay.querySelector('#je-recog-print').disabled = true;
+      return;
+    }
+
     const { servers, team: t } = withTotals(result);
     const when = result.generatedAt ? new Date(result.generatedAt).toLocaleString('pt-BR') : '';
     const banner = flags.loggedOut
@@ -474,6 +485,7 @@ window.JEPessoasRecognitionReport = (function () {
     if (t.aboveCap.total > 0) notes.push(`Do Perdido, <strong>${fmt(t.aboveCap.total)}</strong> passaram do limite de 10h por dia em sábado, domingo ou feriado (selo <em>${escapeHTML(reason('teto-10h').label)}</em>).`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário. O que passou soma <strong>${fmt(t.overMonthlyMin)}</strong>.`);
     if (t.unexplainedMin !== 0) notes.push(`${T.naoConciliado.label}: <strong>${fmt(t.unexplainedMin)}</strong> em parte dos meses (selo <em>Conferir</em>). Confira esses meses no Espelho de Ponto.`);
+    if (t.monthsWithDebitDifference > 0) notes.push(`${t.monthsWithDebitDifference} mês(es) com débito calculado diferente do Resíduo de Horas oficial (selo <em>Conferir débito</em>). A jornada e os lançamentos precisam ser conferidos.`);
     if (t.hybridMonths > 0) notes.push(`${t.hybridMonths} mês(es) em regime híbrido ficaram fora do total (${fmt(t.hybridMin)} de trabalho além da jornada, só informativo).`);
     if (t.openMonths > 0) notes.push(`${t.openMonths} mês(es) ainda abertos ficaram fora do total (${fmt(t.openPendingMin)} em estimativa parcial).`);
     servers.filter((s) => s.error).forEach((s) => notes.push(`${escapeHTML(s.name)}: ${escapeHTML(s.error)}`));
@@ -489,10 +501,11 @@ window.JEPessoasRecognitionReport = (function () {
       <div class="je-audit-cards">
         ${card(T.excedente.label, t.worked.total, T.excedente.tip)}
         ${card(T.compensou.label, t.compensatedMin, T.compensou.tip)}
+        ${card(T.cobriuFds.label, t.weekendCompensatedMin, T.cobriuFds.tip + ' Cobertura equivalente: ' + fmt(t.weekendCoverageMin) + '.')}
         ${card(T.pago.label, t.paid.total, T.pago.tip)}
         ${card(T.banco.label, t.bank.total, T.banco.tip)}
       </div>
-      <p class="je-audit-foot je-recog-equation">Os mesmos nomes da linha <em>Destino do mês</em> do Espelho de Ponto: ${T.excedente.label} = ${T.compensou.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}.</p>
+      <p class="je-audit-foot je-recog-equation">Os mesmos nomes da linha <em>Destino do mês</em> do Espelho de Ponto: ${T.excedente.label} = ${T.compensou.label} + ${T.cobriuFds.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}. A cobertura de fim de semana mostra horas trabalhadas; com os fatores, cobriram ${fmt(t.weekendCoverageMin)} de falta.</p>
 
       <div class="je-recog-options">
         <div class="je-recog-option">
@@ -545,7 +558,8 @@ window.JEPessoasRecognitionReport = (function () {
         <p>Os nomes são os do Espelho de Ponto: os da linha <em>Destino do mês</em> e os selos da coluna <em>Ocorrência</em>. A conta de cada mês é a mesma do Espelho e da Auditoria de Horas Perdidas.</p>
         <p><strong>${T.excedente.label}:</strong> em dia útil, o que passou da jornada do dia (7h em turno único, 8h com intervalo, 5h no recesso). Em sábado, domingo e feriado, todas as horas trabalhadas.</p>
         <p><strong>${T.pago.label}:</strong> linhas <em>Pecúnia</em> e <em>Adicional Noturno Pecúnia</em> do rodapé do espelho. <strong>${T.banco.label}:</strong> linha <em>Horas Excedentes Homologadas</em>. <strong>${T.compensou.label}:</strong> excedente de dia útil que completou a jornada de dias mais curtos do mesmo mês.</p>
-        <p><strong>${T.perdido.label}:</strong> o que sobra, e é o que se pede para reconhecer. Em cada mês fechado, ${T.excedente.label} = ${T.compensou.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}; quando a conta não fecha, o mês recebe o selo <em>Conferir</em> (${T.naoConciliado.label}). Os motivos do Perdido são os selos do Espelho: ${seals.map((s) => `<em>${escapeHTML(s)}</em>`).join(', ')}.</p>
+        <p><strong>${T.cobriuFds.label}:</strong> ${T.cobriuFds.tip} Essas horas cobriram a jornada e ficam fora do pedido de reconhecimento.</p>
+        <p><strong>${T.perdido.label}:</strong> o que sobra, e é o que se pede para reconhecer. Em cada mês fechado, ${T.excedente.label} = ${T.compensou.label} + ${T.cobriuFds.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}; quando a conta não fecha, o mês recebe o selo <em>Conferir</em> (${T.naoConciliado.label}). Os motivos do Perdido são os selos do Espelho: ${seals.map((s) => `<em>${escapeHTML(s)}</em>`).join(', ')}.</p>
         <p>Mês em regime híbrido e mês ainda aberto aparecem na lista, mas ficam fora dos totais.</p>
       </div>
       <div class="je-audit-def">
@@ -567,6 +581,7 @@ window.JEPessoasRecognitionReport = (function () {
   function numCells(o) {
     return `<td>${dot(o.worked.total)}</td>
       <td>${dot(o.compensatedMin)}</td>
+      <td>${dot(o.weekendCompensatedMin)}</td>
       <td>${dot(o.paid.total)}</td>
       <td>${dot(o.bank.total)}</td>
       <td><strong>${fmt(o.pending.total)}</strong></td>
@@ -580,6 +595,7 @@ window.JEPessoasRecognitionReport = (function () {
   function statusBadge(s) {
     if (s.status === 'hibrido') return ` <span class="je-audit-badge je-audit-badge-hib" title="Mês em regime híbrido: fora do total. ${fmt(s.hybridMin)} de trabalho além da jornada, só informativo.">Híbrido</span>`;
     if (s.status === 'aberto') return ' <span class="je-audit-badge je-audit-badge-rec" title="Mês ainda aberto: estimativa parcial, fora do total.">Aberto</span>';
+    if (s.debitDifferenceMin) return ` <span class="je-audit-badge je-audit-badge-he" title="${escapeHTML(terms().debitoDivergente.tip)} Diferença: ${fmt(s.debitDifferenceMin)}.">Conferir débito</span>`;
     if (s.unexplainedMin !== 0) return ` <span class="je-audit-badge je-audit-badge-he" title="${escapeHTML(terms().naoConciliado.label)}: ${fmt(s.unexplainedMin)}. ${escapeHTML(terms().naoConciliado.tip)}">Conferir</span>`;
     return '';
   }
@@ -725,13 +741,13 @@ window.JEPessoasRecognitionReport = (function () {
 
   function exportCSV() {
     if (!current || !current.servers || !current.servers.length) { alert('Gere o relatório antes de exportar.'); return; }
-    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'Pago', 'Banco',
+    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'Pago', 'Banco',
       'Perdido', 'Perdido_DiaUtil', 'Perdido_Sabado', 'Perdido_DomFer', 'AcimaDe10h',
-      'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoBanco', 'NaoConciliado', 'Hibrido_info']];
+      'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoBanco', 'NaoConciliado', 'Hibrido_info', 'DiferencaDebito']];
     const line = (srv, s) => rows.push([srv.name, srv.matricula, s.label, STATUS_CSV[s.status] || s.status,
-      fmt(s.worked.total), fmt(s.compensatedMin), fmt(s.paid.total), fmt(s.bank.total),
+      fmt(s.worked.total), fmt(s.compensatedMin), fmt(s.weekendCompensatedMin), fmt(s.weekendCoverageMin), fmt(s.paid.total), fmt(s.bank.total),
       fmt(s.pending.total), fmt(s.pending.uteis), fmt(s.pending.sab), fmt(s.pending.domfer), fmt(s.aboveCap.total),
-      fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin)]);
+      fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin), fmt(s.debitDifferenceMin)]);
     // A ordem das linhas segue o agrupamento escolhido na tela.
     if (groupBy === 'month') {
       calc().groupByMonth(current.servers).forEach((g) => g.rows.forEach((r) => line(current.servers[r.index], r.month)));
@@ -754,7 +770,7 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function printCells(o) {
-    return [fmt(o.worked.total), fmt(o.compensatedMin), fmt(o.paid.total), fmt(o.bank.total), `<strong>${fmt(o.pending.total)}</strong>`,
+    return [fmt(o.worked.total), fmt(o.compensatedMin), fmt(o.weekendCompensatedMin), fmt(o.paid.total), fmt(o.bank.total), `<strong>${fmt(o.pending.total)}</strong>`,
       fmt(o.pending.uteis), fmt(o.pending.sab), fmt(o.pending.domfer), fmt(o.aboveCap.total)].map((c) => `<td>${c}</td>`).join('');
   }
 
@@ -772,7 +788,7 @@ window.JEPessoasRecognitionReport = (function () {
     const byMonth = groupBy === 'month';
     const version = (window.JEPessoasVersion && window.JEPessoasVersion.getVersion && window.JEPessoasVersion.getVersion()) || '';
     const when = current.generatedAt ? new Date(current.generatedAt).toLocaleString('pt-BR') : '';
-    const cols = mainColumns().slice(0, 11).map((c) => c.head);
+    const cols = mainColumns().slice(0, COLS - 1).map((c) => c.head);
     const head = [byMonth ? 'Mês' : 'Servidor'].concat(cols.slice(1));
     const dayHead = dayColumns().map((c) => c.head);
     const hasLoss = (m) => m.status === 'fechado' && m.pending.total > 0;
@@ -812,6 +828,7 @@ window.JEPessoasRecognitionReport = (function () {
     if (t.aboveCap.total > 0) notes.push(`Do ${T.perdido.label}, ${fmt(t.aboveCap.total)} passaram do limite de 10h por dia em sábado, domingo ou feriado.`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário; o que passou soma ${fmt(t.overMonthlyMin)}.`);
     if (t.unexplainedMin !== 0) notes.push(`${T.naoConciliado.label}: ${fmt(t.unexplainedMin)} em parte dos meses.`);
+    if (t.monthsWithDebitDifference > 0) notes.push(`${t.monthsWithDebitDifference} mês(es) com débito calculado diferente do Resíduo de Horas oficial. A jornada e os lançamentos desses meses precisam ser conferidos.`);
     if (t.hybridMonths > 0) notes.push(`${t.hybridMonths} mês(es) em regime híbrido ficaram fora do total (${fmt(t.hybridMin)} de trabalho além da jornada).`);
     if (t.openMonths > 0) notes.push(`${t.openMonths} mês(es) ainda abertos ficaram fora do total.`);
     servers.filter((s) => s.error).forEach((s) => notes.push(`${escapeHTML(s.name)}: ${escapeHTML(s.error)}`));
@@ -822,7 +839,7 @@ window.JEPessoasRecognitionReport = (function () {
       <p class="meta">Fonte: Espelho de Ponto do Meu Espaço TSE, lido pelo TSE XT ${escapeHTML(version)}. Documento de apoio; não substitui os registros oficiais.</p>
 
       <h2>1. Resumo por ${byMonth ? 'mês' : 'servidor'}</h2>
-      <p>Horas no formato hh:mm, com os nomes do Espelho de Ponto (linha <em>Destino do mês</em>). Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe teve <strong>${fmt(t.worked.total)}</strong> de ${T.excedente.label}: <strong>${fmt(t.compensatedMin)}</strong> compensaram dias curtos, <strong>${fmt(t.paid.total)}</strong> foram pagas em pecúnia (${T.pago.label}) e <strong>${fmt(t.bank.total)}</strong> foram para o ${T.banco.label}. Ficaram <strong>${fmt(t.pending.total)}</strong> como ${T.perdido.label}: sem pagamento, sem registro em banco e sem compensação.</p>
+      <p>Horas no formato hh:mm, com os nomes do Espelho de Ponto (linha <em>Destino do mês</em>). Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe teve <strong>${fmt(t.worked.total)}</strong> de ${T.excedente.label}: <strong>${fmt(t.compensatedMin)}</strong> de dias úteis compensaram dias curtos, e <strong>${fmt(t.weekendCompensatedMin)}</strong> de fim de semana cobriram <strong>${fmt(t.weekendCoverageMin)}</strong> de falta com ×1,5/×2; <strong>${fmt(t.paid.total)}</strong> foram pagas em pecúnia (${T.pago.label}) e <strong>${fmt(t.bank.total)}</strong> foram para o ${T.banco.label}. Ficaram <strong>${fmt(t.pending.total)}</strong> como ${T.perdido.label}: sem pagamento, sem registro em banco e sem compensação.</p>
       ${printTable(head, summaryRows)}
 
       <h2>2. Opções de reconhecimento</h2>

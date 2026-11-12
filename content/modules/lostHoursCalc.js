@@ -4,7 +4,7 @@
  * Fonte única usada pela coluna HORAS PERDIDAS, pelos selos da coluna
  * Ocorrência e pela Auditoria de Horas Perdidas. Hora perdida é a que passou
  * da jornada e não virou pecúnia, não virou banco e não compensou dia curto
- * do mesmo mês (regras-calculo-frequencia.md §3.11 e §3.12).
+ * do mesmo mês (regras-calculo-frequencia.md §3.11 a §3.13).
  *
  * Recebe o resultado de JEPessoasAuthScan.analyzeEspelho(). O espelho só
  * informa homologadas, não homologadas e "Excedeu" pelo total mensal, então a
@@ -28,17 +28,19 @@ window.JEPessoasLostCalc = (function () {
   const TERMS = {
     excedente: { label: 'Excedente', tip: 'Tudo o que passou da jornada em dia útil, somado às horas de sábado, domingo e feriado.' },
     compensou: { label: 'Compensou dias curtos', tip: 'Excedente de dia útil usado para completar dias curtos do mesmo mês.' },
+    cobriuFds: { label: 'Cobriu dias curtos (fim de semana ×1,5/×2)', tip: 'Horas trabalhadas de sábado, domingo ou feriado, não pagas nem destinadas ao banco, usadas para cobrir a falta restante dos dias úteis, inclusive acima de 10h. O valor é o tempo trabalhado; a cobertura aplica ×1,5 no sábado e ×2 no domingo ou feriado.' },
     pago: { label: 'Pago', tip: 'Pecúnia e adicional noturno em pecúnia do rodapé.' },
     banco: { label: 'Banco', tip: 'Horas homologadas. Entram no banco com os fatores ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' },
     perdido: { label: 'Perdido', tip: 'Não virou pecúnia nem banco e não compensou dia curto. Os motivos estão nos selos da coluna Ocorrência.' },
     debito: { label: 'Débito do mês', tip: 'Resíduo de Horas negativo no rodapé.' },
+    debitoDivergente: { label: 'Débito a conferir', tip: 'Diferença entre a falta restante calculada após as compensações e o Resíduo de Horas negativo do portal. A jornada e os lançamentos oficiais precisam ser conferidos.' },
     naoConciliado: { label: 'Não conciliado', tip: 'Diferença entre o excedente e os destinos. Costuma vir de jornada diferente da esperada no dia; vale conferir.' }
   };
 
   /** Rótulo, tom e explicação de cada motivo de perda (selo da coluna Ocorrência). */
   function reasonInfo(code, hasAuth) {
     const map = {
-      'teto-10h': { label: 'Acima de 10h', tone: 'perda', tip: 'Acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º): não gera pecúnia nem banco.' },
+      'teto-10h': { label: 'Acima de 10h', tone: 'perda', tip: 'Parcela acima de 10h em sábado, domingo ou feriado que sobrou após cobrir dias curtos do mês: não gerou pecúnia nem banco.' },
       'nao-homologada': { label: 'Não homologada', tone: 'perda', tip: 'Consta em "Horas Excedentes Não Homologadas" no rodapé: sem homologação da chefia não entra no banco.' },
       'acima-autorizado': { label: 'Acima do autorizado', tone: 'perda', tip: 'Consta nas linhas "Excedeu" do rodapé: passou da quantidade autorizada no SAEX e não foi paga.' },
       'sobra-mes': { label: 'Sobra do mês', tone: 'perda', tip: 'Excedente de dia útil que não compensou dia curto, não foi pago e não foi homologado. A divisão entre os dias é estimada.' },
@@ -82,19 +84,44 @@ window.JEPessoasLostCalc = (function () {
     const homolog = { sab: f.homolog.sab, domfer: f.homolog.domfer };
     const naoHomolog = { sab: f.naoHomolog.sab, domfer: f.naoHomolog.domfer };
     const excedeu = { sab: f.excedeu.sab, domfer: f.excedeu.domfer };
+    let deficit = weekdayDestination(a, result).remainingDeficitMin;
+    let exactCoverage = 0;
 
     a.days.forEach((d) => {
       if (!isWeekendOrHoliday(d) || !(d.totalMin > 0)) return;
       const key = (d.isSaturday && !d.isHoliday) ? 'sab' : 'domfer';
-      const above = Math.max(0, d.totalMin - cap);
-      addItem(result, d, CODES.TETO_10H, above, true);
-      result.p3 += above;
-
+      let above = Math.max(0, d.totalMin - Math.max(cap, paidMin(d)));
       let rest = Math.max(0, Math.min(d.totalMin, cap) - paidMin(d));
       rest -= takeFrom(homolog, key, rest);
 
       const notHomologated = takeFrom(naoHomolog, key, rest);
       rest -= notHomologated;
+
+      // Pagas, homologadas e explicitamente não homologadas já têm destino.
+      // A parcela restante cobre primeiro o déficit útil, com fator, sem teto
+      // de 10h. A distribuição por dia segue a ordem das linhas do espelho.
+      const L = window.JEPessoasLegal;
+      const factor = key === 'sab'
+        ? ((L && L.SATURDAY_FACTOR && L.SATURDAY_FACTOR.valor) || 1.5)
+        : ((L && L.SUNDAY_HOLIDAY_FACTOR && L.SUNDAY_HOLIDAY_FACTOR.valor) || 2);
+      // O espelho tem precisão de minuto: consome o último minuto inteiro,
+      // limitando a cobertura ao déficit. Arredonda o acumulado, não cada dia,
+      // para não somar artificialmente os meios minutos de vários sábados.
+      const used = Math.min(rest + above, Math.ceil(deficit / factor));
+      if (used > 0) {
+        const coverage = Math.min(deficit, used * factor);
+        const roundedBefore = Math.round(exactCoverage);
+        exactCoverage += coverage;
+        result.coverageByDate[d.date] = { workedMin: used, coverageMin: Math.round(exactCoverage) - roundedBefore };
+        result.weekendCompensatedMin += used;
+        result.weekendCoverageMin = Math.round(exactCoverage);
+        deficit -= coverage;
+        const withinCap = Math.min(rest, used);
+        rest -= withinCap;
+        above -= used - withinCap;
+      }
+      addItem(result, d, CODES.TETO_10H, above, true);
+      result.p3 += above;
       addItem(result, d, CODES.NAO_HOMOLOGADA, notHomologated, true);
 
       const overAuthorized = takeFrom(excedeu, key, rest);
@@ -109,6 +136,19 @@ window.JEPessoasLostCalc = (function () {
 
   function isOrdinaryWeekday(d) {
     return !isWeekendOrHoliday(d) && !d.isDispensed;
+  }
+
+  function weekdayDestination(a, loss) {
+    let surplus = 0;
+    let deficit = 0;
+    a.days.filter(isOrdinaryWeekday).forEach((d) => {
+      const delta = d.totalMin - d.targetMin;
+      if (delta > 0) surplus += delta; else deficit -= delta;
+    });
+    const f = a.footer;
+    const available = surplus - f.pecunia.uteis - f.noturnoPec.uteis - f.homolog.uteis - f.naoHomolog.uteis - loss.p2;
+    const compensatedMin = Math.max(0, Math.min(deficit, available));
+    return { surplus, compensatedMin, remainingDeficitMin: deficit - compensatedMin };
   }
 
   function computeWeekdayLoss(a, result) {
@@ -155,18 +195,21 @@ window.JEPessoasLostCalc = (function () {
   /**
    * @returns {{days:Object<string,{lostMin:number,items:Array<{code:string,min:number}>,hasAuth:boolean}>,
    *   p1:number, p2:number, p3:number, p5:number, netWeekdayMin:number,
-   *   discardedHybridMin:number, alerts:Array<{date:string,min:number}>}}
+   *   discardedHybridMin:number, alerts:Array<{date:string,min:number}>,
+   *   coverageByDate:Object<string,{workedMin:number,coverageMin:number}>,
+   *   weekendCompensatedMin:number, weekendCoverageMin:number}}
    */
   function computeMonthLoss(a) {
-    const result = { days: {}, p1: 0, p2: 0, p3: 0, p5: 0, netWeekdayMin: 0, discardedHybridMin: 0, alerts: [] };
+    const result = { days: {}, p1: 0, p2: 0, p3: 0, p5: 0, netWeekdayMin: 0, discardedHybridMin: 0, alerts: [],
+      coverageByDate: {}, weekendCompensatedMin: 0, weekendCoverageMin: 0 };
     if (!a || !a.found || !a.closed) return result;
     if (a.hybrid) {
       computeHybridInfo(a, result);
       return result;
     }
     result.p1 = a.footer.naoHomolog.total;
-    computeWeekendLoss(a, result);
     computeWeekdayLoss(a, result);
+    computeWeekendLoss(a, result);
     return result;
   }
 
@@ -176,32 +219,31 @@ window.JEPessoasLostCalc = (function () {
    */
   function computeMonthDestination(a, loss) {
     const f = a.footer;
-    let surplus = 0;
-    let deficit = 0;
+    const { surplus, compensatedMin, remainingDeficitMin } = weekdayDestination(a, loss);
     let weekendWorked = 0;
     a.days.forEach((d) => {
       if (isWeekendOrHoliday(d)) {
         if (d.totalMin > 0) weekendWorked += d.totalMin;
-      } else if (!d.isDispensed) {
-        const e = d.totalMin - d.targetMin;
-        if (e > 0) surplus += e; else deficit -= e;
       }
     });
-    const paidWeekday = f.pecunia.uteis + f.noturnoPec.uteis;
-    const lostWeekday = f.naoHomolog.uteis + loss.p2;
-    const compensatedMin = Math.max(0, Math.min(deficit, surplus - paidWeekday - f.homolog.uteis - lostWeekday));
     const paid = f.pecunia.total + f.noturnoPec.total;
     const lost = loss.p1 + loss.p2 + loss.p3 + loss.p5;
     const excess = surplus + weekendWorked;
+    const calculatedDebitMin = Math.max(0, remainingDeficitMin - loss.weekendCoverageMin);
+    const debitMin = Math.max(0, -f.residuoMin);
     return {
       excessMin: excess,
       compensatedMin,
+      weekendCompensatedMin: loss.weekendCompensatedMin,
+      weekendCoverageMin: loss.weekendCoverageMin,
       paidMin: paid,
       homologMin: f.homolog.total,
       creditMin: Math.round(f.homolog.uteis + f.homolog.sab * 1.5 + f.homolog.domfer * 2),
       lostMin: lost,
-      debitMin: Math.max(0, -f.residuoMin),
-      unexplainedMin: excess - compensatedMin - paid - f.homolog.total - lost
+      debitMin,
+      calculatedDebitMin,
+      debitDifferenceMin: calculatedDebitMin - debitMin,
+      unexplainedMin: excess - compensatedMin - loss.weekendCompensatedMin - paid - f.homolog.total - lost
     };
   }
 

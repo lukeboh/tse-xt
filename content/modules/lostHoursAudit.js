@@ -24,6 +24,7 @@ window.JEPessoasLostHours = (function () {
   'use strict';
 
   const STORAGE_VERSION = 2;
+  const CALCULATION_VERSION = 1;
   const FIRST_YEAR = 2009;
   const FETCH_THROTTLE_MS = 90;
 
@@ -53,13 +54,13 @@ window.JEPessoasLostHours = (function () {
   const DEF = {
     p1: 'P1 · Não Homologadas — horas que o espelho reconhece como excedente mas a chefia não homologou (linha "Horas Excedentes Não Homologadas" do rodapé). Sem homologação: fator zero, não entram no banco e não são pagas. Valor exato. Base: Res. 22.901/2008 art. 11.',
     p2: 'P2 · Excedente de dia útil absorvido — o que você trabalhou além da jornada (7h/8h) nos dias úteis e o sistema não pagou nem homologou; é absorvido pela coluna HORAS AJUST./Compl. Jorn. Mínima para fechar a jornada do mês. Reconstruído dia a dia (total do dia − jornada, líquido do pago/homologado). Estimativa. Base: Portaria 380/2026 art. 6º §2º e art. 7º §2º.',
-    p3: 'P3 · Descarte de fim de semana/feriado — horas acima do teto de 10h em sábado/domingo/feriado, cortadas. Valor exato. Base: Res. 22.901/2008 art. 4º; Portaria 380/2026 art. 12; Portaria 490/2022 art. 23.',
+    p3: 'P3 · Descarte de fim de semana/feriado — horas acima de 10h em sábado/domingo/feriado que sobraram após a cobertura dos dias curtos do mês com ×1,5/×2. Divisão por dia estimada.',
     p4: 'P4 · Crédito aquém da fórmula — quando a chefia homologou horas mas o Extrato do Banco creditou menos que Dias úteis ×1 + Sábados ×1,5 + Domingos/feriados ×2. Quase sempre 00:00. Valor exato. Base: Res. 22.901/2008 art. 9º.',
-    p5: 'P5 · Fim de semana/feriado sem destino — até 10h trabalhadas que não foram pagas, nem homologadas, nem aparecem em "Não Homologadas". Inclui o que passou da quantidade autorizada (linhas "Excedeu") e dias que merecem conferência. Valor do mês exato; divisão entre os dias estimada.',
+    p5: 'P5 · Fim de semana/feriado sem destino — até 10h trabalhadas que não foram pagas, nem homologadas, nem aparecem em "Não Homologadas", e não cobriram dias curtos com ×1,5/×2. Inclui o que passou da quantidade autorizada (linhas "Excedeu") e dias que merecem conferência. Divisão entre os dias estimada.',
     conferir: 'Dias com autorização de serviço extraordinário em que horas de fim de semana/feriado ficaram sem destino e sem aparecer nas linhas "Excedeu". Verifique o limite autorizado: se o dia estava dentro dele, é candidato a pedido de correção.',
     pecunia: 'Pecúnia — horas de serviço extraordinário autorizadas e pagas no mês (coluna PECÚNIA do espelho). Não entram no banco de horas.',
     homolog: 'Homologadas — horas de excedente aprovadas pela chefia para compensação no mês; entram no banco de horas com fator por tipo de dia.',
-    perdido: 'Perdido — soma de P1 + P2 + P3 + P4 no mês: horas trabalhadas além da jornada que não viraram pecúnia nem crédito no banco.',
+    perdido: 'Perdido — soma de P1 + P2 + P3 + P4 + P5 no mês: horas trabalhadas além da jornada que não viraram pecúnia nem crédito no banco e não cobriram dias curtos.',
     mes: 'Mês de referência. Clique na linha para abrir o Espelho de Ponto correspondente.',
     regime: 'Regime do mês: Normal, HE autoriz. (mês com hora extra autorizada — consumo do banco vedado, Portaria 380/2026 art. 13) ou Híbrido (teletrabalho/híbrido — serviço extraordinário suprimido).'
   };
@@ -206,7 +207,10 @@ window.JEPessoasLostHours = (function () {
     }
 
     return {
+      calculationVersion: CALCULATION_VERSION,
       p1, p2, p3, p4, p5,
+      weekendCompensatedMin: loss.weekendCompensatedMin,
+      weekendCoverageMin: loss.weekendCoverageMin,
       totalLost: p1 + p2 + p3 + p4 + p5,
       alerts: loss.alerts,
       discardedHybridMin,
@@ -324,6 +328,7 @@ window.JEPessoasLostHours = (function () {
           snap.months[it.key] = {
             key: it.key, label: monthLabel(it.y, it.m), y: it.y, m: it.m,
             empty: true, reopenable: isReopenable(it.y, it.m, null),
+            calculationVersion: CALCULATION_VERSION,
             p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, totalLost: 0,
             pecuniaMin: 0, homologMin: 0, naoHomologMin: 0
           };
@@ -468,22 +473,24 @@ window.JEPessoasLostHours = (function () {
 
     body.innerHTML = `
       ${banner}
+      ${list.some(r => r.calculationVersion !== CALCULATION_VERSION) ? '<div class="je-audit-alert">Há meses calculados antes da cobertura de dias curtos pelo fim de semana. Rode um <strong>Full Update</strong> para recalcular todo o histórico.</div>' : ''}
       <div class="je-audit-hero">
         <div class="je-audit-hero-num">${fmt(tot.totalLost)}</div>
-        <div class="je-audit-hero-cap">horas que você trabalhou além da jornada e que <strong>não</strong> viraram pecúnia <strong>nem</strong> crédito no banco de horas</div>
+        <div class="je-audit-hero-cap">horas que você trabalhou além da jornada, que <strong>não</strong> viraram pecúnia nem crédito no banco e <strong>não</strong> cobriram dias curtos</div>
         <div class="je-audit-hero-sub">${withLoss.length} de ${list.length} meses com perda · ${escapeHTML(snap.serverLabel || '')}</div>
       </div>
 
       <p class="je-audit-intro">
-        Toda hora extra tem três destinos possíveis: vira <strong>pecúnia</strong> (é paga),
-        é <strong>homologada</strong> pela chefia e entra no <strong>banco de horas</strong>, ou
-        <strong>se perde</strong>. As 5 categorias abaixo somam tudo que se perdeu.
+        O excedente pode cobrir <strong>dias curtos</strong> do mês, virar <strong>pecúnia</strong>,
+        entrar no <strong>banco de horas</strong> por homologação ou <strong>se perder</strong>.
+        Horas não pagas de sábado cobrem faltas com ×1,5; de domingo e feriado, com ×2, inclusive acima de 10h.
+        Neste histórico, ${fmt(sum('weekendCompensatedMin'))} trabalhadas no fim de semana cobriram ${fmt(sum('weekendCoverageMin'))} de falta e ficaram fora da perda.
       </p>
 
       <div class="je-audit-cards">
         ${bucketCard('p1', 'P1', 'Não Homologadas', tot.p1, 'exato')}
         ${bucketCard('p2', 'P2', 'Excedente de dia útil', tot.p2, 'estimativa')}
-        ${bucketCard('p3', 'P3', 'Acima de 10h em FDS/feriado', tot.p3, 'exato')}
+        ${bucketCard('p3', 'P3', 'Acima de 10h em FDS/feriado', tot.p3, 'estimativa')}
         ${bucketCard('p4', 'P4', 'Crédito aquém da fórmula', tot.p4, 'exato')}
         ${bucketCard('p5', 'P5', 'FDS/feriado sem destino', tot.p5, 'exato')}
       </div>
@@ -506,8 +513,8 @@ window.JEPessoasLostHours = (function () {
             <p class="je-audit-src">Base: ${lk('prt380_2026', 'Portaria-TSE 380/2026')}, art. 6º §2º e art. 7º §2º · jornada de 5h no recesso: ${lk('prt885_2024', 'Portaria-TSE 885/2024')} e ${lk('res461_2023', 'Res.-TSE 461/2023')} (julho) · <em>regras-calculo-frequencia.md §3.5–3.6 e §3.10</em>.</p>
           </div>
           <div class="je-audit-def">
-            <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Acima de 10h em fim de semana / feriado <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
-            <p>Horas trabalhadas <strong>acima do teto de 10h</strong> num sábado, domingo ou feriado — o que passa disso é cortado. <strong>Meses de regime híbrido/teletrabalho não entram aqui</strong>: neles a norma suprime o serviço extraordinário e veda o acúmulo de banco, então o trabalho extra é estrutural do regime, não perda de um direito — aparece só como informação no selo "Híbrido".</p>
+            <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Acima de 10h em fim de semana / feriado <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
+            <p>Horas trabalhadas <strong>acima de 10h</strong> num sábado, domingo ou feriado que sobraram depois da cobertura dos dias curtos com ×1,5/×2. A cobertura também usa a parcela acima de 10h; só a sobra entra em P3. A divisão entre os dias é estimada. <strong>Meses de regime híbrido/teletrabalho não entram aqui</strong>: o descartado nesse regime é informativo.</p>
             <p class="je-audit-src">Base: ${lk('res22901', 'Res.-TSE 22.901/2008')}, art. 4º (teto de 10h) · ${lk('prt490_2022', 'Portaria-TSE 490/2022')}, art. 22-23 (híbrido) · <em>regras-calculo-frequencia.md §3.4 e §3.7</em>.</p>
           </div>
           <div class="je-audit-def">
@@ -517,7 +524,7 @@ window.JEPessoasLostHours = (function () {
           </div>
           <div class="je-audit-def">
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p5}">P5</span> Fim de semana / feriado sem destino <span class="je-audit-tag je-audit-tag-exato">valor exato</span></div>
-            <p>Horas <strong>até o teto de 10h</strong> em sábado, domingo ou feriado que não foram pagas, não foram homologadas e não aparecem em <em>"Não Homologadas"</em>. Parte consta nas linhas <em>"Excedeu"</em> do rodapé: passou da quantidade autorizada. O restante, em dia com autorização, recebe o selo <strong>Não paga: conferir</strong> no Espelho de Ponto.</p>
+            <p>Horas <strong>até o teto de 10h</strong> em sábado, domingo ou feriado que não foram pagas, não foram homologadas, não aparecem em <em>"Não Homologadas"</em> e não cobriram dias curtos com ×1,5/×2. Parte consta nas linhas <em>"Excedeu"</em> do rodapé: passou da quantidade autorizada. O restante, em dia com autorização, recebe o selo <strong>Não paga: conferir</strong> no Espelho de Ponto.</p>
             <p class="je-audit-src">Base: verificado em <em>regras-calculo-frequencia.md §3.12</em>.</p>
           </div>
           <p class="je-audit-regime-legend">
@@ -746,7 +753,7 @@ window.JEPessoasLostHours = (function () {
 
   function exportCSV() {
     if (!currentSnapshot || !currentSnapshot.months) return;
-    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir']];
+    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'CalculoAtual']];
     Object.values(currentSnapshot.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (x.y - y.y) || (x.m - y.m)).forEach((r) => {
       rows.push([
         r.label,
@@ -755,7 +762,9 @@ window.JEPessoasLostHours = (function () {
         fmt(r.pecuniaMin), fmt(r.homologMin),
         fmt(r.p1), fmt(r.p2), fmt(r.p3), fmt(r.p4), fmt(r.p5 || 0), fmt(r.totalLost),
         fmt(r.discardedHybridMin || 0),
-        (r.alerts || []).map((x) => x.date + ' ' + fmt(x.min)).join(' / ')
+        (r.alerts || []).map((x) => x.date + ' ' + fmt(x.min)).join(' / '),
+        fmt(r.weekendCompensatedMin || 0), fmt(r.weekendCoverageMin || 0),
+        r.calculationVersion === CALCULATION_VERSION ? 'Sim' : 'Nao: refazer Full Update'
       ]);
     });
     const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');

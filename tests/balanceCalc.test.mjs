@@ -272,3 +272,33 @@ test('dia dispensado não mexe na coluna de controle', () => {
   const r = B.computeDailyDelta({ dayOfWeek: 2, isClosedMonth: true, isDispensed: true, dayTargetMinutes: 420, totalMin: 0, exceedMin: 0 });
   assert.equal(r.controlDeltaMin, 0);
 });
+
+test('cobertura de fim de semana zera controle de 10/2026 sem inventar crédito no banco', () => {
+  const { JEPessoasLostCalc: L } = loadModule('lostHoursCalc.js');
+  const zero = () => ({ uteis: 0, sab: 0, domfer: 0, total: 0 });
+  const days = [
+    { date: '01/10/2026', dow: 4, totalMin: 0, targetMin: 420 },
+    { date: '02/10/2026', dow: 5, totalMin: 196, targetMin: 420 },
+    { date: '24/10/2026', dow: 6, isWeekend: true, isSaturday: true, totalMin: 701, pecuniaMin: 298 },
+    { date: '25/10/2026', dow: 0, isWeekend: true, totalMin: 20 }
+  ];
+  const a = { found: true, closed: true, days, footer: {
+    pecunia: { uteis: 0, sab: 298, domfer: 0, total: 298 },
+    noturnoPec: zero(), homolog: zero(), naoHomolog: zero(), excedeu: zero(), residuoMin: 0
+  } };
+  const loss = L.computeMonthLoss(a);
+  const pool = B.createHomologPool({});
+  const deltas = days.map(d => B.computeDailyDelta({
+    dayOfWeek: d.dow, totalMin: d.totalMin, pecuniaMin: d.pecuniaMin, dayTargetMinutes: d.targetMin,
+    isClosedMonth: true, homologPool: pool, weekendCoverageMin: loss.coverageByDate[d.date]?.coverageMin
+  }));
+  assert.equal(deltas.reduce((sum, d) => sum + d.controlDeltaMin, 0), 0);
+  assert.equal(deltas.reduce((sum, d) => sum + d.delta, 0), 0);
+});
+
+test('cobertura mensal não altera saldo ou projeção de mês aberto', () => {
+  const input = { dayOfWeek: 6, totalMin: 180, exceedMin: 180, weekendCoverageMin: 90 };
+  const r = B.computeDailyDelta(input);
+  const original = B.computeDailyDelta({ ...input, weekendCoverageMin: 0 });
+  assert.deepEqual(r, original);
+});

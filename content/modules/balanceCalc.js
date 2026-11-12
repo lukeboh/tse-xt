@@ -84,17 +84,20 @@ window.JEPessoasBalance = (function () {
    * @param {Object}  [o.homologPool]      createHomologPool() do mês fechado, compartilhado entre
    *                                        os dias e abatido aqui. Sem ele o mês fechado usa o
    *                                        excedente bruto (rodapé indisponível).
+   * @param {number} [o.weekendCoverageMin] cobertura de dias curtos calculada pelo
+   *                                        lostHoursCalc; soma só ao controle do mês fechado.
    * @returns {{delta:number, multiplierPct:(0|50|100), bucket:('weekday'|'sunday'), projected?:boolean, netExcedenteMin:number, lostHoursMin:number, isPecuniaOnly:boolean}}
    *   netExcedenteMin — quanto do excedente do dia AINDA poderia virar pecúnia se
    *   houvesse autorização suficiente (já capado no teto legal de horas pagáveis
    *   por jornada: 2h em dia útil, 10h em sábado/domingo/feriado). Fica 0 em mês
    *   fechado/projeção de dia útil, onde a coluna PECÚNIA nativa não é comparável.
-   *   lostHoursMin — tempo descartado acima do teto de 10h em sábado/domingo/
-   *   feriado. O excedente de dia útil acima de 2h não é descarte: continua na
-   *   reconciliação do mês (regras-calculo-frequencia.md §3.11).
+   *   lostHoursMin — parcela bruta acima de 10h, antes da cobertura mensal.
+   *   Em mês fechado, perdas e cobertura vêm de lostHoursCalc (§3.13); esse
+   *   valor só serve de fallback/projeção quando não há análise mensal.
    *   controlDeltaMin — só em mês fechado: variação do dia na coluna de controle
    *   SALDO ACUM. Dia útil entra com o saldo real (positivo ou negativo), líquido
-   *   do que foi pago; sábado, domingo e feriado só com o crédito homologado.
+   *   do que foi pago; sábado, domingo e feriado somam o crédito homologado e a
+   *   cobertura de dias curtos. A cobertura não altera delta (crédito no banco).
    */
   function computeDailyDelta(o) {
     o = o || {};
@@ -125,7 +128,7 @@ window.JEPessoasBalance = (function () {
 
       return {
         delta,
-        controlDeltaMin: delta,
+        controlDeltaMin: delta + (isClosedMonth ? Math.max(0, o.weekendCoverageMin || 0) : 0),
         multiplierPct: delta > 0 ? (isSundayOrHoliday ? 100 : 50) : 0,
         bucket: isSundayOrHoliday ? 'sunday' : 'weekday',
         netExcedenteMin: net,

@@ -5,9 +5,22 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.15-Snapshot';
+  const CURRENT_VERSION = '1.1.16-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.16-Snapshot',
+      date: '2026-11-12',
+      title: 'Fim de semana cobre dias curtos antes de virar perda',
+      features: [
+        'Horas não pagas de sábado cobrem a falta restante de dias úteis com ×1,5; domingos e feriados, com ×2, inclusive acima de 10h. Só a sobra entra nas perdas.',
+        'Espelho, Auditoria de Horas Perdidas e Reconhecimento Posterior usam a mesma conta. O tempo trabalhado usado na cobertura fica separado do equivalente com os fatores, inclusive no CSV e na impressão.',
+        'A cobertura soma à coluna de controle SALDO ACUM., sem criar crédito no banco. Em 10/2026, o controle fecha em 00:00 e 07:03 deixam de ser classificadas como perdidas.',
+        'Resultados salvos antes desta regra pedem recálculo. A Auditoria requer Full Update; o Reconhecimento Posterior requer gerar o relatório novamente.',
+        'Jornada preservada: 7h em turno único, 8h com intervalo e o tratamento atual de recesso. Divergências entre débito calculado e Resíduo oficial ficam sinalizadas para conferência.',
+        'Verificação: 192 testes passando, Full Update real de 215 meses e CSV/impressão conferidos nos dois agrupamentos do Reconhecimento Posterior.'
+      ]
+    },
     {
       version: '1.1.15-Snapshot',
       date: '2026-11-11',

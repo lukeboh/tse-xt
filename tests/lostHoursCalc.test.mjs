@@ -164,3 +164,121 @@ test('vocabulário comum: termos do Destino do mês e selos dos motivos de perda
   assert.equal(L.reasonInfo('sem-destino', false).label, 'Sem autorização');
   assert.equal(L.reasonInfo('codigo-novo').label, 'codigo-novo');
 });
+
+function shortDays(deficit) {
+  const days = [];
+  while (deficit > 0) {
+    const missing = Math.min(420, deficit);
+    days.push(day({ totalMin: 420 - missing }));
+    deficit -= missing;
+  }
+  return days;
+}
+
+for (const [label, deficit, unpaid, debit] of [
+  ['04/2009', H(24, 22), H(7, 8), H(10, 6)],
+  ['01/2014', H(25), H(4, 34), H(15, 52)],
+  ['12/2019', H(19, 21), H(5, 19), H(8, 43)]
+]) {
+  test(`${label}: domingo não pago cobre falta com ×2 e só o restante é débito`, () => {
+    const a = month([...shortDays(deficit), sun({ totalMin: unpaid })], { residuoMin: -debit });
+    const loss = calc.computeMonthLoss(a);
+    const dest = calc.computeMonthDestination(a, loss);
+    assert.equal(loss.weekendCompensatedMin, unpaid);
+    assert.equal(loss.weekendCoverageMin, unpaid * 2);
+    assert.equal(loss.p1 + loss.p2 + loss.p3 + loss.p5, 0);
+    assert.equal(dest.calculatedDebitMin, debit);
+    assert.equal(dest.debitMin, debit);
+    assert.equal(dest.unexplainedMin, 0);
+  });
+}
+
+test('10/2026: sábado inclui 1:41 acima de 10h e domingos cobrem toda a falta', () => {
+  const saturday = sat({ totalMin: H(11, 41), pecuniaMin: H(4, 58), hasAuth: true });
+  const sunday = sun({ totalMin: 20 });
+  const a = month([...shortDays(H(10, 44)), saturday, sunday], {
+    pecunia: { uteis: 0, sab: H(4, 58), domfer: 0, total: H(4, 58) }
+  });
+  const r = calc.computeMonthLoss(a);
+  const d = calc.computeMonthDestination(a, r);
+  assert.equal(r.weekendCompensatedMin, H(7, 3));
+  assert.equal(r.weekendCoverageMin, H(10, 44));
+  assert.equal(r.coverageByDate[saturday.date].workedMin, H(6, 43));
+  assert.equal(r.coverageByDate[saturday.date].coverageMin + r.coverageByDate[sunday.date].coverageMin, H(10, 44));
+  assert.deepEqual(r.days, {});
+  assert.deepEqual(r.alerts, []);
+  assert.equal(d.lostMin, 0);
+  assert.equal(d.calculatedDebitMin, 0);
+  assert.equal(d.unexplainedMin, 0);
+});
+
+test('cobertura parcial mantém só a sobra como perda e não cobre além da falta', () => {
+  const d = sat({ totalMin: H(12), pecuniaMin: H(8), hasAuth: true });
+  const a = month([...shortDays(H(1, 30)), d], { pecunia: { uteis: 0, sab: H(8), domfer: 0, total: H(8) } });
+  const r = calc.computeMonthLoss(a);
+  assert.equal(r.weekendCompensatedMin, H(1));
+  assert.equal(r.weekendCoverageMin, H(1, 30));
+  assert.equal(r.p3, H(2));
+  assert.equal(r.p5, H(1));
+  assert.deepEqual(codes(r.days[d.date]), [['teto-10h', H(2)], ['sem-destino', H(1)]]);
+  assert.equal(calc.computeMonthDestination(a, r).unexplainedMin, 0);
+});
+
+test('compensação útil tem prioridade; homologadas e não homologadas não são usadas duas vezes', () => {
+  const d = sun({ totalMin: H(5), pecuniaMin: H(1) });
+  const a = month([day({ totalMin: H(8) }), day({ totalMin: H(3) }), d], {
+    pecunia: { uteis: 0, sab: 0, domfer: H(1), total: H(1) },
+    homolog: { uteis: 0, sab: 0, domfer: H(1), total: H(1) },
+    naoHomolog: { uteis: 0, sab: 0, domfer: H(1), total: H(1) }
+  });
+  const r = calc.computeMonthLoss(a);
+  const dest = calc.computeMonthDestination(a, r);
+  assert.equal(dest.compensatedMin, H(1));
+  assert.equal(r.weekendCompensatedMin, H(1, 30));
+  assert.equal(r.weekendCoverageMin, H(3));
+  assert.equal(r.p1, H(1));
+  assert.equal(r.p5, 30);
+  assert.equal(dest.unexplainedMin, 0);
+});
+
+test('feriado no sábado cobre com ×2; dia útil dispensado não gera falta', () => {
+  const a = month([day({ totalMin: H(5) }), day({ isDispensed: true }), sat({ totalMin: H(1), isHoliday: true })]);
+  const r = calc.computeMonthLoss(a);
+  assert.equal(r.weekendCoverageMin, H(2));
+  assert.equal(r.p5, 0);
+  assert.equal(calc.computeMonthDestination(a, r).calculatedDebitMin, 0);
+});
+
+test('meios minutos de sábados são arredondados no acumulado, sem inflar a cobertura', () => {
+  const a = month([day({ totalMin: 410 }), sat({ totalMin: 1 }), sat({ totalMin: 1 }), sat({ totalMin: 1 })]);
+  const r = calc.computeMonthLoss(a);
+  assert.equal(r.weekendCompensatedMin, 3);
+  assert.equal(r.weekendCoverageMin, 5);
+  assert.equal(Object.values(r.coverageByDate).reduce((sum, d) => sum + d.coverageMin, 0), 5);
+  assert.equal(calc.computeMonthDestination(a, r).calculatedDebitMin, 5);
+});
+
+test('mês aberto e híbrido não recebem cobertura e mantêm o regime anterior', () => {
+  for (const extra of [{ closed: false }, { hybrid: true }]) {
+    const r = calc.computeMonthLoss(month([day({ totalMin: H(5) }), sun({ totalMin: H(2) })], {}, extra));
+    assert.equal(r.weekendCompensatedMin, 0);
+    assert.equal(r.weekendCoverageMin, 0);
+    assert.deepEqual(r.coverageByDate, {});
+  }
+});
+
+test('divergência do Resíduo oficial é preservada, sem fabricar conciliação', () => {
+  const a = month([day({ totalMin: H(4) }), sun({ totalMin: H(1) })], { residuoMin: -H(2) });
+  const d = calc.computeMonthDestination(a, calc.computeMonthLoss(a));
+  assert.equal(d.calculatedDebitMin, H(1));
+  assert.equal(d.debitMin, H(2));
+  assert.equal(d.debitDifferenceMin, -H(1));
+});
+
+test('jornada de 8h com intervalo é preservada na cobertura (D11 continua aberta)', () => {
+  const a = month([day({ targetMin: H(8), totalMin: H(7) }), sun({ totalMin: 30 })]);
+  const loss = calc.computeMonthLoss(a);
+  assert.equal(loss.weekendCompensatedMin, 30);
+  assert.equal(loss.weekendCoverageMin, H(1));
+  assert.equal(calc.computeMonthDestination(a, loss).calculatedDebitMin, 0);
+});

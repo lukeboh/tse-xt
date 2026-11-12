@@ -8,7 +8,7 @@
  * (a) pagamento em pecúnia ou (b) registro em banco de horas.
  *
  * Recebe o resultado de JEPessoasAuthScan.analyzeEspelho() e reaproveita
- * JEPessoasLostCalc (regras-calculo-frequencia.md §3.11 e §3.12). Só mês
+ * JEPessoasLostCalc (regras-calculo-frequencia.md §3.11 a §3.13). Só mês
  * fechado e fora do regime híbrido entra nos totais; mês aberto é estimativa
  * parcial e mês híbrido é informativo.
  */
@@ -85,6 +85,9 @@ window.JEPessoasRecognition = (function () {
       paid: zero(),
       bank: zero(),
       compensatedMin: 0,
+      weekendCompensatedMin: 0,
+      weekendCoverageMin: 0,
+      debitDifferenceMin: 0,
       pending: zero(),
       aboveCap: zero(),
       undistributedMin: 0,
@@ -103,7 +106,7 @@ window.JEPessoasRecognition = (function () {
     s.creditMin = creditFor(s.pending);
     s.extraordinaryMin = s.paid.total + s.bank.total + s.pending.total;
     s.overMonthlyMin = Math.max(0, s.extraordinaryMin - legal('MAX_HE_MES_MIN', 3600));
-    s.unexplainedMin = s.worked.total - s.paid.total - s.bank.total - s.compensatedMin - s.pending.total - s.hybridMin;
+    s.unexplainedMin = s.worked.total - s.paid.total - s.bank.total - s.compensatedMin - s.weekendCompensatedMin - s.pending.total - s.hybridMin;
     return s;
   }
 
@@ -136,6 +139,9 @@ window.JEPessoasRecognition = (function () {
     withTotal(s.paid);
     withTotal(s.bank);
     s.compensatedMin = dest.compensatedMin;
+    s.weekendCompensatedMin = dest.weekendCompensatedMin;
+    s.weekendCoverageMin = dest.weekendCoverageMin;
+    s.debitDifferenceMin = dest.debitDifferenceMin;
 
     // Dia útil: o total do mês é o que vale; a divisão entre os dias é estimada.
     s.pending.uteis = f.naoHomolog.uteis + loss.p2;
@@ -237,10 +243,13 @@ window.JEPessoasRecognition = (function () {
     return {
       months: 0,
       monthsWithPending: 0,
+      monthsWithDebitDifference: 0,
       worked: zero(),
       paid: zero(),
       bank: zero(),
       compensatedMin: 0,
+      weekendCompensatedMin: 0,
+      weekendCoverageMin: 0,
       pending: zero(),
       aboveCap: zero(),
       pay50Min: 0,
@@ -258,12 +267,15 @@ window.JEPessoasRecognition = (function () {
   function addClosed(t, s) {
     t.months += 1;
     if (s.pending.total > 0) t.monthsWithPending += 1;
+    if (s.debitDifferenceMin) t.monthsWithDebitDifference += 1;
     addQuad(t.worked, s.worked);
     addQuad(t.paid, s.paid);
     addQuad(t.bank, s.bank);
     addQuad(t.pending, s.pending);
     addQuad(t.aboveCap, s.aboveCap);
     t.compensatedMin += s.compensatedMin;
+    t.weekendCompensatedMin += s.weekendCompensatedMin || 0;
+    t.weekendCoverageMin += s.weekendCoverageMin || 0;
     t.pay50Min += s.pay50Min;
     t.pay100Min += s.pay100Min;
     t.unexplainedMin += s.unexplainedMin;
@@ -294,7 +306,7 @@ window.JEPessoasRecognition = (function () {
     const t = emptyTotals();
     (serverTotals || []).forEach((s) => {
       if (!s) return;
-      ['months', 'monthsWithPending', 'compensatedMin', 'pay50Min', 'pay100Min', 'unexplainedMin',
+      ['months', 'monthsWithPending', 'monthsWithDebitDifference', 'compensatedMin', 'weekendCompensatedMin', 'weekendCoverageMin', 'pay50Min', 'pay100Min', 'unexplainedMin',
         'overMonthlyMin', 'hybridMonths', 'hybridMin', 'openMonths', 'openPendingMin'].forEach((k) => { t[k] += s[k] || 0; });
       ['worked', 'paid', 'bank', 'pending', 'aboveCap'].forEach((k) => addQuad(t[k], s[k]));
     });

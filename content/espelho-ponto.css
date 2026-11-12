@@ -3138,6 +3138,10 @@ body.je-xt-enabled .je-heauth-limit span {
   text-align: right !important;
 }
 
+.je-recog-modal .je-audit-cards {
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+}
+
 .je-recog-caret {
   display: inline-block !important;
   width: 12px !important;
