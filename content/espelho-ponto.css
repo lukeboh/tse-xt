@@ -3246,6 +3246,7 @@ body.je-xt-enabled .je-heauth-limit span {
     font-size: 9pt;
     line-height: 1.45;
     color: #000;
+    background: #fff !important;
   }
 
   #je-recog-printdoc h1 { font-size: 15pt; margin: 0 0 4pt; color: #000; }
@@ -3258,6 +3259,7 @@ body.je-xt-enabled .je-heauth-limit span {
 
   #je-recog-printdoc table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 4pt 0 8pt;
     font-size: 8pt;
@@ -3268,19 +3270,31 @@ body.je-xt-enabled .je-heauth-limit span {
     border: 0.5pt solid #555;
     padding: 2pt 4pt;
     text-align: right;
-    color: #000;
-    background: none;
+    color: #000 !important;
+    background: #fff !important;
     font-variant-numeric: tabular-nums;
   }
 
   #je-recog-printdoc th {
     font-weight: 700;
     text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #je-recog-printdoc th:first-child {
+    width: 20%;
+  }
+
+  #je-recog-printdoc td {
+    white-space: nowrap;
   }
 
   #je-recog-printdoc td:first-child,
   #je-recog-printdoc td.l {
     text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   #je-recog-printdoc tr { break-inside: avoid; }

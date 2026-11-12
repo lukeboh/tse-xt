@@ -770,8 +770,13 @@ window.JEPessoasRecognitionReport = (function () {
   }
 
   function printCells(o) {
-    return [fmt(o.worked.total), fmt(o.compensatedMin), fmt(o.weekendCompensatedMin), fmt(o.paid.total), fmt(o.bank.total), `<strong>${fmt(o.pending.total)}</strong>`,
-      fmt(o.pending.uteis), fmt(o.pending.sab), fmt(o.pending.domfer), fmt(o.aboveCap.total)].map((c) => `<td>${c}</td>`).join('');
+    return [fmt(o.worked.total), fmt(o.compensatedMin), fmt(o.weekendCompensatedMin), fmt(o.paid.total), fmt(o.bank.total), `<strong>${fmt(o.pending.total)}</strong>`]
+      .map((c) => `<td>${c}</td>`).join('');
+  }
+
+  function printLossCells(o) {
+    return [fmt(o.pending.uteis), fmt(o.pending.sab), fmt(o.pending.domfer), fmt(o.aboveCap.total)]
+      .map((c) => `<td>${c}</td>`).join('');
   }
 
   // Dias com Perdido de um mês fechado, para as tabelas de detalhe da impressão.
@@ -788,7 +793,10 @@ window.JEPessoasRecognitionReport = (function () {
     const byMonth = groupBy === 'month';
     const version = (window.JEPessoasVersion && window.JEPessoasVersion.getVersion && window.JEPessoasVersion.getVersion()) || '';
     const when = current.generatedAt ? new Date(current.generatedAt).toLocaleString('pt-BR') : '';
-    const cols = mainColumns().slice(0, COLS - 1).map((c) => c.head);
+    // No retrato, os destinos e a discriminação do Perdido ficam em tabelas
+    // separadas, preservando todos os valores com fonte legível.
+    const cols = mainColumns().slice(0, 8).map((c) => c.head);
+    const lossCols = mainColumns().slice(8, COLS - 1).map((c) => c.head);
     const head = [byMonth ? 'Mês' : 'Servidor'].concat(cols.slice(1));
     const dayHead = dayColumns().map((c) => c.head);
     const hasLoss = (m) => m.status === 'fechado' && m.pending.total > 0;
@@ -799,6 +807,10 @@ window.JEPessoasRecognitionReport = (function () {
       ? groups.map((g) => `<tr><td>${escapeHTML(g.label)}</td><td>${g.totals.months}</td>${printCells(g.totals)}</tr>`)
       : servers.map((s) => `<tr><td>${who(s.name, s.matricula)}</td><td>${s.totals.months}</td>${printCells(s.totals)}</tr>`);
     summaryRows.push(`<tr class="total"><td>Total da equipe</td><td>${byMonth ? '' : t.months}</td>${printCells(t)}</tr>`);
+    const lossRows = byMonth
+      ? groups.map((g) => `<tr><td>${escapeHTML(g.label)}</td>${printLossCells(g.totals)}</tr>`)
+      : servers.map((s) => `<tr><td>${who(s.name, s.matricula)}</td>${printLossCells(s.totals)}</tr>`);
+    lossRows.push(`<tr class="total"><td>Total da equipe</td>${printLossCells(t)}</tr>`);
 
     const optionRows = servers.filter((s) => s.totals.pending.total > 0).map((s) => `<tr><td>${escapeHTML(s.name)}</td><td>${fmt(s.totals.pending.total)}</td><td>${fmt(s.totals.pay50Min)}</td><td>${fmt(s.totals.pay100Min)}</td><td>${fmt(s.totals.creditMin)}</td></tr>`);
     optionRows.push(`<tr class="total"><td>Total da equipe</td><td>${fmt(t.pending.total)}</td><td>${fmt(t.pay50Min)}</td><td>${fmt(t.pay100Min)}</td><td>${fmt(t.creditMin)}</td></tr>`);
@@ -812,6 +824,7 @@ window.JEPessoasRecognitionReport = (function () {
         }).join('');
         return `<h3>${escapeHTML(g.label)}</h3>
           ${printTable(['Servidor'].concat(cols.slice(2)), rows.map((r) => `<tr><td>${who(r.name, r.matricula)}</td>${printCells(r.month)}</tr>`))}
+          ${printTable(['Servidor'].concat(lossCols), rows.map((r) => `<tr><td>${who(r.name, r.matricula)}</td>${printLossCells(r.month)}</tr>`))}
           ${days}`;
       }).join('')
       : servers.filter((s) => s.months.some(hasLoss)).map((srv) => {
@@ -820,6 +833,7 @@ window.JEPessoasRecognitionReport = (function () {
         months.forEach((m) => dayRows.push(...printDayRows(m, m.label)));
         return `<h3>${escapeHTML(srv.name)} · matrícula ${escapeHTML(srv.matricula || '—')}</h3>
           ${printTable(['Mês'].concat(cols.slice(2)), months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printCells(m)}</tr>`))}
+          ${printTable(['Mês'].concat(lossCols), months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printLossCells(m)}</tr>`))}
           ${dayRows.length ? printTable(dayHead, dayRows) : ''}`;
       }).join('');
 
@@ -841,6 +855,8 @@ window.JEPessoasRecognitionReport = (function () {
       <h2>1. Resumo por ${byMonth ? 'mês' : 'servidor'}</h2>
       <p>Horas no formato hh:mm, com os nomes do Espelho de Ponto (linha <em>Destino do mês</em>). Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe teve <strong>${fmt(t.worked.total)}</strong> de ${T.excedente.label}: <strong>${fmt(t.compensatedMin)}</strong> de dias úteis compensaram dias curtos, e <strong>${fmt(t.weekendCompensatedMin)}</strong> de fim de semana cobriram <strong>${fmt(t.weekendCoverageMin)}</strong> de falta com ×1,5/×2; <strong>${fmt(t.paid.total)}</strong> foram pagas em pecúnia (${T.pago.label}) e <strong>${fmt(t.bank.total)}</strong> foram para o ${T.banco.label}. Ficaram <strong>${fmt(t.pending.total)}</strong> como ${T.perdido.label}: sem pagamento, sem registro em banco e sem compensação.</p>
       ${printTable(head, summaryRows)}
+      <p><strong>Discriminação do Perdido</strong> — a parcela acima de 10h já está incluída nos totais por tipo de dia.</p>
+      ${printTable([byMonth ? 'Mês' : 'Servidor'].concat(lossCols), lossRows)}
 
       <h2>2. Opções de reconhecimento</h2>
       <p><strong>(a) Pagamento em pecúnia:</strong> horas com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados). <strong>(b) Registro em banco de horas:</strong> crédito com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados).</p>
@@ -868,7 +884,7 @@ window.JEPessoasRecognitionReport = (function () {
     // @page não aceita escopo por classe: a regra só existe durante esta impressão.
     const page = document.createElement('style');
     page.id = 'je-recog-print-page';
-    page.textContent = '@page { size: A4 landscape; margin: 12mm; }';
+    page.textContent = '@page { size: A4 portrait; margin: 12mm; }';
     document.head.appendChild(page);
     document.body.classList.add('je-recog-printing');
 

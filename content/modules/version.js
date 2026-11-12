@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.16-Snapshot';
+  const CURRENT_VERSION = '1.1.17-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.1.17-Snapshot',
+      date: '2026-11-12',
+      title: 'Reconhecimento Posterior em A4 retrato',
+      features: [
+        'A impressão do Relatório de Reconhecimento Posterior usa A4 retrato por padrão, para facilitar o encaminhamento.',
+        'Os destinos das horas e a discriminação do Perdido ficam em tabelas separadas na impressão, preservando todos os valores e a fonte legível.',
+        'Cabeçalhos, nomes e motivos podem quebrar linha no retrato. A mudança vale para os dois agrupamentos do relatório.'
+      ]
+    },
     {
       version: '1.1.16-Snapshot',
       date: '2026-11-12',

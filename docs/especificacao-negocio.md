@@ -197,7 +197,7 @@ Resultados salvos do Reconhecimento Posterior anteriores a essa regra pedem nova
 - Só mês **fechado** e **fora do regime híbrido** entra nos totais. Mês híbrido e mês aberto aparecem na lista com selo, fora da soma.
 - O relatório destaca o que passou de 10h no dia, os meses acima de 60h e os meses em que a conta não fechou (`Não conciliado`).
 - Se o portal devolver o espelho de outro servidor, nada daquele servidor é contado e a linha recebe o selo **Conferir**.
-- Saídas: tabela expansível (servidor → mês → dia ou mês → servidor → dia), CSV e versão para impressão em A4 paisagem.
+- Saídas: tabela expansível (servidor → mês → dia ou mês → servidor → dia), CSV e versão para impressão em **A4 retrato** por padrão (v1.1.17). Na impressão, os destinos e a discriminação do Perdido ficam em tabelas separadas para manter a leitura, nos dois agrupamentos.
 - Não há limite de meses. Acima de 150 consultas, a tela pede confirmação; durante a varredura, a barra mostra a previsão de término.
 - O cálculo fica em `recognitionCalc.js` (puro, testado) e reaproveita `lostHoursCalc.js`. A tela fica em `recognitionReport.js`.
 

@@ -71,6 +71,8 @@ Ajustes acionáveis para alinhar as fórmulas do TSE XT às normas vigentes do T
 
 Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 meses** e Reconhecimento Posterior de **6 servidores em 10/2026**. O Perdido da equipe caiu de **51:36 para 14:20**; CSV e impressão conferidos nos dois agrupamentos. Registro completo em [handoff de 12/11](handoff-2026-11-12.md).
 
+**M4 — impressão em retrato (v1.1.17-Snapshot):** A4 retrato por padrão, conforme pedido de 12/11. As tabelas de destinos e de discriminação do Perdido foram separadas na impressão para manter todos os valores legíveis. Conferidos os dois agrupamentos no Chrome e 192 testes passando.
+
 ### Detalhamento Executivo dos Itens da Trilha C
 
 ---
