@@ -1,7 +1,11 @@
 # 🔒 Política de Privacidade — TSE XT
 
-**Última atualização:** 23 de setembro de 2026  
-**Versão:** 1.2.0  
+**Última atualização:** 12 de novembro de 2026
+
+**Versão da política:** 1.3.0
+
+**Extensão de referência:** 1.2.0
+
 **Repositório:** [https://github.com/lukeboh/tse-xt](https://github.com/lukeboh/tse-xt)
 
 ---
@@ -14,7 +18,7 @@ O **TSE XT** é uma extensão de navegador desenvolvida para aprimorar a usabili
 ## 2. Não Coleta de Dados Pessoais
 O TSE XT adota o princípio de **Privacidade por Design (*Privacy by Design*)**:
 - **Zero Coleta:** A extensão **NÃO** coleta, **NÃO** armazena fora do navegador, **NÃO** rastreia e **NÃO** transmite nenhuma informação pessoal, funcional, matrícula, dados de folha de ponto, horários ou credenciais de acesso.
-- **Processamento 100% Local (*Client-Side*):** Todo o processamento de regras de negócio, cálculos dos 5 KPIs e renderização visual ocorre única e exclusivamente na memória local do navegador do próprio usuário.
+- **Processamento 100% Local (*Client-Side*):** Todo o processamento de regras de negócio, cálculos dos 5 KPIs e renderização visual ocorre única e exclusivamente no próprio navegador do usuário, em memória e no armazenamento local descrito abaixo.
 - **Sem Servidores Externos:** A extensão não se comunica com nenhum servidor remoto ou banco de dados externo. As únicas requisições que faz são aos próprios sistemas do TSE, com a sessão já aberta pelo usuário, para ler páginas do portal usadas nos cálculos (por exemplo, meses anteriores do Espelho de Ponto na Auditoria de Horas Perdidas, o Espelho de Ponto dos servidores da equipe no Relatório de Reconhecimento Posterior, os seus próprios contracheques na Auditoria de Pagamento de Pecúnias e as autorizações de hora extra do SAEX).
 
 ---
@@ -29,11 +33,13 @@ As permissões declaradas no manifesto seguem o **Princípio do Menor Privilégi
   - a última Auditoria de Pagamento de Pecúnias (horas de pecúnia do seu espelho e, dos seus contracheques, só as linhas de serviço extraordinário e de adicional noturno, com quantidade e valor), para reabrir sem refazer a leitura. As demais rubricas do contracheque são lidas na memória e descartadas;
   - um cache das autorizações de hora extra e do excedente apurado (inclusive, na visão de chefia, dos servidores da unidade), para não repetir as mesmas consultas ao portal.
 
-  Esses dados nunca saem do navegador e são apagados ao remover a extensão. A extensão também usa `localStorage`/`sessionStorage` da página do portal para lembrar o tema e o estado da tela de login entre uma página e outra.
+  Esses dados não são enviados automaticamente a terceiros e são apagados ao remover a extensão. A extensão também usa `localStorage`/`sessionStorage` da página do portal para lembrar o tema e o estado da tela de login entre uma página e outra.
 - `activeTab`: Utilizada temporariamente apenas quando o usuário clica no botão "Atualizar Página do Portal" no popup, permitindo recarregar a aba ativa para aplicar as preferências selecionadas.
 - `host_permissions` (`*://meuespaco.tse.jus.br/*` e `*://*.tse.jus.br/*`): Restrita exclusivamente aos domínios oficiais do Tribunal para permitir a injeção de estilos e funcionalidades nas páginas do portal Meu Espaço (Espelho de Ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais telas do menu clássico).
 
 ---
+
+O usuário pode exportar CSV, salvar uma impressão em PDF ou encaminhar os arquivos por sua própria iniciativa. Esses arquivos podem conter nomes, matrículas, horários e, na auditoria de pagamento, valores; seu armazenamento e compartilhamento passam a ser decididos pelo usuário.
 
 ## 4. Compartilhamento de Dados e Terceiros
 - A extensão **NÃO** utiliza ferramentas de analytics, telemetria, rastreadores ou bibliotecas externas.
@@ -51,5 +57,5 @@ A extensão atende rigorosamente às diretrizes do **Manifest V3** do Google Chr
 ---
 
 ## 6. Contato e Código-Fonte
-O código-fonte completo, documentação e canal para reporte de dúvidas ou sugestões estão disponíveis publicamente no repositório oficial:  
+O código-fonte completo, documentação e canal para reporte de dúvidas ou sugestões estão disponíveis publicamente no repositório oficial:
 👉 [https://github.com/lukeboh/tse-xt](https://github.com/lukeboh/tse-xt)

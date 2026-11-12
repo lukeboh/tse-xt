@@ -1,5 +1,7 @@
 # TSE XT — Extensão de Usabilidade & Modernização Visual para o Meu Espaço do TSE
 
+**Versão estável: 1.2.0 — 12/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.2.0.md)
+
 Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Edge, Brave) projetada para transformar e modernizar a interface e usabilidade do portal **Meu Espaço**, do **Tribunal Superior Eleitoral (TSE)** — não apenas o Espelho de Ponto, mas todo o menu de serviços do portal (`meuespaco.tse.jus.br/portalservidor2`).
 
 > ⚠️ **Aplicação experimental.** O TSE XT tem o único objetivo de melhorar a experiência do usuário no portal Meu Espaço (controle de ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais serviços). Pode conter erros e **não representa nenhuma garantia** de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho. Um aviso com esse teor é exibido no primeiro uso e a cada atualização de versão.
@@ -10,7 +12,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 1. **Camada genérica** (automática, sem código dedicado por tela): topbar, drawer de serviços, título de página, tabelas, formulários, botões e ícones de ação de **todas as ~30 telas do menu clássico** do Meu Espaço herdam o mesmo Design System (glassmorfismo, tabelas com cabeçalho e zebrado padronizados, botões reconhecidos por texto/semântica, campos com rótulo e contador de caracteres) sem precisar de um perfil de página específico.
 2. **Camada dedicada** (perfis de página com lógica de negócio própria) para as telas onde a extensão vai além de estilo:
-   - **Espelho de Ponto** (`EspelhoPontoMesAction`/`EspelhoPontoDiaAction`): cálculo de saldo, dashboard de KPIs, auditoria de horas perdidas, ajuste de ponto inline.
+   - **Espelho de Ponto** (`EspelhoPontoMesAction`/`EspelhoPontoDiaAction`): cálculo de saldo, dashboard de KPIs, Auditoria de Horas Perdidas, Reconhecimento Posterior da equipe, Auditoria de Pagamento de Pecúnias e ajuste de ponto inline.
    - **Reembolso Farmacêutico** (`ReembolsoFarmaceuticoAction`): formulário de novo pedido reconstruído, busca de medicamento, calculadora de desconto, badges de status.
    - **Gestão de Serviço Extraordinário** (`HoraExtraGestao`): painel de KPI por servidor com o mesmo indicador de excedente/pecúnia do Espelho de Ponto.
 
@@ -31,7 +33,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 - **Dashboard com 5 KPIs**: Saída de Hoje, Saldo do Mês, Banco de Horas, Hora Extra em Pecúnia (Semana/Sábado +50% e Domingo/Feriado +100%, com fração feito/autorizado lida direto do SAEX e indicador do excedente que poderia virar pecúnia com mais autorização) e Meta do Mês.
 - **Destaque Visual de Horas Extras em Pecúnia**: badges coloridos nas células do espelho identificando horas pagáveis em folha (+50% em dias úteis/sábados e +100% em domingos/feriados), com totalizador mensal dedicado na linha de totais da tabela.
 - **Colunas analíticas na tabela**: `SALDO ACUM.` (saldo excedente dia a dia) e `HORAS EXCED.` (meses fechados), com coloração verde/vermelho/neutro e badges de teto legal (`> 2h`/`> 10h`, art. 4º).
-- **Auditoria de Horas Perdidas**: varre o Espelho desde 2009 e quantifica as horas que nunca viraram pecúnia nem banco de horas, em quatro categorias explicadas com base normativa.
+- **Auditoria de Horas Perdidas**: varre o Espelho desde 2009 e quantifica, em cinco categorias, as horas que não viraram pecúnia, banco nem cobertura de dias curtos. O fim de semana não pago cobre a falta restante com ×1,5/×2 antes da perda.
 - **Relatório de Reconhecimento Posterior** (chefia): para cada servidor da equipe, compara as horas feitas além da jornada com as pagas em pecúnia e mostra o que ficou a reconhecer, em pecúnia (50% / 100%) ou em banco de horas. Tem CSV e versão para impressão, para anexar ao pedido.
 - **Auditoria de Pagamento de Pecúnias**: confere se as horas de pecúnia do espelho de cada mês aparecem nos seus contracheques, por faixa (dia útil, sábado, domingo/feriado). Aponta mês pago a menor, não localizado ou pago a maior, para você conferir e, se for o caso, pedir a revisão. Tem CSV e versão para impressão.
 - **Ajuste de Ponto Inline** (incluindo **visão de chefia para servidores subordinados**) e **modal de Autorização de Hora Extra**: incluir/excluir marcações diretamente pela tabela e ver o detalhe de autorização do dia sem sair da tela, via actions oficiais do Struts.
@@ -49,6 +51,14 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 ---
 
+## Novidades da versão 1.2
+
+- Reconhecimento Posterior da equipe: CSV e impressão A4 retrato, por servidor ou por mês.
+- Auditoria de Pagamento de Pecúnias: espelho × contracheques e folhas suplementares.
+- Cobertura de dias curtos pelo fim de semana não pago com ×1,5/×2, inclusive acima de 10h, antes da perda.
+- Cinco categorias de perda, motivos por dia, Destino do mês e controle separado do crédito oficial no banco.
+- Relatórios com período livre e previsão de término, ajuste de ponto de subordinados, destaque de pecúnia e cabeçalho fixo.
+
 ## 🚀 Como Instalar no Google Chrome
 
 1. Abra o Chrome e acesse `chrome://extensions/`.
@@ -59,24 +69,19 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 ---
 
-## 📸 Capturas de Tela (Chrome Web Store Assets)
+## 📸 Capturas de Tela — versão 1.2.0
 
-Capturas da aplicação real, com dados pessoais anonimizados. Para regerar a cada versão, siga o [roteiro de liberação](docs/roteiro-liberacao.md).
+Cinco capturas atuais da aplicação real, com nomes e matrículas anonimizados e valores individuais em reais ocultados. São as imagens selecionadas para a loja.
 
-| [Espelho de Ponto (Modernizado)](docs/tela-exemplo.png) | [Modo Original (TSE XT Desligado)](docs/tela-exemplo-off.png) |
-|:---:|:---:|
-| ![Espelho de Ponto](docs/tela-exemplo.png) | ![Modo Original](docs/tela-exemplo-off.png) |
-| *Espelho com 5 KPIs e colunas analíticas* | *O mesmo mês no layout original do portal* |
+| Espelho de Ponto | Auditoria de Horas Perdidas |
+| :---: | :---: |
+| ![Espelho e cinco KPIs](docs/tela-exemplo.png) | ![Cinco categorias de perda](docs/tela-auditoria-horas-perdidas.png) |
 
-| [Auditoria de Horas Perdidas](docs/tela-auditoria-horas-perdidas.png) | [Gestão de Serviço Extraordinário](docs/tela-gestao-he.png) |
-|:---:|:---:|
-| ![Auditoria de Horas Perdidas](docs/tela-auditoria-horas-perdidas.png) | ![Gestão de Serviço Extraordinário](docs/tela-gestao-he.png) |
-| *Horas não convertidas em pecúnia nem banco, desde 2009* | *Painel de chefia com barras Sáb/Dom e horas pecúnia* |
+| Reconhecimento Posterior | Auditoria de Pagamento |
+| :---: | :---: |
+| ![Reconhecimento da equipe](docs/tela-reconhecimento-posterior.png) | ![Espelho e contracheques](docs/tela-auditoria-pagamento.png) |
 
-| [Reembolso Farmacêutico](docs/tela-reembolso-farmaceutico.png) |
-|:---:|
-| ![Reembolso Farmacêutico](docs/tela-reembolso-farmaceutico.png) |
-| *Novo pedido com auto-busca de medicamento e resumo lateral* |
+![Gestão de Serviço Extraordinário](docs/tela-gestao-he.png)
 
 ### Blocos Promocionais da Loja
 
@@ -103,5 +108,5 @@ O histórico detalhado das versões anteriores e das fases visuais já concluíd
 
 - **[Política de Privacidade](PRIVACY.md)**: Declaração de não coleta de dados, processamento 100% local (*client-side*) e conformidade com o Manifest V3.
 - **[Especificação de Negócio & Regras de Cálculo](docs/especificacao-negocio.md)**: Detalhamento completo das fórmulas matemáticas do Espelho de Ponto, desconsideração de pecúnia, regime híbrido e regras de jornada (7h/8h).
-- **[Roteiro de Liberação](docs/roteiro-liberacao.md)**: passo a passo para publicar uma versão na Chrome Web Store (versão, testes, capturas anonimizadas, blocos promocionais, consolidação de commits, tag e envio).
+- **[Roteiro de Liberação](docs/roteiro-liberacao.md)**: passo a passo para publicar uma versão na Chrome Web Store (versão, testes, capturas anonimizadas, blocos promocionais, integração preservando histórico, tag e envio).
 - **[Licença](LICENSE)**: MIT.

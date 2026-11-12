@@ -16,9 +16,9 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 export const CAPTURAS = [
   'docs/tela-exemplo.png',
   'docs/tela-auditoria-horas-perdidas.png',
+  'docs/tela-reconhecimento-posterior.png',
+  'docs/tela-auditoria-pagamento.png',
   'docs/tela-gestao-he.png',
-  'docs/tela-reembolso-farmaceutico.png',
-  'docs/tela-exemplo-off.png',
 ];
 const ESPERADO = [
   ...CAPTURAS.map((f) => [f, 1280, 800, true]),

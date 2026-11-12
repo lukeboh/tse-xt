@@ -1,5 +1,7 @@
 # 🎨 Roadmap de Arquitetura Visual — Expansão do TSE XT às demais funcionalidades
 
+> Documento de origem/histórico, preservado na liberação **1.2.0** (12/11/2026). O estado atual de entregas e pendências está no [roadmap consolidado](roadmap.md); ver também o [changelog](../CHANGELOG.md).
+
 **Versão do documento:** 1.7.0 (roadmap concluído — F1 a F7 entregues)
 **Data:** 05/09/2026
 

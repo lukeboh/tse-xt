@@ -1,5 +1,7 @@
 # 🎯 Proposta — Reorganização dos KPIs para planejamento do mês
 
+> Documento de origem/histórico, preservado na liberação **1.2.0** (12/11/2026). O estado atual de entregas e pendências está no [roadmap consolidado](roadmap.md); ver também o [changelog](../CHANGELOG.md).
+
 **Versão do documento:** 1.0.0
 **Data:** 03/09/2026
 **Escopo:** painel de 5 KPIs do Espelho de Ponto Mensal (`domModernizer.injectKPICards`, `kpiExtractor`).

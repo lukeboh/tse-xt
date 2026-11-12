@@ -1,12 +1,16 @@
 # 🗺️ Roadmap Consolidado de Evoluções — TSE XT
 
-**Versão do documento:** 1.1.0-Snapshot  
-**Data de consolidação:** 30/09/2026  
-**Status do projeto:** Série 1.1 em andamento (v1.1.0-Snapshot) · Marco 1.0 consolidado (v1.0.0)
+**Versão do documento:** 1.2.0
+
+**Data de consolidação:** 12/11/2026
+
+**Status do projeto:** v1.2.0 estável aprovada · série 1.1 consolidada · itens abertos da Trilha C preservados
 
 > Este documento é a **fonte única e centralizada da verdade** para o backlog de evolução do TSE XT. Reúne em um só lugar as pendências normativas de cálculo, melhorias de interface/experiência de usuário, novos módulos funcionais, débitos técnicos e validações regulatórias.
 
 ---
+
+A liberação 1.2.0 reúne M4/M5, a cobertura de dias curtos, as melhorias de frequência e a impressão em retrato. Aprovação visual concedida em 12/11/2026. Ver [changelog](../CHANGELOG.md) e [registro da liberação](release-1.2.0.md).
 
 ## 📌 Sumário das Trilhas
 
@@ -85,10 +89,10 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
   * `TC-C1-03`: Mês com parcela homologada pela chefia (ex.: abr/2026) $\rightarrow$ apenas a parcela homologada é creditada no `SALDO ACUM.` (aplicando fator ×1,0 para úteis, ×1,5 sábado e ×2,0 domingo/feriado).
   * `TC-C1-04`: Jornada superior a 10h em sábado/domingo/feriado (ex.: 11h52 em 06/10/2016 ou 11h24 em 07/09/2026) $\rightarrow$ coluna injetada `HORAS PERDIDAS` exibe `+01:52` ou `+01:24`, expurgando o tempo do saldo acumulado.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Exemplo 1 (Pecúnia pura de eleição):* Mês 10/2024 fechado com 50h55 de pecúnia e 00:00 homologadas.  
-    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`  
+  * *Exemplo 1 (Pecúnia pura de eleição):* Mês 10/2024 fechado com 50h55 de pecúnia e 00:00 homologadas.
+    URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
     Extrato: `https://meuespaco.tse.jus.br/portalservidor2/BancoHorasAction_recuperarExtrato.action` (nenhuma hora adquirida de 10/2024).
-  * *Exemplo 2 (Horas perdidas não homologadas):* Mês 03/2024 com 38h19 de pecúnia e 15h34 não homologadas.  
+  * *Exemplo 2 (Horas perdidas não homologadas):* Mês 03/2024 com 38h19 de pecúnia e 15h34 não homologadas.
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** A coluna `SALDO ACUM.` somou todos os finais de semana (com fatores 1,5 e 2,0), inflando artificialmente o banco em dezenas de horas que ou já foram pagas em dinheiro ou foram descartadas.
@@ -111,9 +115,9 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
   * `TC-C2-02`: Mês com $\ge 1$ dia híbrido $\rightarrow$ Crédito bloqueado, consumo permitido de saldo pré-existente; resíduo negativo não alimenta cálculo de débito.
   * `TC-C2-03`: Mês com autorização de HE $\rightarrow$ Crédito permitido apenas para homologadas; botão/projeção de consumo bloqueado.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Híbrido:* Mês 03/2026 (resíduo cosmético de −98:04 sem débito real no extrato).  
+  * *Híbrido:* Mês 03/2026 (resíduo cosmético de −98:04 sem débito real no extrato).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=3`
-  * *HE Autorizado:* Mês 04/2026 (Portaria 380/2026 vigente, pecúnia 06:00 dom + 05:50 úteis homologadas).  
+  * *HE Autorizado:* Mês 04/2026 (Portaria 380/2026 vigente, pecúnia 06:00 dom + 05:50 úteis homologadas).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=4`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Falta de segregação estrita no cálculo diário do saldo acumulado linha a linha e projeções de zeramento de mês tentando consumir banco em mês de HE autorizado.
@@ -128,7 +132,7 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
   * `TC-C3-01`: Mês aberto com dia híbrido registrado $\rightarrow$ projeção de pecúnia forçada a `00:00`.
   * `TC-C3-02`: Trabalho registrado em sábado, domingo ou feriado em mês híbrido (ex.: sábado 04/07/2026 com 08h03) $\rightarrow$ emissão de badge de alerta visual de descarte normativo.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Trabalho de FDS em híbrido:* Sábado 04/07/2026 com 08h03 trabalhadas e `HORAS AJUST. = 00:00` / `PECÚNIA = 00:00` no sistema oficial.  
+  * *Trabalho de FDS em híbrido:* Sábado 04/07/2026 com 08h03 trabalhadas e `HORAS AJUST. = 00:00` / `PECÚNIA = 00:00` no sistema oficial.
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=7`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** O TSE XT permitia projeção de pecúnia em mês aberto híbrido e não alertava o servidor que o trabalho prestado no fim de semana não teria qualquer contraprestação de banco ou pecúnia.
@@ -143,9 +147,9 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
   * `TC-C4-01`: Dia útil em turno único com 7h42 de total $\rightarrow$ os 42min entre 7h e 8h não creditam saldo excedente imediato.
   * `TC-C4-02`: Mês de janeiro em turno único $\rightarrow$ jornada-alvo de 5h (300min); aviso no saldo acumulado de que excedente não vai automaticamente ao banco.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Complementação ordinária:* Mês 03/2024 (dias com 07:42 $\rightarrow$ `Compl. Jorn. Mínima 00:42`; 08:34 $\rightarrow$ `01:34`).  
+  * *Complementação ordinária:* Mês 03/2024 (dias com 07:42 $\rightarrow$ `Compl. Jorn. Mínima 00:42`; 08:34 $\rightarrow$ `01:34`).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
-  * *Recesso 5h:* Mês 01/2025.  
+  * *Recesso 5h:* Mês 01/2025.
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2025&mesSelecionado=1`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Qualquer minuto acima de 420min em dia útil gerava saldo positivo no `SALDO ACUM.`, divergindo da lógica de fechamento mensal do TSE.
@@ -162,9 +166,9 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
   * `TC-C5-03`: Mês com horas extras acumuladas $> 60\text{h}$ $\rightarrow$ badge e alerta no card de teto legal de 60h atingido.
   * `TC-C5-04`: Faixa de 60h a 90h $\rightarrow$ indicador de dependência de deliberação da DG para fins de compensação.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Teto de 10h em FDS:* Domingo 06/10/2016 com 11h52 trabalhadas, teto travado em 10h00 e 1h52 descartadas; ou Feriado 07/09/2026 com 11h24 trabalhadas (caso Fernando Lima Rocha).  
+  * *Teto de 10h em FDS:* Domingo 06/10/2016 com 11h52 trabalhadas, teto travado em 10h00 e 1h52 descartadas; ou Feriado 07/09/2026 com 11h24 trabalhadas (caso Fernando Lima Rocha).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2026&mesSelecionado=9`
-  * *Teto de 60h no mês:* Mês 10/2024 (50h55 de HE executada, próximo ao teto).  
+  * *Teto de 60h no mês:* Mês 10/2024 (50h55 de HE executada, próximo ao teto).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Alertas diários implementados parcialmente; faltava sinalização consolidada do teto mensal de 60h e da faixa especial de 60h–90h no card e rodapé.
@@ -178,8 +182,8 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
 * **Casos de Testes Automatizados:**
   * `TC-C6-01`: Dia onde `excedenteRealizado > limiteAutorizadoDoDia` (via `heAuthFetch.js`) $\rightarrow$ badge `> autorizado (SAEX)`.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Excedente não autorizado:* Mês 03/2024 em dias com trabalho além do autorizado pelo SAEX.  
-    URL do Espelho: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`  
+  * *Excedente não autorizado:* Mês 03/2024 em dias com trabalho além do autorizado pelo SAEX.
+    URL do Espelho: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=3`
     URL do Backend SAEX: `https://meuespaco.tse.jus.br/portalservidor2/AutorizacaoHoraExcedenteAction_execute?dataDia.asString=15/03/2024&servidor.matricula=30000000`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** O servidor realizava horas excedentes acreditando que seriam pagas ou compensadas, descobrindo apenas no fechamento do mês que viraram "Horas Não Homologadas" perdidas.
@@ -199,7 +203,7 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
 * **Casos de Testes Automatizados:**
   * `TC-C8-01`: $E_1(Dia_{N+1}) - S_{fim}(Dia_N) < 480\text{min}$ $\rightarrow$ emissão de badge `⚠️ Repouso interjornada < 8h (art. 7º)`.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Fechamentos eleitorais / plantões:* Dias de apuração ou fechamento de cadastro com saídas noturnas e retornos matutinos.  
+  * *Fechamentos eleitorais / plantões:* Dias de apuração ou fechamento de cadastro com saídas noturnas e retornos matutinos.
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=5`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Ausência total de controle temporal entre dias consecutivos.
@@ -213,7 +217,7 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
 * **Casos de Testes Automatizados:**
   * `TC-C9-01`: Célula ou cabeçalho `.h13` renderiza tooltip informativo esclarecendo a limitação de cálculo.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Mês com trabalho noturno:* Qualquer mês com marcações após as 22h (ex.: 10/2024).  
+  * *Mês com trabalho noturno:* Qualquer mês com marcações após as 22h (ex.: 10/2024).
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action?anoSelecionado=2024&mesSelecionado=10`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Servidor tinha dúvida se a coluna de adicional noturno estava sendo incorporada ao saldo acumulado.
@@ -227,7 +231,7 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
 * **Casos de Testes Automatizados:**
   * `TC-C10-01`: Bloco injetado no rodapé do espelho deve conter links e citações para as normas vigentes, substituindo as regras legadas de COVID de 2019–2021.
 * **Cenário Real & URLs no Meu Espaço:**
-  * *Rodapé de legislação do Espelho:* Seção "Legislação de referência" em qualquer mês.  
+  * *Rodapé de legislação do Espelho:* Seção "Legislação de referência" em qualquer mês.
     URL: `https://meuespaco.tse.jus.br/portalservidor2/EspelhoPontoMesAction_recuperar.action`
 * **Visualização Antes vs Depois:**
   * **Antes (Problema):** Página oficial e injeção do TSE XT referenciando portarias antigas de teletrabalho na pandemia.

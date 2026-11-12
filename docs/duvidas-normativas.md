@@ -1,5 +1,7 @@
 # ❓ Dúvidas Normativas em Aberto
 
+> Revisado para a versão estável **1.2.0**, em 12/11/2026. As referências a versões anteriores abaixo são históricas; dúvidas e limitações permanecem em aberto. [Registro da liberação](release-1.2.0.md).
+
 **Versão do documento:** 2.3.0
 **Data:** 02/09/2026
 

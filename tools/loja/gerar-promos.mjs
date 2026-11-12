@@ -9,7 +9,7 @@
  *   docs/promo-letreiro-1400x560.png  (Marquee promo tile)
  * A versão exibida vem do manifest.json (major.minor). Rodar DEPOIS de
  * regerar as capturas, porque o letreiro recorta docs/tela-exemplo.png e
- * docs/tela-gestao-he.png.
+ * docs/tela-reconhecimento-posterior.png.
  */
 import fs from 'node:fs';
 import path from 'node:path';

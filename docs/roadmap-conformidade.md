@@ -1,5 +1,7 @@
 # 🗺️ Roadmap de Conformidade — Ajustes de regra no TSE XT
 
+> Documento de origem/histórico, preservado na liberação **1.2.0** (12/11/2026). O estado atual de entregas e pendências está no [roadmap consolidado](roadmap.md); ver também o [changelog](../CHANGELOG.md).
+
 **Versão do documento:** 1.1.0
 **Data:** 02/09/2026
 

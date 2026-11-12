@@ -5,196 +5,24 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.1.17-Snapshot';
+  const CURRENT_VERSION = '1.2.0';
 
   const CHANGELOG = [
     {
-      version: '1.1.17-Snapshot',
-      date: '2026-11-12',
-      title: 'Reconhecimento Posterior em A4 retrato',
-      features: [
-        'A impressão do Relatório de Reconhecimento Posterior usa A4 retrato por padrão, para facilitar o encaminhamento.',
-        'Os destinos das horas e a discriminação do Perdido ficam em tabelas separadas na impressão, preservando todos os valores e a fonte legível.',
-        'Cabeçalhos, nomes e motivos podem quebrar linha no retrato. A mudança vale para os dois agrupamentos do relatório.'
-      ]
-    },
-    {
-      version: '1.1.16-Snapshot',
-      date: '2026-11-12',
-      title: 'Fim de semana cobre dias curtos antes de virar perda',
-      features: [
-        'Horas não pagas de sábado cobrem a falta restante de dias úteis com ×1,5; domingos e feriados, com ×2, inclusive acima de 10h. Só a sobra entra nas perdas.',
-        'Espelho, Auditoria de Horas Perdidas e Reconhecimento Posterior usam a mesma conta. O tempo trabalhado usado na cobertura fica separado do equivalente com os fatores, inclusive no CSV e na impressão.',
-        'A cobertura soma à coluna de controle SALDO ACUM., sem criar crédito no banco. Em 10/2026, o controle fecha em 00:00 e 07:03 deixam de ser classificadas como perdidas.',
-        'Resultados salvos antes desta regra pedem recálculo. A Auditoria requer Full Update; o Reconhecimento Posterior requer gerar o relatório novamente.',
-        'Jornada preservada: 7h em turno único, 8h com intervalo e o tratamento atual de recesso. Divergências entre débito calculado e Resíduo oficial ficam sinalizadas para conferência.',
-        'Verificação: 192 testes passando, Full Update real de 215 meses e CSV/impressão conferidos nos dois agrupamentos do Reconhecimento Posterior.'
-      ]
-    },
-    {
-      version: '1.1.15-Snapshot',
-      date: '2026-11-11',
-      title: 'Reconhecimento Posterior com os nomes do Espelho',
-      features: [
-        'O Relatório de Reconhecimento Posterior usa os mesmos nomes do Espelho de Ponto: Excedente, Compensou dias curtos, Pago, Banco e Perdido, na ordem da linha "Destino do mês", e os mesmos selos para os motivos.',
-        'Cada coluna explica o que mostra ao passar o mouse no título, e a seção "O que cada coluna mostra" repete as explicações na tela e na versão para impressão.',
-        'Novo agrupamento mês → servidor, ao lado de servidor → mês. A escolha vale para a tabela, o CSV e a versão para impressão.'
-      ]
-    },
-    {
-      version: '1.1.14-Snapshot',
-      date: '2026-11-11',
-      title: 'Relatórios sem limite de meses, com previsão de término',
-      features: [
-        'A Auditoria de Pagamento de Pecúnias e o Relatório de Reconhecimento Posterior não limitam mais o período: a escolha é sua, e quanto maior o período, mais demorada a consulta.',
-        'A barra de progresso da Auditoria de Pagamento acompanha a varredura inteira (espelhos e contracheques), sem recomeçar a cada etapa.',
-        'Os três relatórios (Reconhecimento Posterior, Pagamento de Pecúnias e Horas Perdidas) mostram quanto falta e a hora prevista de término.'
-      ]
-    },
-    {
-      version: '1.1.13-Snapshot',
-      date: '2026-11-11',
-      title: 'Nome do servidor nos relatórios',
-      features: [
-        'A versão para impressão do Relatório de Reconhecimento Posterior volta a mostrar quem emitiu o relatório.',
-        'A versão para impressão da Auditoria de Pagamento de Pecúnias volta a mostrar o nome do servidor ao lado da matrícula.',
-        'A Auditoria de Horas Perdidas identifica o servidor logado também nas telas sem a lista de servidores.'
-      ]
-    },
-    {
-      version: '1.1.12-Snapshot',
-      date: '2026-11-11',
-      title: 'Auditoria de Pagamento de Pecúnias',
-      features: [
-        'Nova auditoria, no botão de ações rápidas e na busca: confere se as horas de pecúnia do espelho de cada mês aparecem nos seus contracheques.',
-        'Compara por faixa (dia útil, sábado, domingo e feriado) e pelo mês de referência de cada rubrica, em todas as folhas, inclusive suplementares.',
-        'Aponta mês pago a menor, não localizado ou pago a maior, e pagamento sem horas correspondentes no espelho.',
-        'Confere o adicional noturno sobre o serviço extraordinário e mostra o valor da hora-base embutido nos pagamentos.',
-        'Detalhe dos lançamentos por mês, exportação em CSV e versão para impressão, para apoiar um pedido de revisão.'
-      ]
-    },
-    {
-      version: '1.1.11-Snapshot',
-      date: '2026-11-11',
-      title: 'Relatório de Reconhecimento Posterior',
-      features: [
-        'Novo relatório para a chefia, no botão de ações rápidas e na busca: horas feitas além da jornada e horas pagas em pecúnia, por servidor da equipe.',
-        'Mostra o que ficou a reconhecer nas duas saídas: pecúnia com acréscimo de 50% ou 100%, ou crédito em banco de horas.',
-        'Detalhe por mês e por dia, exportação em CSV e versão para impressão, para anexar ao pedido.',
-        'Só mês fechado e fora do regime híbrido entra nos totais. Mês aberto e mês híbrido aparecem com selo, fora da soma.'
-      ]
-    },
-    {
-      version: '1.1.10-Snapshot',
-      date: '2026-11-10',
-      title: 'Coluna de controle dia a dia em mês fechado',
-      features: [
-        'SALDO ACUM. em mês fechado volta a mostrar a conta do mês dia a dia: soma o excedente de dia útil, desconta dia curto e o que foi pago.',
-        'Nova linha Destino do mês abaixo dos totais: excedente, compensado, pago, banco, perdido e débito.',
-        'A linha avisa quando a conta do mês não fecha, em Não conciliado. O card de KPI continua com o crédito oficial do banco.'
-      ]
-    },
-    {
-      version: '1.1.9-Snapshot',
-      date: '2026-11-10',
-      title: 'Roadmap: alerta de repouso cancelado e conciliação SAEX',
-      features: [
-        'Sem mudança de comportamento: esta versão só atualiza a documentação.',
-        'Item C8 cancelado: o alerta de repouso abaixo de 8h só dispararia por batida logo após a meia-noite.',
-        'Documentada a conciliação com o Relatório SAEX: horas realizadas iguais à pecúnia mais adicional noturno em 30 de 31 meses.'
-      ]
-    },
-    {
-      version: '1.1.8-Snapshot',
-      date: '2026-11-10',
-      title: 'Horas perdidas: selo em mês híbrido',
-      features: [
-        'Mês com trabalho híbrido passa a mostrar o selo "Híbrido: descartado" no sábado, domingo ou feriado trabalhado e não pago.',
-        'O selo é informativo: o mês híbrido continua sem as colunas do TSE XT e sem contar como perda.',
-        'Documentado o cruzamento dos dias a conferir com o limite autorizado no SAEX.'
-      ]
-    },
-    {
-      version: '1.1.7-Snapshot',
-      date: '2026-11-10',
-      title: 'Horas perdidas: onde cada hora se perdeu',
-      features: [
-        'Coluna HORAS PERDIDAS em mês fechado mostra tudo o que não virou pecúnia, banco nem compensação do mês, com o motivo no tooltip.',
-        'Selos na coluna Ocorrência indicam o motivo da perda; "Não paga: conferir" aponta dia com autorização e horas sem destino, candidato a pedido de correção.',
-        'Auditoria: nova categoria P5 (fim de semana e feriado sem destino), coluna Conferir, exportação no CSV e mês aberto fora da apuração. É preciso refazer a varredura uma vez.',
-        'Corrigida a leitura de liberação médica em faixa de horário, que tratava como dispensado um dia só parcialmente liberado.',
-        'Afastamento, abono de ponto, doação de sangue e greve deixam de contar como falta na apuração.'
-      ]
-    },
-    {
-      version: '1.1.6-Snapshot',
-      date: '2026-11-10',
-      title: 'Regras: revisão do histórico de horas',
-      features: [
-        'Sem mudança de comportamento: esta versão só atualiza a documentação.',
-        'Novo capítulo com o destino de cada hora, verificado em 213 meses fechados: o excedente acima de 2h em dia útil compensa dia curto do mês.',
-        'Registradas as linhas "Excedeu" do rodapé e quatro dúvidas novas: vencimento do banco, saldo negativo, crédito sem homologação e jornada de 8h.'
-      ]
-    },
-    {
-      version: '1.1.5-Snapshot',
-      date: '2026-11-10',
-      title: 'Roadmap: decisões sobre plantão/eleição e selo SAEX',
-      features: [
-        'Sem mudança de comportamento: esta versão só atualiza o planejamento.',
-        'Item C7 cancelado: não haverá regra por dia de eleição ou plantão, e o fator ×2 segue valendo para domingo e feriado.',
-        'Item C6 adiado: o selo de excedente além do autorizado fica registrado para retomada futura.'
-      ]
-    },
-    {
-      version: '1.1.4-Snapshot',
-      date: '2026-11-10',
-      title: 'Roadmap: situação real dos itens da Trilha C',
-      features: [
-        'Sem mudança de comportamento na extensão: esta versão só atualiza a documentação.',
-        'C2 registrado como entregue na série 0.6.x; C4, C5 e C9 como parciais; C3, C6, C7, C8 e C10 como pendentes.',
-        'O roadmap passa a listar o que falta em cada item de conformidade e as dúvidas normativas de que ele depende.'
-      ]
-    },
-    {
-      version: '1.1.3-Snapshot',
-      date: '2026-11-10',
-      title: 'Conformidade normativa (C1): Saldo Acumulado só com horas homologadas e coluna HORAS PERDIDAS',
-      features: [
-        'Item C1 — Saldo Acumulado fiel ao Extrato: em mês fechado, a coluna SALDO ACUM. e o card de KPI creditam só a parcela de "Horas Excedentes Homologadas" do rodapé, com fator por tipo de dia. Meses pagos em pecúnia ou sem homologação fecham em 00:00, sem inflar o banco com finais de semana.',
-        'Nova coluna HORAS PERDIDAS, à direita de Compl. Jorn. Mínima: tempo acima do teto de 10h em sábado, domingo ou feriado (Res. 22.901/2008 art. 4º), que não gera pecúnia nem banco.',
-        'O teto de 10h em sábado, domingo e feriado passa a limitar também o crédito no banco de horas. O excedente de dia útil acima de 2h continua na reconciliação do mês.',
-        'Selo +25% nas colunas de adicional noturno e totais de adicional noturno e de Compl. Jorn. Mínima no rodapé da tabela.'
-      ]
-    },
-    {
-      version: '1.1.2-Snapshot',
-      date: '2026-10-13',
-      title: 'Ajuste fino visual do cabeçalho sticky: eliminação de borda superior e vedação contra vazamentos',
-      features: [
-        'Eliminação da Borda Superior: remoção da linha cinza externa no topo do cabeçalho da tabela de frequência em repouso, preservando visual limpo integrado.',
-        'Vedação Hermética no Scroll: eliminação de frestas verticais no topo e remoção de transparências nos cantos superiores do cabeçalho fixado, impedindo que linhas de dados ou avisos da página vazem por trás durante a rolagem.',
-        'Sombra Superior Estanque: aplicação de cobertura superior nas células cinzas e azuis mantendo vedação contínua mesmo sob subpixel scrolling do navegador.'
-      ]
-    },
-    {
-      version: '1.1.1-Snapshot',
-      date: '2026-10-13',
-      title: 'Fixação (sticky) do cabeçalho da tabela do Espelho de Ponto preservando o design system',
-      features: [
-        'Cabeçalho Sticky Fiel ao Design Original: a linha de títulos da tabela de frequência permanece fixada no topo da tela durante a rolagem, mantendo os cantos arredondados, fundo cinza característico e sem distorção visual.',
-        'Refinamento do container de frequência: border-collapse e border-spacing calibrados para sticky sem necessidade de overflow clipping agressivo.',
-        'Recarregamento e bump de versão integrados ao ciclo de desenvolvimento.'
-      ]
-    },
-    {
-      version: '1.1.0-Snapshot',
-      date: '2026-09-30',
-      title: 'Série 1.1.x — Ajuste de ponto de subordinados para chefias e destaque de horas extras em pecúnia',
-      features: [
-        'Ajuste de Ponto de Subordinados: chefias imediatas agora podem consultar o espelho de ponto de integrantes da unidade e registrar ajustes diretamente pela tabela (botão ⚡ Ajustar Ponto), com pré-carregamento automático da matrícula do subordinado e da data selecionada no modal do TSE XT.',
-        'Destaque de Horas Extras em Pecúnia: identificação e realce visual com badges específicos para horas extras pagas em pecúnia (+50% para dias úteis/sábados em azul e +100% para domingos/feriados em roxo), além de totalizador mensal dedicado na linha de totais.',
-        'Correções de robustez: proteção rigorosa de idempotência na renderização de células de pecúnia contra corrupção em recálculos sucessivos e validação precisa de permissões de chefia evitando falsos positivos.'
+      "version": "1.2.0",
+      "date": "2026-11-12",
+      "title": "Relatórios, conciliação de horas e fechamento da série 1.1",
+      "features": [
+        "Novo Relatório de Reconhecimento Posterior para a equipe: destinos das horas, alternativas de pecúnia ou banco, agrupamentos por servidor ou por mês, CSV e impressão A4 retrato.",
+        "Nova Auditoria de Pagamento de Pecúnias: compara o espelho com rubricas e referências dos próprios contracheques, incluindo folhas suplementares e adicional noturno; CSV e impressão.",
+        "Auditoria de Horas Perdidas com cinco categorias, motivos por dia e avisos para conferência; mês aberto e regime híbrido tratados separadamente.",
+        "Horas não pagas de sábado cobrem dias curtos com ×1,5; domingo e feriado, com ×2, inclusive acima de 10h, antes de contar a sobra como perda.",
+        "SALDO ACUM. de controle dia a dia, linha Destino do mês e avisos de divergência; o crédito oficial continua restrito às horas homologadas.",
+        "Relatórios sem limite fixo de período, com progresso e previsão de término; resultados anteriores à regra de cobertura pedem recálculo.",
+        "Ajuste de ponto de integrantes da equipe pela chefia, com identidade e data preenchidas no modal e validação de permissão.",
+        "Destaque e totais de pecúnia e adicional noturno, renderização idempotente e cabeçalho do Espelho fixo durante a rolagem.",
+        "Jornada de 7h em turno único, 8h com intervalo e tratamento atual de recesso preservados; dúvidas de fechamento continuam documentadas.",
+        "Dados e resultados permanecem no navegador; leituras autenticadas somente nos próprios sistemas do TSE e exportações por ação do usuário."
       ]
     },
     {

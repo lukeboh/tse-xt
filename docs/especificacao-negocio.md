@@ -1,5 +1,7 @@
 # 📋 Especificação de Negócio e Regras de Cálculo — TSE XT
 
+> Revisado para a versão estável **1.2.0**, em 12/11/2026. As referências a versões anteriores abaixo são históricas; dúvidas e limitações permanecem em aberto. [Registro da liberação](release-1.2.0.md).
+
 **Versão da Especificação:** 1.1.0  
 **Extensão:** TSE XT (Tribunal Superior Eleitoral - Extensão de Produtividade)  
 **Módulo Foco:** Espelho de Ponto Mensal (`EspelhoPontoMesAction`)  
@@ -156,20 +158,21 @@ Na linha `Totais:` da tabela principal:
 
 ## 5. Auditoria de Horas Perdidas
 
-**Introduzida na v0.4.x.** Modal que varre o Espelho de Ponto do servidor desde 2009 e quantifica as horas trabalhadas que nunca viraram pecúnia nem banco de horas.
+**Introduzida na v0.4.x e revisada na 1.2.0.** Modal que varre o Espelho de Ponto desde 2009 e quantifica as horas sem pecúnia, banco ou cobertura de dias curtos. A compensação entre úteis precede a cobertura de fim de semana com ×1,5/×2 (§3.13 das regras verificadas).
 
-### 5.1. Categorias (P1–P4)
+### 5.1. Categorias (P1–P5)
 | Categoria | Origem |
 | :--- | :--- |
-| **P1 — Não Homologadas** | Excedente que a chefia não homologou (`Horas Excedentes Não Homologadas` do Extrato) — perda confirmada, valor exato. |
-| **P2 — Excedente de dia útil absorvido** | Excedente do dia útil travado no teto da jornada ordinária / `Compl. Jorn. Mínima`, sem virar pecúnia nem banco — estimativa. |
-| **P3 — Descarte de fim de semana/feriado** | Trabalho de sábado/domingo/feriado em mês de regime híbrido, onde o serviço extraordinário é integralmente suprimido (Portarias 490/2022 e 380/2026) — não entra como perda (é estrutural do regime), mas fica somado à parte no tooltip e no CSV. |
+| **P1 — Não Homologadas** | Linha `Horas Excedentes Não Homologadas` do rodapé do Espelho — valor oficial do mês. |
+| **P2 — Excedente de dia útil sem destino** | Saldo líquido dos dias úteis após compensar dias curtos, descontadas pecúnia, adicional noturno pago, homologadas e não homologadas — reconstrução. |
+| **P3 — Acima de 10h em fim de semana/feriado** | Parcela acima de 10h que sobrou após a cobertura de dias curtos com os fatores — distribuição diária estimada. Mês híbrido fica fora da perda. |
 | **P4 — Crédito aquém da fórmula** | Diferença entre o crédito teórico (`Úteis×1 + Sáb×1,5 + DomFer×2`) e o que o Extrato efetivamente registrou como `Horas Adquiridas` — estimativa ([duvidas-normativas.md D4](duvidas-normativas.md)). |
+| **P5 — Fim de semana/feriado sem destino** | Até 10h sem pagamento, homologação, classificação explícita em não homologadas ou cobertura de dias curtos. Inclui linhas `Excedeu` e dias com autorização a conferir. |
 
 ### 5.2. Comportamento
-- Cada categoria é explicada em linguagem clara na própria tela, com a origem do número e link para a norma que a fundamenta; marca **"valor exato"** (P1) vs. **"estimativa"** (P2–P4).
+- Cada categoria explica a origem e as limitações. P1 lê o total oficial; a divisão das demais categorias entre dias é uma reconstrução. O mês híbrido é informativo, fora da perda.
 - Gráfico de barras cronológico das perdas por ano (cores institucionais do TSE XT: `primary-dark → primary → primary-light → accent-cyan`, do mais severo ao mais brando).
-- Tabela ordenável por qualquer coluna (mês, regime, pecúnia, homologadas, P1–P4, perdido); clicar numa linha abre o Espelho de Ponto do mês correspondente (com confirmação).
+- Tabela ordenável por mês, regime, pecúnia, homologadas, P1–P5, perdido e dias a conferir; clicar numa linha oferece abrir o Espelho correspondente, com confirmação.
 - Resultado persistido por matrícula em `chrome.storage.local`: a tela sempre reabre com a última varredura e, por padrão, atualiza só o delta (meses ainda não varridos); **Full Update** refaz a varredura completa.
 
 ### 5.3. Relatório de Reconhecimento Posterior

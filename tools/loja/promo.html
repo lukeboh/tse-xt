@@ -79,7 +79,7 @@
   .letreiro .principal { left: 690px; top: 58px; width: 680px; height: 330px; }
   .letreiro .principal img { width: 1280px; transform: scale(0.53); }
   .letreiro .secundaria { left: 850px; top: 336px; width: 500px; height: 190px; }
-  .letreiro .secundaria img { width: 1280px; transform: scale(0.78) translate(-618px, -163px); }
+  .letreiro .secundaria img { width: 1280px; transform: scale(0.4) translate(0, -35px); }
 
   /* ---------- Pequeno 440x280 ---------- */
   .pequeno { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
@@ -97,7 +97,7 @@
 <script>
   const p = new URLSearchParams(location.search);
   const tipo = p.get('tipo') || 'letreiro';
-  const versao = p.get('versao') || '1.0';
+  const versao = p.get('versao') || '1.2';
   const raiz = document.getElementById('raiz');
   const logo = '<div class="logo"><img src="../../icons/base.png" alt=""></div>';
   if (tipo === 'pequeno') {
@@ -108,7 +108,7 @@
         <div class="tag">Usabilidade moderna para o Meu Espaço</div>
         <div class="chips">
           <span class="chip">⏱️ 5 KPIs de ponto</span>
-          <span class="chip">⌨️ Ctrl + K</span>
+          <span class="chip">📄 Relatórios</span>
           <span class="chip">🔒 100% local</span>
         </div>
       </div>`;
@@ -121,13 +121,13 @@
           <div class="chips">
             <span class="chip">⏱️ Espelho de Ponto com 5 KPIs</span>
             <span class="chip">🔎 Auditoria de Horas Perdidas</span>
-            <span class="chip">💊 Reembolso Farmacêutico</span>
-            <span class="chip">📋 Gestão de Hora Extra</span>
+            <span class="chip">📄 Reconhecimento Posterior</span>
+            <span class="chip">🧾 Auditoria de Pagamento</span>
           </div>
           <div class="rodape">100% local · Manifest V3 · Código aberto</div>
         </div>
         <div class="tela principal"><img src="../../docs/tela-exemplo.png" alt=""></div>
-        <div class="tela secundaria"><img src="../../docs/tela-gestao-he.png" alt=""></div>
+        <div class="tela secundaria"><img src="../../docs/tela-reconhecimento-posterior.png" alt=""></div>
       </div>`;
   }
 </script>

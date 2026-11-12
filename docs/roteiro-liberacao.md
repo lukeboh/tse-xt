@@ -1,127 +1,59 @@
-# Roteiro de liberação de versão — TSE XT
+# Roteiro de liberação — TSE XT
 
-Passo a passo para publicar uma versão na Chrome Web Store. Siga na ordem; cada passo diz como conferir que deu certo.
+Procedimento vigente a partir de **1.2.0 (12/11/2026)**. Fonte da versão: manifest.json; versão exibida e changelog: content/modules/version.js. Os commits publicados são preservados: consolida-se o changelog da série, sem reset, squash retroativo ou push forçado.
 
-Convenção: a liberação fecha uma **série** (ex.: 1.0.x → 1.1.0). Os commits da série são consolidados em um só, e esse commit recebe a tag `vX.Y.Z` e é o que vai para a loja.
+## 1. Fechar o escopo
 
----
+- Conferir working tree, branches, remotos e regras de versionamento.
+- Obter aprovação visual e confirmar o marco. Não encerrar pendências só por editar o roadmap.
+- Atualizar manifesto, versão exibida e testes de versão. Uma versão estável não leva Snapshot.
+- Consolidar as notas da série em uma entrada do changelog da extensão e sincronizar CHANGELOG.md.
 
-## 0. Pré-requisitos
+## 2. Validar e revisar a documentação
 
-- Node 22 ou mais novo (as ferramentas usam `WebSocket` e `fetch` nativos, sem `npm install`).
-- Chrome de depuração aberto por `iniciar_chrome_debug.ps1` (porta 9222, extensão carregada sem compactação a partir do repositório).
-- `tools/loja/anon.local.json` preenchido: copie `tools/loja/anon.exemplo.json` e coloque os nomes reais que aparecem nas telas (servidor, dependentes, colegas da unidade na Gestão de HE). O arquivo é ignorado pelo git e **nunca** pode ser versionado.
-- Acesso ao [Developer Dashboard](https://chrome.google.com/webstore/devconsole) com a conta publicadora.
+    npm test
 
-## 1. Definir a versão
+A suíte inclui o teste de empacotamento, que abre o ZIP e verifica todos os recursos declarados no manifesto. Revisar README, PRIVACY, especificação, regras de cálculo, dúvidas, roadmap e descrição da loja. Preservar referências históricas. Não publicar nomes, matrículas, valores individuais ou capturas não anonimizadas.
 
-1. Escolha o número: `X.Y.0` para uma série consolidada, `X.Y.Z` para correção avulsa. A versão tem de ser maior que a publicada na loja.
-2. Atualize **nos dois lugares**:
-   - `manifest.json` → `"version"`;
-   - `content/modules/version.js` → `CURRENT_VERSION`.
-3. Em `CHANGELOG` (mesmo arquivo), substitua as entradas intermediárias da série por **uma** entrada da versão liberada, com data, título e itens (modelo: entradas `0.7.0` e `1.0.0`).
+## 3. Preparar materiais da loja
 
-Conferir: `git grep -n "1.0.0" manifest.json content/modules/version.js` mostra a versão nova nos dois.
+- Atualizar docs/descricao-loja.md: descrição em texto puro, limite de 16.000 caracteres, novidades, privacidade e permissões.
+- Capturar telas da aplicação real no Chrome 9222, com anonimização e conferência visual. Nunca simular as telas da loja.
+- Antes de recarregar a extensão, retirar **todas** as abas do Espelho por links reais do menu; recarregar e depois voltar pelo menu. Não navegar diretamente nem enviar o formulário do Espelho via CDP.
+- Publicar no máximo cinco capturas, PNG RGB sem alfa de 1280x800. A seleção vigente está em tools/loja/verificar-assets.mjs e docs/descricao-loja.md.
+- Regerar os blocos promocionais depois das capturas:
 
-## 2. Testes
+    node tools/loja/gerar-promos.mjs
+    node tools/loja/verificar-assets.mjs
 
-```powershell
-npm test
-```
+A anonimização do utilitário padrão muda o DOM da aba. Usar uma aba dedicada ou restaurar os textos após capturar; não deixar dados fictícios contaminarem a leitura de identidade dos relatórios. Valores individuais em reais também precisam ser ocultados.
 
-Conferir: `fail 0`.
+## 4. Gerar e inspecionar o pacote
 
-## 3. Revisar documentos
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
 
-| Arquivo | O que revisar |
-|---|---|
-| `docs/descricao-loja.md` | Versão de referência, funcionalidades novas ou removidas, bloco da descrição sem Markdown e com até 16.000 caracteres, justificativas de permissão se o manifest mudou |
-| `PRIVACY.md` | Data e versão; qualquer novo dado guardado em `chrome.storage`/`localStorage` ou nova requisição feita pela extensão |
-| `README.md` | Recursos, tabela de capturas |
-| `manifest.json` → `description` | Até 132 caracteres (vira o "Resumo" da loja) |
+Saída: dist/tse-xt-vX.Y.Z.zip. O ZIP contém manifesto na raiz, background.js, content/, popup/ e os ícones de runtime, **incluindo icons/base.png**. Não contém docs, ferramentas, testes ou configuração local de anonimização. Registrar o SHA-256 junto aos materiais de distribuição, fora do ZIP.
 
-Dica para achar o que a extensão guarda: `git grep -n "chrome.storage.local.set\|localStorage.setItem\|sessionStorage.setItem" content popup`.
+## 5. Integrar, commitar e marcar
 
-## 4. Regerar as capturas (dados reais, anonimizados)
+- Fazer commit no padrão local, depois da revisão de dados pessoais e dos testes.
+- Efetuar o push conforme a regra do projeto.
+- Integrar a branch aprovada na main normalmente, por fast-forward quando possível; caso haja divergência, revisar o merge e revalidar. Não reescrever commits ou tags publicados.
+- Criar tag anotada do marco, sem mover tags existentes:
 
-Nunca desenhar telas: toda imagem sai da aplicação real pelo Chrome de depuração.
+    git tag -a vX.Y.0 -m "TSE XT vX.Y.0"
+    git push origin main vX.Y.0
 
-1. Recarregue a extensão para a versão nova aparecer na topbar. **Antes, tire todas as abas do Espelho de Ponto** (clique em outra tela no menu): o `background.js` recarrega as abas do TSE quando a extensão é recarregada, e recarregar o Espelho derruba a sessão.
-   ```powershell
-   node tools/loja/recarregar-extensao.mjs
-   ```
-2. Faça login no Meu Espaço (se a sessão tiver caído) e deixe duas abas abertas: uma no Espelho de Ponto do mês corrente e outra livre para as demais telas. Para trocar de tela, **sempre clique no menu** — nunca digite a URL nem recarregue o Espelho.
-3. Liste as abas para pegar os ids: `curl -s http://127.0.0.1:9222/json/list` (ou use um trecho da URL em `--aba`).
-4. Capture (cada comando anonimiza a tela, confere que não sobrou nenhum termo pessoal e só então salva):
+Conferir que a tag, a main, o manifesto e o ZIP representam o mesmo código. O changelog e o registro da liberação devem identificar as verificações feitas e as limitações que permanecem.
 
-   | Tela | Como chegar | Comando |
-   |---|---|---|
-   | Espelho de Ponto | menu Frequência → Espelho de ponto | `node tools/loja/capturar.mjs --aba EspelhoPonto --saida docs/tela-exemplo.png` |
-   | Auditoria | mesma aba do Espelho | `node tools/loja/capturar.mjs --aba EspelhoPonto --acao auditoria --saida docs/tela-auditoria-horas-perdidas.png` |
-   | Gestão de HE | menu Serviço Extraordinário → Gestão de Serviço Extraordinário | `node tools/loja/capturar.mjs --aba HoraExtraGestao --desfocar-valores --saida docs/tela-gestao-he.png` |
-   | Reembolso | menu Benefícios → Assistência farmacêutica → NOVO → digite "dipirona" no campo Medicamento | `node tools/loja/capturar.mjs --aba ReembolsoFarmaceutico --saida docs/tela-reembolso-farmaceutico.png` |
-   | TSE XT desligado | desligue pelo interruptor da topbar **numa tela que não seja o Espelho** (ele recarrega a página), depois abra o Espelho pelo menu | `node tools/loja/capturar.mjs --aba EspelhoPonto --saida docs/tela-exemplo-off.png` |
+## 6. Enviar à Chrome Web Store
 
-   Depois da captura com o XT desligado, religue-o também fora do Espelho.
+Upload e submissão são etapas separadas da preparação local:
 
-   A Auditoria precisa de um resultado salvo: se ela disser "Nenhuma auditoria salva", clique em **Full Update** e espere (cerca de 20 minutos para varrer desde 2009) antes de capturar.
-5. Olhe cada imagem antes de seguir. Nomes, matrículas, IP, dependentes e valores individuais em R$ não podem aparecer.
+1. No Developer Dashboard do item existente, enviar o ZIP.
+2. Colar a descrição e atualizar a seleção de capturas e promoções.
+3. Conferir privacidade, justificativas e distribuição, preservando a visibilidade escolhida pelo publicador.
+4. Enviar para revisão quando autorizado.
+5. Após aprovação, conferir a versão instalada pela loja em perfil limpo.
 
-A anonimização só muda o que aparece na tela. Recarregar a aba (fora do Espelho) volta tudo ao normal.
-
-## 5. Regerar os blocos promocionais
-
-```powershell
-node tools/loja/gerar-promos.mjs
-node tools/loja/verificar-assets.mjs
-```
-
-O letreiro recorta `docs/tela-exemplo.png` e `docs/tela-gestao-he.png`, por isso roda depois do passo 4. A versão exibida vem do `manifest.json`. Para mudar textos ou layout, edite `tools/loja/promo.html`.
-
-Conferir: `verificar-assets.mjs` termina sem nenhum `✘`.
-
-## 6. Consolidar os commits e criar a tag
-
-1. Faça commit das mudanças dos passos 1 a 5.
-2. Crie uma branch de segurança com o estado atual: `git branch backup/pre-squash-X.Y.Z`.
-3. Ache o commit de liberação anterior (`git log --oneline`, título `🚀 release: ...`).
-4. Consolide tudo o que veio depois dele em um commit:
-   ```powershell
-   git reset --soft <commit-da-liberacao-anterior>
-   git commit
-   ```
-   Mensagem no padrão do repositório, por exemplo:
-   ```text
-   🔖: release v1.0.0 - Série 0.7.x consolidada
-
-   📝 Resumo do que entrou na versão (mesmo conteúdo da entrada do CHANGELOG).
-   ```
-5. Confira que nada se perdeu: `git diff backup/pre-squash-X.Y.Z HEAD` tem de sair vazio.
-6. Crie a tag anotada: `git tag -a vX.Y.Z -m "TSE XT vX.Y.Z"`.
-7. Publique. Como o histórico foi reescrito, o push da `main` precisa de force:
-   ```powershell
-   git push --force-with-lease origin main
-   git push origin vX.Y.Z
-   ```
-
-## 7. Empacotar
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\package.ps1
-```
-
-Gera `dist/tse-xt-vX.Y.Z.zip` só com `manifest.json`, `background.js`, `content/`, `popup/` e os ícones. Conferir o nome do zip e abrir o conteúdo: não pode haver `docs/`, `tools/`, `tests/` nem `anon.local.json`.
-
-## 8. Publicar no Developer Dashboard
-
-1. Item **TSE XT** → **Pacote** → **Enviar novo pacote** → `dist/tse-xt-vX.Y.Z.zip`.
-2. **Página na loja**: colar a descrição (seção 1 de `docs/descricao-loja.md`) e trocar as imagens pelas do passo 4 e 5, na ordem da tabela da seção 3.
-3. **Privacidade**: conferir finalidade única, justificativas e declarações (seção 4 de `docs/descricao-loja.md`). Qualquer permissão nova no manifest precisa de justificativa aqui, senão a revisão rejeita.
-4. **Distribuição**: manter a visibilidade atual, a não ser que a mudança tenha sido decidida.
-5. **Enviar para revisão**.
-
-## 9. Depois da publicação
-
-- Acompanhe o status no Dashboard (a revisão costuma levar de horas a alguns dias). Se for rejeitada, o e-mail diz o motivo; corrija, gere nova versão de correção e volte ao passo 1.
-- Com o item publicado, instale pela loja num perfil limpo e confira: a versão na topbar e no `chrome://extensions`, o aviso de aplicação experimental e uma tela do Espelho.
-- Apague a branch `backup/pre-squash-X.Y.Z` quando tiver certeza de que não precisa mais dela.
+Há automação oficial para upload e submissão pela API v2. Requisitos, limites e referências em [automacao-chrome-web-store.md](automacao-chrome-web-store.md). Não confundir pacote preparado com item enviado, aprovado ou publicado.

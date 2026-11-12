@@ -1,16 +1,16 @@
 # Chrome Web Store — TSE XT
 
 > Fonte de verdade de tudo que é preenchido no Developer Dashboard. Atualizar aqui a cada liberação (ver [roteiro-liberacao.md](roteiro-liberacao.md)) e copiar para a loja.
-> Versão de referência: **1.1.0-Snapshot** (Série 1.1)
+> Versão de referência: **1.2.0** (12/11/2026)
 
 ---
 
 ## 1. Descrição (aba "Página na loja" → Descrição)
 
-Copiar o bloco abaixo inteiro. O campo da loja é texto puro (sem Markdown) e aceita até 16.000 caracteres — este bloco tem 10.872.
+Copiar o bloco abaixo inteiro. O campo da loja é texto puro (sem Markdown) e aceita até 16.000 caracteres.
 
 ```text
-✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.1)
+✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.2)
 
 O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade de todo o portal Meu Espaço do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto) até as dezenas de telas do menu clássico, com painéis dedicados para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
 
@@ -38,14 +38,19 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • 🎯 Meta do Mês: Acompanhamento em tempo real da jornada ordinária do mês com barra de progresso visual (gradiente esmeralda ao superar 100%).
 
 🔎 4. AUDITORIA DE HORAS PERDIDAS (ESPELHO DE PONTO)
-• Varre o Espelho de Ponto desde 2009 e quantifica, mês a mês, as horas trabalhadas que nunca viraram pecúnia nem banco de horas — separadas em quatro categorias explicadas em linguagem clara, cada uma com a origem do número e o artigo da norma que a fundamenta.
+• Varre o Espelho de Ponto desde 2009 e quantifica, mês a mês, as horas trabalhadas que nunca viraram pecúnia nem banco de horas — que também não compensaram dias curtos — separadas em cinco categorias explicadas em linguagem clara, cada uma com a origem do número e o artigo da norma que a fundamenta.
 • Gráfico cronológico das perdas por ano, tabela ordenável por qualquer coluna e clique na linha para abrir o mês correspondente.
 • Resultado persistido por matrícula: reabre com a última varredura e atualiza só o que mudou (ou refaça tudo com Full Update).
 • Meses de trabalho híbrido/teletrabalho não entram como perda — a norma suprime o serviço extraordinário nesse regime, então o excedente é estrutural, não um direito perdido.
 
+• Antes de contar a perda, horas não pagas de sábado cobrem faltas úteis com ×1,5; domingos e feriados, com ×2, inclusive acima de 10h. Só a sobra entra como perda.
+• Progresso com previsão de término. Resultados anteriores à regra de cobertura pedem Full Update.
+
 📈 5. COLUNAS ANALÍTICAS NA TABELA DE FREQUÊNCIA (ESPELHO DE PONTO)
 • SALDO ACUM.: acompanhe a evolução dia a dia do seu saldo diretamente na tabela, com badges de acréscimo +50% (sábado) e +100% (domingo/feriado) e coloração imediata (verde para crédito, rosa para débito, neutro para zero).
 • HORAS EXCED. (meses fechados): quando o mês é homologado e a coluna nativa passa a se chamar "HORAS AJUST.", o TSE XT injeta uma coluna própria com o saldo líquido real de cada dia (total trabalhado − jornada esperada), mantendo a leitura consistente com os meses abertos.
+• Destino do mês: excedente, compensação entre dias úteis, cobertura pelo fim de semana, pago, banco, perdido e débito oficial; divergências ficam sinalizadas para conferência. O controle diário não é um novo crédito no banco.
+• Cabeçalho fixo durante a rolagem para facilitar a leitura dos meses extensos.
 • Dia corrente: antes de a coluna oficial "HORAS EXCED." ser processada à noite, o TSE XT já projeta o saldo do dia a partir do total trabalhado, com selo próprio.
 • Destaque visual de horas extras em pecúnia: células com valores a serem pagos em folha ganham badges destacados (+50% em dias úteis/sábados e +100% em domingos/feriados), com totalizador mensal exclusivo na linha de totais.
 • Cálculo rigoroso que desconsidera valores já pagos em Pecúnia, garantindo que horas indenizadas não distorçam o saldo a compensar.
@@ -91,6 +96,16 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Página só é revelada depois que o TSE XT termina de montar a interface — sem flash do layout nativo original.
 • Interruptor visual persistente: alterna instantaneamente entre o visual moderno XT e o layout clássico original do portal para fins de conferência, a qualquer momento, com um clique.
 
+📄 14. RECONHECIMENTO POSTERIOR DA EQUIPE
+• Por servidor ou por mês: horas excedentes, pagas, homologadas, compensadas e que ficaram sem destino, com as alternativas de pecúnia ou banco.
+• A cobertura de dias curtos pelo fim de semana fica fora da solicitação. Meses abertos e híbridos ficam fora dos totais.
+• Período livre, previsão de término, CSV e impressão A4 retrato por padrão, com tabelas organizadas para encaminhar o pedido.
+
+🧾 15. AUDITORIA DE PAGAMENTO DE PECÚNIAS
+• Confere suas horas de pecúnia do espelho com as rubricas e referências dos seus próprios contracheques, incluindo folhas suplementares e adicional noturno.
+• Aponta diferenças de horas, de faixas de acréscimo e pagamentos sem correspondência; permite conferir os lançamentos, exportar CSV e imprimir.
+• Sem limite fixo de meses; progresso e previsão de término durante as consultas.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔒 PRIVACIDADE & SEGURANÇA POR DESIGN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -127,15 +142,15 @@ Todas regeradas a partir da aplicação real, com dados pessoais anonimizados (v
 | Campo da loja | Arquivo | Conteúdo |
 |---|---|---|
 | Ícone da loja (128x128) | `icons/icon-128.png` | Ícone oficial |
-| Captura 1 (1280x800) | `docs/tela-exemplo.png` | Espelho de Ponto: 5 KPIs, colunas analíticas e SALDO ACUM. |
-| Captura 2 (1280x800) | `docs/tela-auditoria-horas-perdidas.png` | Auditoria de Horas Perdidas: total, quatro categorias e gráfico por ano |
-| Captura 3 (1280x800) | `docs/tela-gestao-he.png` | Gestão de Serviço Extraordinário: barras Sábado/Domingo por servidor (valores individuais em R$ desfocados) |
-| Captura 4 (1280x800) | `docs/tela-reembolso-farmaceutico.png` | Reembolso Farmacêutico: Novo Pedido com auto-busca de medicamento e resumo lateral |
-| Captura 5 (1280x800) | `docs/tela-exemplo-off.png` | Mesmo Espelho com o TSE XT desligado (layout original do portal) |
+| Captura 1 (1280x800) | `docs/tela-exemplo.png` | Espelho de Ponto: 5 KPIs e regime do mês |
+| Captura 2 (1280x800) | `docs/tela-auditoria-horas-perdidas.png` | Auditoria de Horas Perdidas: total, cinco categorias e gráfico por ano |
+| Captura 3 (1280x800) | `docs/tela-reconhecimento-posterior.png` | Reconhecimento Posterior da equipe, destinos, alternativas e exportações |
+| Captura 4 (1280x800) | `docs/tela-auditoria-pagamento.png` | Auditoria de Pagamento de Pecúnias; valores em reais ocultados |
+| Captura 5 (1280x800) | `docs/tela-gestao-he.png` | Gestão de Serviço Extraordinário: barras por servidor; valores em reais ocultados |
 | Bloco promocional pequeno (440x280) | `docs/promo-pequeno-440x280.png` | Logo, nome, versão e três destaques |
-| Bloco promocional de letreiro (1400x560) | `docs/promo-letreiro-1400x560.png` | Logo, proposta de valor e recortes das capturas 1 e 3 |
+| Bloco promocional de letreiro (1400x560) | `docs/promo-letreiro-1400x560.png` | Logo, proposta de valor e recortes do Espelho e do Reconhecimento Posterior |
 
-Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/loja/gerar-promos.mjs` — não editar os PNGs à mão.
+Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/loja/gerar-promos.mjs` — não editar os PNGs à mão. As capturas antigas de Reembolso e do modo desligado ficam como histórico no repositório e não integram a seleção de cinco imagens da versão 1.2.0.
 
 ## 4. Aba "Privacidade"
 
@@ -149,7 +164,7 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 |---|---|
 | `storage` | Guardar localmente preferências de aparência, a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia, a última Auditoria de Pagamento de Pecúnias (só as linhas de serviço extraordinário e de adicional noturno dos seus contracheques) e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
 | `activeTab` | Recarregar a aba ativa quando o usuário pede, na janela da extensão, para aplicar as preferências escolhidas. |
-| Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas do portal Meu Espaço e ler, com a sessão do próprio usuário, as páginas do portal usadas nos cálculos (Espelho de Ponto, autorizações de hora extra). Nenhum outro domínio é acessado. |
+| Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas do portal Meu Espaço e ler, com a sessão do próprio usuário, as páginas do portal usadas nos cálculos (Espelho de Ponto próprio e da equipe, autorizações de hora extra e contracheques próprios). Nenhum outro domínio é acessado. |
 | Código remoto | Não usa. Todo o JavaScript está no pacote. |
 
 **Uso de dados:** marcar que a extensão **não coleta** nenhuma das categorias listadas (dados pessoais, de saúde, financeiros, autenticação, comunicações, localização, histórico da web, atividade do usuário, conteúdo do site). O processamento é todo local e nada é transmitido ao desenvolvedor nem a terceiros. Marcar as três declarações de conformidade (não vende dados, não usa para fins alheios à finalidade única, não usa para crédito).
@@ -158,5 +173,19 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 
 ## 5. Aba "Distribuição"
 
-- Visibilidade: **Não listado** (como a 0.5.0 publicada) — só quem tem o link instala. Mudar para Público só por decisão explícita.
+- Visibilidade: preservar a configuração atual do item; a última referência documentada é **Não listado**. Mudar para Público só por decisão explícita.
 - Regiões: todas.
+
+
+## 6. Novidades para o envio da versão 1.2.0
+
+- Novo Relatório de Reconhecimento Posterior para a equipe: destinos das horas, alternativas de pecúnia ou banco, agrupamentos por servidor ou por mês, CSV e impressão A4 retrato.
+- Nova Auditoria de Pagamento de Pecúnias: compara o espelho com rubricas e referências dos próprios contracheques, incluindo folhas suplementares e adicional noturno; CSV e impressão.
+- Auditoria de Horas Perdidas com cinco categorias, motivos por dia e avisos para conferência; mês aberto e regime híbrido tratados separadamente.
+- Horas não pagas de sábado cobrem dias curtos com ×1,5; domingo e feriado, com ×2, inclusive acima de 10h, antes de contar a sobra como perda.
+- SALDO ACUM. de controle dia a dia, linha Destino do mês e avisos de divergência; o crédito oficial continua restrito às horas homologadas.
+- Relatórios sem limite fixo de período, com progresso e previsão de término; resultados anteriores à regra de cobertura pedem recálculo.
+- Ajuste de ponto de integrantes da equipe pela chefia, com identidade e data preenchidas no modal e validação de permissão.
+- Destaque e totais de pecúnia e adicional noturno, renderização idempotente e cabeçalho do Espelho fixo durante a rolagem.
+
+A publicação desta versão foi preparada localmente; enviar pacote, descrição e imagens pelo Dashboard é uma etapa separada. Ver [release-1.2.0.md](release-1.2.0.md) e [automação oficial](automacao-chrome-web-store.md).
