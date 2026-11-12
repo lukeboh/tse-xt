@@ -33,4 +33,28 @@ Fonte: [service accounts na API](https://developer.chrome.com/docs/webstore/serv
 
 O conjunto de métodos da API v2 consultado não expõe edição da descrição da página, imagens promocionais e declarações de privacidade. Para esta liberação, esses materiais estão preparados para o **Developer Dashboard**. Isso é uma conclusão a partir da [referência de métodos](https://developer.chrome.com/docs/webstore/api/reference/rest), não uma promessa de automação dessas telas.
 
-**Nesta tarefa não foi configurada autenticação de publicação, feito upload nem submetido o item à revisão.** Foram preparados o pacote e os materiais. Uma futura automação deve usar credenciais fora do Git e separar envio do pacote, submissão à revisão e publicação após aprovação.
+Na preparação da versão 1.2.0 foram gerados o pacote e os materiais, sem envio à loja. Em continuação autorizada de **12/11/2026 (1.2.1-Snapshot)**, foram configurados um projeto GCP exclusivo, service account vinculada ao publicador, federação OIDC e as variáveis do repositório.
+
+## Operação configurada
+
+O workflow [.github/workflows/chrome-web-store.yml](../.github/workflows/chrome-web-store.yml) é executado na **main**, por acionamento manual. Ele recebe uma tag anotada e estável (por exemplo, `v1.2.0`) e uma operação:
+
+| Operação | Efeito |
+| :--- | :--- |
+| `status` (padrão) | Testa e empacota a tag, autentica e consulta a API; não modifica a loja. |
+| `upload` | Envia o ZIP e aguarda o processamento; não solicita revisão. |
+| `submit` | Envia o ZIP e solicita revisão com `STAGED_PUBLISH`, `skipReview: false` e `blockOnWarnings: true`. |
+
+O workflow usa Windows porque o empacotador e seu teste executam PowerShell. As Actions são fixadas por SHA. Antes de autenticar, valida a tag, sua versão no manifesto e a inclusão do commit no histórico da main, executa os testes e guarda o pacote como artefato.
+
+O cliente [cws-api.mjs](../tools/loja/cws-api.mjs) não imprime tokens, chaves públicas ou respostas brutas. Não reenvia uma versão já em revisão/aprovada, não substitui outra revisão ativa e impede downgrade. Uma versão aprovada em `STAGED` não é publicada por uma repetição de `submit`.
+
+As variáveis `CWS_PROJECT_ID`, `CWS_WORKLOAD_IDENTITY_PROVIDER`, `CWS_SERVICE_ACCOUNT`, `CWS_PUBLISHER_ID` e `CWS_ITEM_ID` guardam somente identificadores. A confiança OIDC exige os IDs numéricos deste repositório e proprietário, a main e o arquivo específico do workflow. Nenhum segredo de publicação é armazenado no GitHub.
+
+A configuração local está em `D:\git\lukeboh\home-env\configs\tokens\tse-xt-chrome-web-store.json`, ignorada pelo Git. Ela contém referências da configuração; não foi criada chave privada permanente. Tokens de acesso são temporários e ficam na memória da execução.
+
+Para consultar pelo CLI autenticado:
+
+    gh workflow run chrome-web-store.yml --repo lukeboh/tse-xt --ref main -f release_tag=v1.2.0 -f operation=status
+
+Trocar `status` por `upload` ou `submit` provoca a ação correspondente na loja. O teste inicial da implantação usa apenas `status`; upload e submissão exigem uma execução escolhida explicitamente com essa operação.

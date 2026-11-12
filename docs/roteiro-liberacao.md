@@ -57,3 +57,5 @@ Upload e submissão são etapas separadas da preparação local:
 5. Após aprovação, conferir a versão instalada pela loja em perfil limpo.
 
 Há automação oficial para upload e submissão pela API v2. Requisitos, limites e referências em [automacao-chrome-web-store.md](automacao-chrome-web-store.md). Não confundir pacote preparado com item enviado, aprovado ou publicado.
+
+Desde a 1.2.1-Snapshot, o workflow `Chrome Web Store` executa esse fluxo por uma tag estável: `status` consulta, `upload` envia rascunho e `submit` solicita revisão. O pacote continua vindo da tag escolhida, como `v1.2.0`, e a publicação depois da aprovação permanece manual.

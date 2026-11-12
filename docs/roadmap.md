@@ -280,6 +280,7 @@ Débitos técnicos, modularização e robustez da suíte de testes.
 | **T1** | **Refatoração do Core Matemático (`balanceCalc.js`)** | Separar explicitamente o retorno diário em `{ deltaCompensacao, valorPecunia, homologavelBanco, horasNaoHomologadas }` para eliminar acoplamentos entre pecúnia e saldo acumulado. |
 | **T2** | **Expansão da Suíte de Testes Unitários (`tests/`)** | Adicionar fixtures automatizadas com meses reais emblemáticos derivados dos estudos empíricos (meses de eleição 10/2022, 10/2024, meses híbridos de 2023/2024 e recesso 01/2025). |
 | **T3** | **Monitoramento Automatizado de Regressões Visuais via CDP** | Padronizar scripts de teste e captura automática via CDP (`tools/loja/`) para validar ausência de exceções JS em todas as telas do portal. |
+| **T4** | **Envio à Chrome Web Store por CI (1.2.1-Snapshot)** | Workflow manual por tag estável, cliente da API v2 e OIDC GitHub → GCP. Consulta de status separada de upload/submissão; publicação após aprovação permanece manual. Configuração operacional em [automacao-chrome-web-store.md](automacao-chrome-web-store.md). |
 
 ---
 

@@ -1,0 +1,155 @@
+name: Chrome Web Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag anotada e estavel a conferir/enviar
+        required: true
+        default: v1.2.0
+        type: string
+      operation:
+        description: status consulta; upload envia rascunho; submit envia para revisao
+        required: true
+        default: status
+        type: choice
+        options:
+          - status
+          - upload
+          - submit
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chrome-web-store
+  cancel-in-progress: false
+
+jobs:
+  chrome-web-store:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validar parametros e configuracao
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          OPERATION: ${{ inputs.operation }}
+          CWS_PROJECT_ID: ${{ vars.CWS_PROJECT_ID }}
+          CWS_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.CWS_WORKLOAD_IDENTITY_PROVIDER }}
+          CWS_SERVICE_ACCOUNT: ${{ vars.CWS_SERVICE_ACCOUNT }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') { throw 'Tag estavel invalida' }
+          if ($env:OPERATION -notin @('status','upload','submit')) { throw 'Operacao invalida' }
+          foreach ($name in @('CWS_PROJECT_ID','CWS_WORKLOAD_IDENTITY_PROVIDER','CWS_SERVICE_ACCOUNT','CWS_PUBLISHER_ID','CWS_ITEM_ID')) {
+            if (-not [Environment]::GetEnvironmentVariable($name)) { throw "Variavel ausente: $name" }
+          }
+
+      - name: Obter ferramentas da main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: automation
+          persist-credentials: false
+
+      - name: Obter versao estavel
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          path: release
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Preparar Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Conferir origem e versao da tag
+        id: release
+        shell: pwsh
+        working-directory: release
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if ((git cat-file -t $env:RELEASE_TAG) -ne 'tag') { throw 'A tag precisa ser anotada' }
+          $commit = git rev-parse HEAD
+          git merge-base --is-ancestor $commit origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'A versao nao pertence ao historico aprovado da main' }
+          $manifest = Get-Content -Raw -Encoding UTF8 manifest.json | ConvertFrom-Json
+          $version = $env:RELEASE_TAG.Substring(1)
+          if ($manifest.version -ne $version -or $manifest.version_name -ne $version) { throw 'Manifesto difere da tag estavel' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Testar a versao da extensao
+        shell: pwsh
+        working-directory: release
+        run: |
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Testar o cliente de publicacao
+        shell: pwsh
+        working-directory: automation
+        run: |
+          node --test tests/cwsApi.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Gerar pacote da tag
+        shell: pwsh
+        working-directory: release
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File package.ps1
+
+      - name: Guardar o pacote validado
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tse-xt-${{ inputs.release_tag }}
+          path: release/dist/tse-xt-v${{ steps.release.outputs.version }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Autenticar sem chave permanente
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ vars.CWS_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.CWS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.CWS_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Executar operacao na Chrome Web Store
+        shell: pwsh
+        env:
+          CWS_OPERATION: ${{ inputs.operation }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
+          CWS_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CWS_VERSION: ${{ steps.release.outputs.version }}
+          CWS_PACKAGE_PATH: release/dist/tse-xt-v${{ steps.release.outputs.version }}.zip
+          CWS_RESULT_PATH: dist/cws-status.json
+        run: |
+          node automation/tools/loja/cws-api.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Registrar resultado
+        shell: pwsh
+        env:
+          OPERATION: ${{ inputs.operation }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+        run: |
+          "Chrome Web Store: $env:OPERATION - $env:RELEASE_TAG" >> $env:GITHUB_STEP_SUMMARY
+          "Commit da extensao: $env:RELEASE_COMMIT" >> $env:GITHUB_STEP_SUMMARY
+          'submit solicita revisao com STAGED_PUBLISH; a publicacao apos aprovacao continua manual.' >> $env:GITHUB_STEP_SUMMARY
+          Get-Content -Raw dist/cws-status.json >> $env:GITHUB_STEP_SUMMARY

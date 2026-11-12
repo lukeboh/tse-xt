@@ -1,5 +1,15 @@
 # Changelog — TSE XT
 
+## 1.2.1-Snapshot — 12/11/2026
+
+- Workflow da Chrome Web Store com operações separadas de status, upload e submissão para revisão.
+- Google Cloud e GitHub autenticam por Workload Identity Federation/OIDC, sem chave privada permanente.
+- O pacote é gerado de uma tag anotada e estável pertencente ao histórico da main, mesmo que a ferramenta de automação esteja numa versão de desenvolvimento posterior.
+- Publicação após aprovação permanece manual (`STAGED_PUBLISH`); o cliente impede reenvio de revisão existente e não substitui outra versão pendente.
+- Testes do cliente da API cobrem upload binário, processamento assíncrono, revisão, repetição e erros sem vazamento de token.
+
+A última versão estável da extensão continua sendo **1.2.0**. Não foi criada nem movida outra tag estável para esta automação.
+
 ## 1.2.0 — 12/11/2026
 
 Consolida as evoluções da série 1.1, com aprovação visual para liberação em 12/11/2026. Fonte do changelog exibido na extensão: `content/modules/version.js`.

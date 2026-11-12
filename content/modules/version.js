@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.0';
+  const CURRENT_VERSION = '1.2.1-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.1-Snapshot',
+      date: '2026-11-12',
+      title: 'Automação de envio à Chrome Web Store',
+      features: [
+        'Workflow manual com consulta de status, envio de pacote e submissão para revisão, usando a API oficial v2.',
+        'Autenticação temporária entre GitHub e Google Cloud por OIDC, sem chave privada permanente.',
+        'O envio usa uma tag estável validada e a submissão mantém a publicação após aprovação como uma etapa manual.'
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "2026-11-12",

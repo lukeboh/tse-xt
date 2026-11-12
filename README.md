@@ -109,4 +109,5 @@ O histórico detalhado das versões anteriores e das fases visuais já concluíd
 - **[Política de Privacidade](PRIVACY.md)**: Declaração de não coleta de dados, processamento 100% local (*client-side*) e conformidade com o Manifest V3.
 - **[Especificação de Negócio & Regras de Cálculo](docs/especificacao-negocio.md)**: Detalhamento completo das fórmulas matemáticas do Espelho de Ponto, desconsideração de pecúnia, regime híbrido e regras de jornada (7h/8h).
 - **[Roteiro de Liberação](docs/roteiro-liberacao.md)**: passo a passo para publicar uma versão na Chrome Web Store (versão, testes, capturas anonimizadas, blocos promocionais, integração preservando histórico, tag e envio).
+- **[Automação da Chrome Web Store](docs/automacao-chrome-web-store.md)**: workflow manual por tag estável, OIDC sem chave permanente e operações separadas de status, upload e submissão para revisão.
 - **[Licença](LICENSE)**: MIT.
