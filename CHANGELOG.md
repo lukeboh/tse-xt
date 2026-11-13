@@ -1,5 +1,14 @@
 # Changelog — TSE XT
 
+## 1.2.6-Snapshot — 13/11/2026
+
+- Parâmetros dos relatórios do botão “+” persistidos em `chrome.storage.local`, separados por login.
+- Reconhecimento Posterior: período, matrículas selecionadas, unidade e agrupamento. Seleção vazia preservada; servidores não disponíveis na equipe atual são ignorados.
+- Auditoria de Pagamento: período e filtro “Só o que precisa de conferência”. Auditoria de Horas Perdidas: coluna e direção da ordenação, por servidor consultado, mantidas durante atualizações.
+- Mudanças são salvas sem exigir geração. Na primeira abertura, períodos dos resultados anteriores são aproveitados. Exportações de resultados com período ou seleção divergentes exigem nova geração.
+- Política de privacidade atualizada para descrever os parâmetros locais; nenhuma permissão nova.
+- Verificação: **217 testes passando**, incluindo restauração em nova instância, seleção vazia, migração do último período, isolamento por login/servidor e empacotamento. Preferências dos três relatórios conferidas no Chrome após navegação.
+
 ## 1.2.5-Snapshot — 13/11/2026
 
 - Botão flutuante de ações rápidas com azul institucional sólido, borda discreta e sombra suave, removendo a borda nativa em relevo, o gradiente e o brilho intenso.

@@ -182,6 +182,8 @@ Na linha `Totais:` da tabela principal:
 
 **1.2.3-Snapshot:** seleção de servidores aberta por padrão, com caixas individuais e ações **Selecionar todos** / **Limpar seleção**. Consultas, CSV e impressão contêm somente os selecionados na geração. Alterar servidores ou período exige nova geração antes da exportação; controles ficam bloqueados durante a consulta. Meses com jornada reduzida têm seus excedentes e créditos simulados discriminados; a simulação não representa crédito adquirido e depende do ato e da autorização aplicáveis.
 
+**Parâmetros persistentes (1.2.6-Snapshot):** período, seleção de matrículas/unidade e agrupamento são guardados localmente por login a cada alteração, sem exigir geração. A seleção é cruzada com a equipe disponível; uma seleção vazia permanece vazia. Na primeira abertura, aproveitam-se período e servidores do último resultado compatível. Preferências e resultado são distintos: período/seleção restaurados diferentes do resultado exigem nova geração antes de exportar. O mesmo mecanismo guarda período/filtro da Auditoria de Pagamento e ordenação por servidor da Auditoria de Horas Perdidas, sem sincronização externa.
+
 Desde a v1.1.15 o relatório usa os nomes do Espelho de Ponto: os da linha **Destino do mês** e os selos da coluna Ocorrência. Os nomes e as explicações ficam num só lugar (`TERMS` e `reasonInfo` em `lostHoursCalc.js`), usado pelo Espelho e pelo relatório. Cada coluna tem a explicação no título (tooltip) e na seção "O que cada coluna mostra", na tela e na versão para impressão.
 
 | Coluna | Como é apurada |

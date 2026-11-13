@@ -1,10 +1,10 @@
 # 🔒 Política de Privacidade — TSE XT
 
-**Última atualização:** 12 de novembro de 2026
+**Última atualização:** 13 de novembro de 2026
 
-**Versão da política:** 1.3.0
+**Versão da política:** 1.3.1
 
-**Extensão de referência:** 1.2.0
+**Extensão de referência:** 1.2.6-Snapshot
 
 **Repositório:** [https://github.com/lukeboh/tse-xt](https://github.com/lukeboh/tse-xt)
 
@@ -27,6 +27,7 @@ O TSE XT adota o princípio de **Privacidade por Design (*Privacy by Design*)**:
 As permissões declaradas no manifesto seguem o **Princípio do Menor Privilégio (*Least Privilege*)**:
 - `storage` (**Armazenamento Local**): Utilizada para persistir, apenas no `chrome.storage.local` do próprio navegador:
   - preferências de configuração (tema ativo/desligado, estilo e destaque dos cards de KPI, modo de abertura do menu de serviços);
+  - últimos parâmetros dos relatórios, separados por login: períodos, matrículas selecionadas e unidade no Reconhecimento Posterior, agrupamento, filtro da Auditoria de Pagamento e ordenação da Auditoria de Horas Perdidas por servidor consultado;
   - a versão em que o aviso de aplicação experimental foi confirmado;
   - o resultado da Auditoria de Horas Perdidas, por matrícula, para reabrir sem refazer a varredura;
   - o último Relatório de Reconhecimento Posterior gerado pela chefia (nome, matrícula e horas dos servidores da equipe no período), para reabrir sem refazer a consulta;

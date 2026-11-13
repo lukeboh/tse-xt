@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.5-Snapshot';
+  const CURRENT_VERSION = '1.2.6-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.6-Snapshot',
+      date: '2026-11-13',
+      title: 'Últimos parâmetros dos relatórios',
+      features: [
+        'Reconhecimento Posterior lembra período, servidores selecionados e agrupamento por usuário, inclusive sem gerar outro relatório.',
+        'Auditoria de Pagamento lembra período e filtro de pendências; Auditoria de Horas Perdidas preserva a ordenação por servidor consultado.',
+        'Preferências ficam somente neste navegador. Períodos de resultados anteriores são aproveitados na primeira abertura; seleção vazia é preservada.'
+      ]
+    },
     {
       version: '1.2.5-Snapshot',
       date: '2026-11-13',

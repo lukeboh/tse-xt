@@ -110,7 +110,7 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 🔒 PRIVACIDADE & SEGURANÇA POR DESIGN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, resultado da Auditoria de Horas Perdidas, último Relatório de Reconhecimento Posterior, última Auditoria de Pagamento de Pecúnias e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
+• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, últimos parâmetros dos relatórios por usuário — períodos, servidores selecionados, agrupamento, filtro e ordenação —, resultado da Auditoria de Horas Perdidas, último Relatório de Reconhecimento Posterior, última Auditoria de Pagamento de Pecúnias e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
 • Zero Requisições Externas: A extensão não se conecta a nenhum servidor de terceiros; a comunicação ocorre apenas com os próprios sistemas do TSE, no seu contexto de sessão.
 • Manifest V3 Conforme: Construída seguindo os mais altos padrões de segurança do Google Chrome (sem scripts inline inseguros e com sanitização rigorosa de DOM contra XSS).
 • Permissões Mínimas: apenas armazenamento local (preferências e resultados calculados), acesso à aba ativa para recarregá-la ao aplicar preferências e acesso restrito aos domínios oficiais do TSE.

@@ -13,11 +13,11 @@ test('version — CURRENT_VERSION em version.js corresponde ao manifest.json', (
   const V = versionMod.JEPessoasVersion;
 
   const currentVersion = V.getVersion();
-  assert.equal(currentVersion, '1.2.5-Snapshot');
+  assert.equal(currentVersion, '1.2.6-Snapshot');
 
   // A versao de desenvolvimento pode diferir da ultima tag estavel da loja.
   assert.equal(manifest.version_name, currentVersion);
-  assert.equal(manifest.version, '1.2.5');
+  assert.equal(manifest.version, '1.2.6');
 });
 
 test('version — CHANGELOG tem entrada no topo para a versão corrente', () => {

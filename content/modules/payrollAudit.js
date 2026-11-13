@@ -23,6 +23,7 @@ window.JEPessoasPayrollAudit = (function () {
   'use strict';
 
   const STORAGE_KEY = 'je_xt_payroll_v1';
+  let preferencesLoaded = false;
   const ESPELHO_URL = '/portalservidor2/EspelhoPontoMesAction_recuperar.action';
   const PAYSLIP_URL = '/portalservidor2/ContrachequeRendimentosAction_verContracheque';
   const SHEET_FIELD = 'contracheque.folhaContracheque.numero';
@@ -292,6 +293,7 @@ window.JEPessoasPayrollAudit = (function () {
     if (!months.length) { alert('Informe o período da auditoria (mês inicial e final).'); return; }
 
     running = true;
+    savePreferences();
     aborted = false;
     openMonths.clear();
     showProgress(true);
@@ -445,7 +447,10 @@ window.JEPessoasPayrollAudit = (function () {
     overlay.querySelector('#je-pay-cancel').addEventListener('click', () => { aborted = true; });
     overlay.querySelector('#je-pay-csv').addEventListener('click', exportCSV);
     overlay.querySelector('#je-pay-print').addEventListener('click', printReport);
-    overlay.querySelector('#je-pay-only').addEventListener('change', (e) => { onlyIssues = e.target.checked; paintTable(); });
+    overlay.querySelector('#je-pay-only').addEventListener('change', (e) => { onlyIssues = e.target.checked; savePreferences(); paintTable(); });
+    ['#je-pay-from', '#je-pay-to'].forEach((s) => {
+      ['input', 'change'].forEach((evt) => overlay.querySelector(s).addEventListener(evt, periodChanged));
+    });
     overlay.querySelector('#je-pay-body').addEventListener('click', onBodyClick);
     overlay.querySelector('#je-pay-body').addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -464,6 +469,7 @@ window.JEPessoasPayrollAudit = (function () {
   function showProgress(on) {
     overlay.querySelector('#je-pay-progress').hidden = !on;
     ['#je-pay-run', '#je-pay-csv', '#je-pay-print'].forEach((s) => { overlay.querySelector(s).disabled = on; });
+    ['#je-pay-from', '#je-pay-to'].forEach((s) => { overlay.querySelector(s).disabled = on; });
   }
 
   // Barra da varredura inteira (espelhos e contracheques) com previsão de término.
@@ -537,6 +543,8 @@ window.JEPessoasPayrollAudit = (function () {
       return;
     }
     if (!result || !result.expected || !result.generatedAt) {
+      overlay.querySelector('#je-pay-csv').disabled = true;
+      overlay.querySelector('#je-pay-print').disabled = true;
       body.innerHTML = `
         <div class="je-audit-empty">
           <p>Escolha o período e clique em <strong>Auditar</strong>.</p>
@@ -546,6 +554,8 @@ window.JEPessoasPayrollAudit = (function () {
     }
 
     current = result;
+    overlay.querySelector('#je-pay-csv').disabled = false;
+    overlay.querySelector('#je-pay-print').disabled = false;
     view = calc().reconcile(result.expected, result.payslips, { today: new Date() });
     const t = view.totals;
     const S = calc().STATUS;
@@ -914,17 +924,41 @@ window.JEPessoasPayrollAudit = (function () {
     if (overlay) overlay.classList.remove('active');
   }
 
+  function savePreferences() {
+    if (!preferencesLoaded) return;
+    return window.JEPessoasReportPreferences.save('payroll', {
+      from: overlay.querySelector('#je-pay-from').value,
+      to: overlay.querySelector('#je-pay-to').value, onlyIssues
+    });
+  }
+
+  function periodChanged() {
+    savePreferences();
+    current = null;
+    overlay.querySelector('#je-pay-body').innerHTML = '<div class="je-audit-alert">Período alterado. Clique em <strong>Auditar</strong> para consultar o período selecionado.</div>';
+    overlay.querySelector('#je-pay-csv').disabled = true;
+    overlay.querySelector('#je-pay-print').disabled = true;
+  }
+
   async function open() {
     createDOM();
     overlay.classList.add('active');
-    if (current || running) return;
+    if (current || running || preferencesLoaded) return;
     const stored = await loadStored();
     const own = ownMatricula();
     // Resultado guardado por outro login neste navegador não é mostrado.
     const mine = stored && (!stored.matricula || !own || stored.matricula === own);
+    if (!preferencesLoaded) {
+      const prefs = await window.JEPessoasReportPreferences.load('payroll', mine ? { from: stored.from, to: stored.to } : {});
+      ['from', 'to'].forEach((k) => { if (prefs[k]) overlay.querySelector('#je-pay-' + k).value = prefs[k]; });
+      onlyIssues = prefs.onlyIssues === true;
+      overlay.querySelector('#je-pay-only').checked = onlyIssues;
+      preferencesLoaded = true;
+    }
     // Resultado guardado antes da v1.1.13 ficou sem o nome do servidor.
     if (mine && !stored.issuer && own && stored.matricula === own) stored.issuer = issuerName();
     render(mine ? stored : null);
+    if (mine && (overlay.querySelector('#je-pay-from').value !== stored.from || overlay.querySelector('#je-pay-to').value !== stored.to)) periodChanged();
   }
 
   return { open, close, issuerName };

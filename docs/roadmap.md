@@ -257,6 +257,8 @@ Melhorias para tornar o uso diário mais ergonômico, rápido e produtivo.
 
 **Refinamento das ações rápidas (1.2.5-Snapshot, 13/11/2026):** botão flutuante com azul institucional sólido, sem relevo nativo, gradiente ou brilho intenso. Sombra suave, estado aberto em azul e foco de teclado visível. Conferidos os estados fechado, aberto e com foco no Chrome; ações do menu preservadas.
 
+**Parâmetros dos relatórios (1.2.6-Snapshot, 13/11/2026):** M4 lembra período, seleção e agrupamento; M5 lembra período e filtro de pendências; Auditoria de Horas Perdidas mantém ordenação por servidor. Preferências locais por login, salvas sem geração, com migração do período do último resultado e bloqueio de exportação quando os parâmetros não correspondem ao resultado. Entrega vinculada à Trilha U, sem encerrar as demais preferências de U4.
+
 ---
 
 ## 📦 Trilha M — Novos Módulos Dedicados & Funcionalidades de Negócio

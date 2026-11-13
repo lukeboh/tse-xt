@@ -562,13 +562,13 @@ window.JEPessoasLostHours = (function () {
     `;
 
     auditRows = withLoss;
-    auditSort = { key: 'label', dir: 'desc' };
     body.querySelectorAll('#je-audit-thead th').forEach((th, i) => {
       th.addEventListener('click', () => {
         const k = SORT_KEYS[i];
         if (!k) return;
         if (auditSort.key === k) auditSort.dir = auditSort.dir === 'asc' ? 'desc' : 'asc';
         else auditSort = { key: k, dir: 'desc' };
+        window.JEPessoasReportPreferences.save('lostHours', { sortKey: auditSort.key, sortDir: auditSort.dir }, getMatricula());
         paintTable();
       });
     });
@@ -788,6 +788,8 @@ window.JEPessoasLostHours = (function () {
     createDOM();
     overlay.classList.add('active');
     const mat = getMatricula();
+    const prefs = await window.JEPessoasReportPreferences.load('lostHours', { sortKey: 'label', sortDir: 'desc' }, mat);
+    auditSort = { key: prefs.sortKey, dir: prefs.sortDir };
     const snap = await loadSnapshot(mat);
     render(snap);
     // Abre sempre com o último resultado + delta: dispara incremental se já há histórico.

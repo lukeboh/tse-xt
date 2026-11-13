@@ -32,6 +32,7 @@ window.JEPessoasRecognitionReport = (function () {
   let team = [];
   let current = null;
   let selectionDirty = false;
+  let preferencesLoaded = false;
   // Agrupamento da tabela: 'server' (servidor → mês) ou 'month' (mês → servidor).
   let groupBy = 'server';
   const openServers = new Set();
@@ -255,6 +256,7 @@ window.JEPessoasRecognitionReport = (function () {
     if (total > CONFIRM_REQUESTS && !confirm(`Serão ${total} consultas ao Espelho de Ponto (${picked.length} servidores × ${months.length} meses). Pode levar alguns minutos; a barra mostra a previsão de término. Continuar?`)) return;
 
     running = true;
+    savePreferences();
     aborted = false;
     openServers.clear();
     openGroups.clear();
@@ -394,7 +396,9 @@ window.JEPessoasRecognitionReport = (function () {
     overlay.querySelector('#je-recog-print').addEventListener('click', printReport);
     overlay.querySelector('#je-recog-all').addEventListener('click', () => selectTeam(true));
     overlay.querySelector('#je-recog-none').addEventListener('click', () => selectTeam(false));
-    ['#je-recog-from', '#je-recog-to'].forEach((s) => overlay.querySelector(s).addEventListener('change', selectionChanged));
+    ['#je-recog-from', '#je-recog-to'].forEach((s) => {
+      ['input', 'change'].forEach((evt) => overlay.querySelector(s).addEventListener(evt, selectionChanged));
+    });
     overlay.querySelector('#je-recog-team-list').addEventListener('change', (e) => {
       const i = e.target && e.target.dataset ? e.target.dataset.i : null;
       if (i == null) return;
@@ -405,6 +409,7 @@ window.JEPessoasRecognitionReport = (function () {
     overlay.querySelectorAll('input[name="je-recog-group"]').forEach((r) => r.addEventListener('change', (e) => {
       if (!e.target.checked) return;
       groupBy = e.target.value === 'month' ? 'month' : 'server';
+      savePreferences();
       paintTable();
     }));
     overlay.querySelector('#je-recog-body').addEventListener('click', onBodyClick);
@@ -449,6 +454,17 @@ window.JEPessoasRecognitionReport = (function () {
     overlay.querySelector('#je-recog-csv').disabled = true;
     overlay.querySelector('#je-recog-print').disabled = true;
     overlay.querySelector('#je-recog-run').disabled = !team.some((s) => s.checked);
+    savePreferences();
+  }
+
+  function savePreferences() {
+    if (!preferencesLoaded) return;
+    return window.JEPessoasReportPreferences.save('recognition', {
+      from: overlay.querySelector('#je-recog-from').value,
+      to: overlay.querySelector('#je-recog-to').value,
+      groupBy, unitId: currentUnit.id,
+      selectedMatriculas: team.filter((s) => s.checked).map((s) => s.matricula)
+    });
   }
 
   function paintTeamSummary() {
@@ -490,6 +506,8 @@ window.JEPessoasRecognitionReport = (function () {
     const body = overlay.querySelector('#je-recog-body');
 
     if (!result || !result.servers || !result.servers.length) {
+      overlay.querySelector('#je-recog-csv').disabled = true;
+      overlay.querySelector('#je-recog-print').disabled = true;
       body.innerHTML = `
         <div class="je-audit-empty">
           <p>Escolha o período e os servidores e clique em <strong>Gerar relatório</strong>.</p>
@@ -506,6 +524,8 @@ window.JEPessoasRecognitionReport = (function () {
       return;
     }
 
+    overlay.querySelector('#je-recog-csv').disabled = false;
+    overlay.querySelector('#je-recog-print').disabled = false;
     const { servers, team: t } = withTotals(result);
     const when = result.generatedAt ? new Date(result.generatedAt).toLocaleString('pt-BR') : '';
     const banner = flags.loggedOut
@@ -959,13 +979,31 @@ window.JEPessoasRecognitionReport = (function () {
   async function open() {
     createDOM();
     overlay.classList.add('active');
-    if (!current && !selectionDirty) render(await loadStored());
-    if (!team.length) {
+    if (!preferencesLoaded) {
+      const stored = await loadStored();
       overlay.querySelector('#je-recog-team-summary').textContent = 'Servidores: carregando…';
       const loaded = await loadTeam();
       currentUnit = loaded.unit;
-      team = loaded.list.map((s) => Object.assign({ checked: true }, s));
+      const mine = stored && (!stored.issuer || !issuerName() || stored.issuer === issuerName());
+      const seed = mine ? { from: stored.from, to: stored.to,
+        selectedMatriculas: (stored.servers || []).map((s) => s.matricula), unitId: currentUnit.id } : {};
+      const prefs = await window.JEPessoasReportPreferences.load('recognition', seed);
+      ['from', 'to'].forEach((k) => { if (prefs[k]) overlay.querySelector('#je-recog-' + k).value = prefs[k]; });
+      groupBy = prefs.groupBy || 'server';
+      overlay.querySelectorAll('input[name="je-recog-group"]').forEach((r) => { r.checked = r.value === groupBy; });
+      const selection = Array.isArray(prefs.selectedMatriculas) && (!prefs.unitId || prefs.unitId === currentUnit.id)
+        ? new Set(prefs.selectedMatriculas) : null;
+      team = loaded.list.map((s) => Object.assign({}, s, { checked: selection ? selection.has(s.matricula) : true }));
+      preferencesLoaded = true;
       paintTeam();
+      render(mine ? stored : null);
+      if (stored && mine) {
+        const months = calc().monthRange(overlay.querySelector('#je-recog-from').value, overlay.querySelector('#je-recog-to').value);
+        const picked = team.filter((s) => s.checked).map((s) => s.matricula).sort();
+        const generated = (stored.servers || []).map((s) => s.matricula).sort();
+        if (!months.length || stored.from !== months[0].key || stored.to !== months[months.length - 1].key || JSON.stringify(picked) !== JSON.stringify(generated)) selectionChanged();
+      }
+      if (!team.some((s) => s.checked)) selectionChanged();
     }
   }
 
