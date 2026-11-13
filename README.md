@@ -58,6 +58,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 - Auditoria de Pagamento de Pecúnias: espelho × contracheques e folhas suplementares.
 - Cobertura de dias curtos pelo fim de semana não pago com ×1,5/×2, inclusive acima de 10h, antes da perda.
 - Cinco categorias de perda, motivos por dia, Destino do mês e controle separado do crédito oficial no banco.
+- No desenvolvimento 1.2.7-Snapshot, Destino do mês acompanha as colunas do espelho, indica a origem das compensações e referencia os totais de pago/perdido sem duplicá-los.
 - Relatórios com período livre e previsão de término, ajuste de ponto de subordinados, destaque de pecúnia e cabeçalho fixo.
 
 ## 🚀 Como Instalar no Google Chrome

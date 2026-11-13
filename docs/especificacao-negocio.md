@@ -186,6 +186,8 @@ Na linha `Totais:` da tabela principal:
 
 Desde a v1.1.15 o relatório usa os nomes do Espelho de Ponto: os da linha **Destino do mês** e os selos da coluna Ocorrência. Os nomes e as explicações ficam num só lugar (`TERMS` e `reasonInfo` em `lostHoursCalc.js`), usado pelo Espelho e pelo relatório. Cada coluna tem a explicação no título (tooltip) e na seção "O que cada coluna mostra", na tela e na versão para impressão.
 
+**Apresentação no espelho (1.2.7-Snapshot):** a linha Destino do mês segue a grade do cabeçalho. Excedente fica sob TOTAL; Compensou dias curtos sob HORAS AJUST.; Banco sob Horas Excedentes; cobertura de fim de semana sob o controle acumulado; avisos de conciliação sob Ocorrência. Essa posição indica relação de leitura, não uma soma direta da coluna: excedente e compensações são reconstruídos de TOTAL e jornada diária, enquanto Banco usa as Horas Excedentes Homologadas do rodapé. Pago e Perdido apenas remetem aos totais de suas colunas acima. A cobertura mostra tempo bruto, com equivalente ×1,5/×2 na explicação, sem gerar crédito no banco. Cálculos e relatórios permanecem com as mesmas regras.
+
 | Coluna | Como é apurada |
 | :--- | :--- |
 | **Excedente** | Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas. |

@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.6';
+  const CURRENT_VERSION = '1.2.7-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.7-Snapshot',
+      date: '2026-11-13',
+      title: 'Alinhamento dos totais e destinos do mês',
+      features: [
+        'Corrigida a célula vazia nativa que sobrava nos totais após a inclusão das colunas do XT, mantendo a grade do cabeçalho.',
+        'Destino do mês distribuído pelas colunas relacionadas, com referências aos totais de Pago e Perdido acima, sem repetir valores.',
+        'Origem dos destinos esclarecida: reconstrução por TOTAL/jornada e banco por homologadas do rodapé; HORAS AJUST. e Compl. Jorn. Mínima não são usadas como somas equivalentes.'
+      ]
+    },
     {
       "version": "1.2.6",
       "date": "2026-11-13",

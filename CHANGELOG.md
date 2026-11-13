@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.7-Snapshot — 13/11/2026
+
+- Corrigida a coluna excedente nos totais do espelho: a reserva vazia nativa de seis posições era mantida junto às novas células, produzindo 25 posições para um cabeçalho de 19. A reserva passa a ocupar somente as duas posições finais, sem alterar os valores nativos.
+- Destino do mês distribuído pela grade do cabeçalho. Pago, Pago noturno e Perdido apontam para seus totais acima, sem repetir valores; excedente, compensações, banco e avisos têm explicações sobre suas fontes.
+- Compensações são reconstruídas de TOTAL e jornada diária, sem apresentá-las como soma de HORAS AJUST. ou Compl. Jorn. Mínima. Banco permanece vinculado às Horas Excedentes Homologadas do rodapé; cobertura de fim de semana não cria crédito.
+- Verificação: **222 testes passando**, com regressões para meses abertos/fechados, reprocessamento, reserva nativa e alocação dos indicadores. Conferência visual no mês fechado real: cabeçalho, totais e destinos com 19 posições, dados nativos preservados após duas aplicações.
+- Correção de desenvolvimento; liberação estável 1.2.6 e sua submissão à loja preservadas.
+
 ## 1.2.6 — 13/11/2026
 
 - Liberação estável solicitada pelo responsável, consolidando os desenvolvimentos 1.2.1 a 1.2.6 sem reescrever commits ou mover a tag 1.2.0.

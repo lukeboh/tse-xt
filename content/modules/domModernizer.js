@@ -794,10 +794,53 @@ window.JEPessoasModernizer = (function () {
     return window.JEPessoasLostCalc.reasonInfo(code, hasAuth);
   }
 
+  function fitMonthlyTotalsTail(nativeCells, anchor) {
+    const nativeTail = nativeCells[nativeCells.length - 1];
+    // O portal reserva as seis últimas colunas numa única célula vazia.
+    // Os totais injetados já ocupam quatro delas: sobram Ocorrência e ações.
+    if (nativeCells.length >= 4 && nativeTail !== anchor && !nativeTail.textContent.trim() && nativeTail.colSpan >= 2) {
+      if (!nativeTail.dataset.jeOrigColspan) nativeTail.dataset.jeOrigColspan = String(nativeTail.colSpan);
+      nativeTail.colSpan = 2;
+      nativeTail.classList.add('je-row-span-fill');
+      return nativeTail;
+    }
+    const trailing = document.createElement('td');
+    trailing.className = 'cellTotais je-totais-trailing';
+    trailing.colSpan = 2;
+    anchor.parentNode.insertBefore(trailing, anchor.nextSibling);
+    return trailing;
+  }
+
+  function monthlyDestinationLayout(headers, dest) {
+    const T = window.JEPessoasLostCalc.TERMS;
+    const has = (h, cls) => (h.className || '').split(/\s+/).includes(cls);
+    const totalIndex = headers.findIndex(h => has(h, 'h09'));
+    if (totalIndex < 0) return [];
+    const item = (label, min, title, tone = 'bom') => ({ label, min, title, tone });
+    const layout = [{ span: headers.slice(0, totalIndex).reduce((n,h) => n + (h.colSpan || 1), 0), label: 'Destino do mês', items: [] }];
+    headers.slice(totalIndex).forEach(h => {
+      const slot = { span: h.colSpan || 1, column: h.className || '', items: [] };
+      if (has(h, 'h09')) slot.items.push(item(T.excedente.label, dest.excessMin, 'Derivado de TOTAL e da jornada de cada dia: excedente útil mais trabalho de sábado, domingo e feriado. Não é a soma de TOTAL.', 'neutro'));
+      if (has(h, 'h10')) slot.items.push(item(T.compensou.label, dest.compensatedMin, 'Reconstruído a partir de TOTAL e jornada: excedente útil que completou dias curtos. Relaciona-se ao fechamento da jornada reconhecida em HORAS AJUST., mas não é a soma dessa coluna.'));
+      if (has(h, 'je-col-daily-exceed')) slot.items.push(item(T.banco.label, dest.homologMin, `${T.banco.tip} Fonte: Horas Excedentes Homologadas do rodapé (tempo bruto). Crédito com fatores: +${formatTime(dest.creditMin)}. Não deriva do total de HORAS AJUST.`));
+      if (has(h, 'je-col-accumulated-balance')) slot.items.push(item('Cobriu dias curtos (FDS)', dest.weekendCompensatedMin, `${T.cobriuFds.tip} Cobertura equivalente no controle: ${formatTime(dest.weekendCoverageMin)}. Não cria crédito no banco.`));
+      if (has(h, 'h12') || has(h, 'h11')) { slot.reference = 'Pago ↑'; slot.title = 'Pago já está nos totais de PECÚNIA e ADIC. NOTURNO PECÚNIA acima; não é repetido nesta linha.'; }
+      if (has(h, 'h13')) { slot.reference = 'Pago noturno ↑'; slot.title = 'Esta parcela também integra Pago. O valor permanece no total da coluna acima.'; }
+      if (has(h, 'je-col-lost-hours')) { slot.reference = 'Perdido ↑'; slot.title = 'Perdido já está consolidado em HORAS PERDIDAS acima; não é repetido nesta linha.'; }
+      if (has(h, 'h16')) {
+        if (dest.debitMin) slot.items.push(item(T.debito.label, dest.debitMin, T.debito.tip, 'ruim'));
+        if (dest.unexplainedMin) slot.items.push(item(T.naoConciliado.label, dest.unexplainedMin, T.naoConciliado.tip, 'aviso'));
+        if (dest.debitDifferenceMin) slot.items.push(item(T.debitoDivergente.label, dest.debitDifferenceMin, `${T.debitoDivergente.tip} Calculado: ${formatTime(dest.calculatedDebitMin)}; oficial: ${formatTime(dest.debitMin)}.`, 'aviso'));
+      }
+      layout.push(slot);
+    });
+    return layout;
+  }
+
   function modernizeMonthlyTable(table, targetHours = 7) {
 
     // Limpa injeções anteriores para garantir idempotência
-    table.querySelectorAll('.je-destino-mes, .je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
+    table.querySelectorAll('.je-destino-mes, .je-destino-fontes, .je-col-daily-exceed, .je-col-lost-hours, .je-col-accumulated-balance, .je-totais-trailing, .je-totais-pecunia, .je-totais-noturno-pecunia, .je-totais-noturno-ord, .je-totais-compl-jornada').forEach(el => el.remove());
 
     // Desfaz o "preenchimento de linha" (normalização de colspan do resumo do
     // mês, mais abaixo) — restaura o colspan nativo antes de reprocessar.
@@ -1511,11 +1554,8 @@ window.JEPessoasModernizer = (function () {
           currentFooterAnchor.parentNode.insertBefore(totalLostTd, currentFooterAnchor.nextSibling);
           currentFooterAnchor = totalLostTd;
 
-          // 8. Célula trailing (Ocorrência + ações)
-          const trailingTd = document.createElement('td');
-          trailingTd.className = 'cellTotais je-totais-trailing';
-          trailingTd.colSpan = 2;
-          currentFooterAnchor.parentNode.insertBefore(trailingTd, currentFooterAnchor.nextSibling);
+          // 8. Reutiliza a reserva nativa, sem duplicar as últimas seis colunas.
+          fitMonthlyTotalsTail(cells, currentFooterAnchor);
         }
       }
     });
@@ -1525,40 +1565,47 @@ window.JEPessoasModernizer = (function () {
       const totalsRow = table.querySelector('tr.total-horas');
       if (totalsRow && totalsRow.parentNode) {
         const dest = window.JEPessoasLostCalc.computeMonthDestination(closedMonthAnalysis, closedMonthLoss);
-        const T = window.JEPessoasLostCalc.TERMS;
-        const chips = [
-          ['neutro', T.excedente.label, dest.excessMin, T.excedente.tip],
-          ['bom', T.compensou.label, dest.compensatedMin, T.compensou.tip],
-          ['bom', T.cobriuFds.label, dest.weekendCompensatedMin, `${T.cobriuFds.tip} Cobertura equivalente: ${formatTime(dest.weekendCoverageMin)}.`],
-          ['bom', T.pago.label, dest.paidMin, T.pago.tip],
-          ['bom', T.banco.label, dest.homologMin, `${T.banco.tip} Crédito neste mês: +${formatTime(dest.creditMin)}.`],
-          ['ruim', T.perdido.label, dest.lostMin, T.perdido.tip],
-          ['ruim', T.debito.label, dest.debitMin, T.debito.tip]
-        ];
-        if (Math.abs(dest.unexplainedMin) > 0) {
-          chips.push(['aviso', T.naoConciliado.label, dest.unexplainedMin, T.naoConciliado.tip]);
+        const header = Array.from(table.querySelectorAll('tr')).find(r => r.querySelector('th.h09'));
+        const layout = header ? monthlyDestinationLayout(Array.from(header.cells), dest) : [];
+        if (layout.length) {
+          const destRow = document.createElement('tr');
+          destRow.className = 'je-destino-mes';
+          layout.forEach(slot => {
+            const cell = document.createElement('td');
+            cell.colSpan = slot.span;
+            if (slot.column) cell.dataset.jeDestinoColumn = slot.column;
+            if (slot.label) {
+              const label = document.createElement('span');
+              label.className = 'je-destino-rotulo'; label.textContent = slot.label;
+              cell.appendChild(label);
+            }
+            if (slot.reference) {
+              const ref = document.createElement('span');
+              ref.className = 'je-destino-ref'; ref.textContent = slot.reference; ref.title = slot.title;
+              cell.appendChild(ref);
+            }
+            slot.items.forEach(item => {
+              const chip = document.createElement('span');
+              chip.className = 'je-destino-chip je-destino-' + item.tone;
+              chip.title = item.title;
+              const label = document.createElement('span');
+              label.className = 'je-destino-label'; label.textContent = item.label;
+              const value = document.createElement('strong');
+              value.className = 'je-destino-value';
+              value.textContent = (item.min < 0 ? '-' : '') + formatTime(Math.abs(item.min));
+              chip.appendChild(label); chip.appendChild(value); cell.appendChild(chip);
+            });
+            destRow.appendChild(cell);
+          });
+          const sourcesRow = document.createElement('tr');
+          sourcesRow.className = 'je-destino-fontes';
+          const sources = document.createElement('td');
+          sources.colSpan = layout.reduce((n,slot) => n + slot.span, 0);
+          sources.textContent = 'Origem dos valores: Excedente e compensações são reconstruídos de TOTAL e jornada diária; não são a soma de HORAS AJUST. ou Compl. Jorn. Mínima. Banco vem das Horas Excedentes Homologadas do rodapé. Pago = PECÚNIA + ADIC. NOTURNO PECÚNIA. Perdido já está totalizado acima. A cobertura de fim de semana fecha a jornada com ×1,5/×2, sem criar crédito no banco.';
+          sourcesRow.appendChild(sources);
+          totalsRow.parentNode.insertBefore(destRow, totalsRow.nextSibling);
+          totalsRow.parentNode.insertBefore(sourcesRow, destRow.nextSibling);
         }
-        if (dest.debitDifferenceMin !== 0) {
-          chips.push(['aviso', T.debitoDivergente.label, dest.debitDifferenceMin,
-            `${T.debitoDivergente.tip} Calculado: ${formatTime(dest.calculatedDebitMin)}; oficial: ${formatTime(dest.debitMin)}.`]);
-        }
-        const destRow = document.createElement('tr');
-        destRow.className = 'je-destino-mes';
-        const destCell = document.createElement('td');
-        destCell.colSpan = Array.from(totalsRow.children).reduce((acc, c) => acc + (c.colSpan || 1), 0);
-        const label = document.createElement('span');
-        label.className = 'je-destino-rotulo';
-        label.textContent = 'Destino do mês';
-        destCell.appendChild(label);
-        chips.filter((c) => c[2] !== 0 || c[1] === 'Excedente').forEach((c) => {
-          const chip = document.createElement('span');
-          chip.className = `je-destino-chip je-destino-${c[0]}`;
-          chip.textContent = `${c[1]} ${c[2] < 0 ? '-' : ''}${formatTime(Math.abs(c[2]))}`;
-          chip.title = c[3];
-          destCell.appendChild(chip);
-        });
-        destRow.appendChild(destCell);
-        totalsRow.parentNode.insertBefore(destRow, totalsRow.nextSibling);
       }
     }
 
@@ -1575,8 +1622,8 @@ window.JEPessoasModernizer = (function () {
       const spanOf = (tr) => Array.from(tr.cells).reduce((s, c) => s + (c.colSpan || 1), 0);
 
       // largura dominante = soma de colspan mais frequente entre as linhas
-      // "normais" do corpo (exclui a linha "Totais:", que o TSE XT reconstrói
-      // propositalmente mais larga, e os espaçadores de 1 célula só).
+      // "normais" do corpo (exclui o resumo de totais e os espaçadores
+      // de uma célula só). O total reconstruído tem a largura do cabeçalho.
       const freq = {};
       allRows.forEach((tr) => {
         if (isTotaisRow(tr) || tr.cells.length <= 1) return;
@@ -2921,6 +2968,8 @@ window.JEPessoasModernizer = (function () {
     buildKpiCardsHTML,
     modernizeTable,
     modernizeMonthlyTable,
+    fitMonthlyTotalsTail,
+    monthlyDestinationLayout,
     modernizeForm,
     modernizeGenericFormButtons,
     modernizeGenericMoldura,
