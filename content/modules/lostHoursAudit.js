@@ -754,7 +754,7 @@ window.JEPessoasLostHours = (function () {
 
   function exportCSV() {
     if (!currentSnapshot || !currentSnapshot.months) return;
-    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'CalculoAtual', 'RessalvaNormativa']];
+    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir', 'CompensouDiasCurtos_FDS_Trabalhadas', 'CompensouDiasCurtos_FDS_Equivalente', 'CalculoAtual', 'RessalvaNormativa']];
     Object.values(currentSnapshot.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (x.y - y.y) || (x.m - y.m)).forEach((r) => {
       rows.push([
         r.label,

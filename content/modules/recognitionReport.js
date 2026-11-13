@@ -796,7 +796,7 @@ window.JEPessoasRecognitionReport = (function () {
 
   function exportCSV() {
     if (!current || !current.servers || !current.servers.length) { alert('Gere o relatório antes de exportar.'); return; }
-    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'Pago', 'Banco',
+    const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'CompensouDiasCurtos_FDS_Trabalhadas', 'CompensouDiasCurtos_FDS_Equivalente', 'Pago', 'Banco',
       'Perdido', 'Perdido_DiaUtil', 'Perdido_Sabado', 'Perdido_DomFer', 'AcimaDe10h',
       'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoSimulado_SujeitoAutorizacao', 'NaoConciliado', 'Hibrido_info', 'DiferencaDebito', 'JornadaReduzida_ExcedenteInformativo', 'JornadaReduzida_CreditoSimulado', 'RessalvaNormativa']];
     const line = (srv, s) => rows.push([srv.name, srv.matricula, s.label, STATUS_CSV[s.status] || s.status,

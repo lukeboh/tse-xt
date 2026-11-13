@@ -192,12 +192,12 @@ Desde a v1.1.15 o relatório usa os nomes do Espelho de Ponto: os da linha **Des
 | :--- | :--- |
 | **Excedente** | Em dia útil, o que passou da jornada do dia. Em sábado, domingo e feriado, todas as horas trabalhadas. |
 | **Compensou dias curtos** | Excedente de dia útil usado para completar dias curtos do mesmo mês. |
-| **Cobriu dias curtos (fim de semana ×1,5/×2)** | Desde a v1.1.16: horas não pagas de sábado/domingo/feriado usadas para cobrir a falta restante, inclusive acima de 10h. A coluna mostra tempo trabalhado; o equivalente com os fatores aparece na explicação e no CSV. |
+| **Compensou dias curtos (FDS)** | Desde a v1.1.16: horas não pagas de sábado/domingo/feriado usadas para compensar a falta restante, inclusive acima de 10h. A coluna mostra tempo trabalhado; o equivalente ×1,5/×2 aparece na explicação e no CSV. Rótulo padronizado na v1.2.8-Snapshot. |
 | **Pago** | `Pecúnia` + `Adicional Noturno Pecúnia` do rodapé do espelho. |
 | **Banco** | `Horas Excedentes Homologadas` do rodapé. |
 | **Perdido** | O que sobra, e é o que se pede para reconhecer. Os motivos são os selos do Espelho: Não homologada, Acima do autorizado, Acima de 10h, Sobra do mês, Sem autorização e Não paga: conferir. |
 
-Em cada mês fechado, Excedente = Compensou dias curtos + Cobriu dias curtos (fim de semana, tempo trabalhado) + Pago + Banco + Perdido. Quando a conta não fecha, o mês recebe o selo **Conferir** (Não conciliado). O débito calculado após as compensações também é comparado ao Resíduo de Horas oficial; divergências recebem **Conferir débito**. A cobertura não cria crédito no banco e fica fora da solicitação de reconhecimento. A jornada 7h/8h e o tratamento atual de recesso foram preservados (D11 aberta).
+Em cada mês fechado, Excedente = Compensou dias curtos + Compensou dias curtos (FDS, tempo trabalhado) + Pago + Banco + Perdido. Quando a conta não fecha, o mês recebe o selo **Conferir** (Não conciliado). O débito calculado após as compensações também é comparado ao Resíduo de Horas oficial; divergências recebem **Conferir débito**. A cobertura não cria crédito no banco e fica fora da solicitação de reconhecimento. A jornada 7h/8h e o tratamento atual de recesso foram preservados (D11 aberta).
 
 Resultados salvos do Reconhecimento Posterior anteriores a essa regra pedem nova geração e ficam indisponíveis para exportação e impressão até o recálculo. Na Auditoria de Horas Perdidas, resultados antigos recebem aviso para **Full Update**, e o CSV identifica se cada mês usa o cálculo atual.
 

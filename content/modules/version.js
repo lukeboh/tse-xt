@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.7-Snapshot';
+  const CURRENT_VERSION = '1.2.8-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.8-Snapshot',
+      date: '2026-11-13',
+      title: 'Nomes consistentes para a compensação de dias curtos',
+      features: [
+        'Indicadores padronizados como “Compensou dias curtos” e “Compensou dias curtos (FDS)” no espelho e no Reconhecimento Posterior, incluindo CSV e impressão.',
+        'Mantidas as explicações de tempo trabalhado e fatores ×1,5/×2, sem alteração dos cálculos.'
+      ]
+    },
     {
       version: '1.2.7-Snapshot',
       date: '2026-11-13',

@@ -1,6 +1,6 @@
 # 🗺️ Roadmap Consolidado de Evoluções — TSE XT
 
-**Versão do documento:** 1.2.7-Snapshot
+**Versão do documento:** 1.2.8-Snapshot
 
 **Data de consolidação:** 12/11/2026
 
@@ -260,6 +260,8 @@ Melhorias para tornar o uso diário mais ergonômico, rápido e produtivo.
 **Parâmetros dos relatórios (1.2.6-Snapshot, 13/11/2026):** M4 lembra período, seleção e agrupamento; M5 lembra período e filtro de pendências; Auditoria de Horas Perdidas mantém ordenação por servidor. Preferências locais por login, salvas sem geração, com migração do período do último resultado e bloqueio de exportação quando os parâmetros não correspondem ao resultado. Entrega vinculada à Trilha U, sem encerrar as demais preferências de U4.
 
 **Grade do espelho e destino mensal (1.2.7-Snapshot, 13/11/2026):** corrigida a reserva nativa de seis colunas que permanecia ao lado dos totais injetados. Totais acompanham o cabeçalho (19 posições no mês fechado, 18 no aberto não híbrido). Destinos distribuídos por coluna, sem duplicar pago/perdido, com fontes explícitas para compensações e banco. Conferência visual no mês fechado e 222 testes passando, incluindo reprocessamento. Refinamento da Trilha U; não encerra pendências normativas da Trilha C.
+
+**Vocabulário da compensação (1.2.8-Snapshot, 13/11/2026):** padronizados os rótulos “Compensou dias curtos” e “Compensou dias curtos (FDS)” no espelho e no Reconhecimento Posterior, incluindo CSV e impressão. Fatores e cálculos preservados; refinamento da Trilha U.
 
 ---
 

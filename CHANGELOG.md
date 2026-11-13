@@ -1,5 +1,11 @@
 # Changelog — TSE XT
 
+## 1.2.8-Snapshot — 13/11/2026
+
+- Rótulos padronizados como **Compensou dias curtos** e **Compensou dias curtos (FDS)**, conforme solicitado. Espelho e Reconhecimento Posterior (tela e impressão) usam o vocabulário compartilhado; cabeçalhos CSV do Reconhecimento e das Horas Perdidas também adotam Compensou.
+- Mantidas as explicações de tempo trabalhado e fatores ×1,5/×2; cálculos preservados.
+- Verificação: suíte de 222 testes, incluindo destinos mensais, relatórios, versão e empacotamento.
+
 ## 1.2.7-Snapshot — 13/11/2026
 
 - Corrigida a coluna excedente nos totais do espelho: a reserva vazia nativa de seis posições era mantida junto às novas células, produzindo 25 posições para um cabeçalho de 19. A reserva passa a ocupar somente as duas posições finais, sem alterar os valores nativos.

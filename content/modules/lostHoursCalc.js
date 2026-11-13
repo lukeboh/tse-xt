@@ -28,7 +28,7 @@ window.JEPessoasLostCalc = (function () {
   const TERMS = {
     excedente: { label: 'Excedente', tip: 'Tudo o que passou da jornada em dia útil, somado às horas de sábado, domingo e feriado.' },
     compensou: { label: 'Compensou dias curtos', tip: 'Excedente de dia útil usado para completar dias curtos do mesmo mês.' },
-    cobriuFds: { label: 'Cobriu dias curtos (fim de semana ×1,5/×2)', tip: 'Horas trabalhadas de sábado, domingo ou feriado, não pagas nem destinadas ao banco, usadas para cobrir a falta restante dos dias úteis, inclusive acima de 10h. O valor é o tempo trabalhado; a cobertura aplica ×1,5 no sábado e ×2 no domingo ou feriado.' },
+    cobriuFds: { label: 'Compensou dias curtos (FDS)', tip: 'Horas trabalhadas de sábado, domingo ou feriado, não pagas nem destinadas ao banco, usadas para compensar a falta restante dos dias úteis, inclusive acima de 10h. O valor é o tempo trabalhado; a compensação aplica ×1,5 no sábado e ×2 no domingo ou feriado.' },
     pago: { label: 'Pago', tip: 'Pecúnia e adicional noturno em pecúnia do rodapé.' },
     banco: { label: 'Banco', tip: 'Horas homologadas. Entram no banco com os fatores ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' },
     perdido: { label: 'Perdido', tip: 'Não virou pecúnia nem banco e não compensou dia curto. Os motivos estão nos selos da coluna Ocorrência.' },
