@@ -56,7 +56,7 @@
 - **Estados de regime:**
   - Híbrido → "Sem acúmulo (Port. 490/2022 art. 22)".
   - HE autorizado → "Consumo vedado (art. 13) · homologáveis +X".
-  - Recesso 5h → "Acúmulo só por decisão da DG (Port. 885/2024)".
+  - Recesso 5h → "Excedente não é crédito automático; conferir ato e autorização".
 
 ### KPI 4 — Hora Extra (Pecúnia)  ⟵ **pergunta 3**
 > **Revisão (v0.5.16):** o campo manual (ícone ⚙, F2) foi removido — não existe
@@ -92,7 +92,7 @@ Dois blocos, cada um com **Feito/Autorizado** (fração) + mini-barra proporcion
 | **Normal** | `+/−` normal | credor → homologável; devedor → puxa do banco | teto legal 60h |
 | **HE autorizado** (art. 13) | `+/−` normal | consumo vedado; só mostra homologável | autorizado/feito/aberto **ativo** |
 | **Híbrido** | `+/−` com aviso "cosmético" (§3.8) | "Sem acúmulo" | "HE suprimida no regime" |
-| **Recesso 5h** | `+/−` sobre jornada de 5h | "acúmulo só por decisão da DG" | igual ao Normal |
+| **Recesso 5h** | `+/−` sobre jornada de 5h | "conferir ato e autorização; excedente não é crédito automático" | igual ao Normal |
 
 ---
 

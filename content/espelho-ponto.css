@@ -3036,6 +3036,16 @@ body.je-xt-enabled .je-heauth-limit span {
   overflow-y: auto !important;
 }
 
+.je-recog-team-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 2px 0 10px !important;
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
 .je-recog-team-item {
   display: flex !important;
   align-items: center !important;

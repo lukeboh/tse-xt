@@ -548,7 +548,7 @@ window.JEPessoasModernizer = (function () {
     } else if (kpiData.hasAuthorizedHEInMonth) {
       bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(139, 92, 246, 0.14); color: #7c3aed;">HE autorizada</span><span>Consumo vedado (${linkNorm(URLS.prt380_2026 || '#', 'art. 13', 'Portaria-TSE 380/2026, art. 13')})${kpiData.homologPreviewMinutes > 0 ? ` · +${kpiData.homologPreviewFormatted} homolog.` : ''}</span>`;
     } else if (kpiData.isReducedRecessMonth) {
-      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;">Recesso 5h</span><span>Acúmulo só por decisão da DG (${linkNorm(URLS.prt885_2024 || '#', 'Port. 885/2024', 'Portaria-TSE 885/2024')})</span>`;
+      bancoFlowLine = `<span class="je-badge-positive" style="background: rgba(250, 204, 21, 0.16); color: #854d0e;">Recesso 5h</span><span title="${window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE}">Excedente não é crédito automático; conferir ato e autorização (${linkNorm(URLS.prt552_2025 || '#', 'Port. 552/2025', 'Portaria-TSE 552/2025')})</span>`;
     } else if (bs === 'credor' && kpiData.bancoWillAddMin > 0) {
       bancoFlowLine = `<span class="je-badge-positive">+${kpiData.bancoWillAddFormatted} homologáveis</span><span>→ banco</span>`;
     } else if (bs === 'devedor' && kpiData.bancoWillConsumeMin > 0) {

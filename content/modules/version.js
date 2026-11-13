@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.2-Snapshot';
+  const CURRENT_VERSION = '1.2.3-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.3-Snapshot',
+      date: '2026-11-13',
+      title: 'Seleção de servidores e ressalvas da jornada reduzida',
+      features: [
+        'Seleção visível de um, vários ou todos os servidores no Reconhecimento Posterior, com ações de selecionar todos e limpar.',
+        'Alterar servidores ou período exige nova geração antes de exportar; seleção bloqueada durante a consulta.',
+        'Excedentes da jornada reduzida discriminados; crédito apresentado como simulação sujeita à autorização, na tela, CSV e impressão.',
+        'Referências oficiais de julho corrigidas para as Portarias 461/2023 e 269/2025; restrição do recesso forense não se estende automaticamente ao mês inteiro.'
+      ]
+    },
     {
       version: '1.2.2-Snapshot',
       date: '2026-11-12',

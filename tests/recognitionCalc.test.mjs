@@ -4,6 +4,7 @@ import { loadModule } from './helpers.mjs';
 
 const legal = loadModule('legalConfig.js');
 const lost = loadModule('lostHoursCalc.js', legal);
+const { JEPessoasBalance: balance } = loadModule('balanceCalc.js', legal);
 const { JEPessoasRecognition: rec } = loadModule('recognitionCalc.js', Object.assign({}, legal, lost));
 
 const H = (h, m = 0) => h * 60 + m;
@@ -33,6 +34,38 @@ function month(days, f, extra = {}) {
   return Object.assign({ found: true, year: 2024, month: 3, closed: true, hybrid: false, days, footer: footer(f) }, extra);
 }
 const q = (o) => [o.uteis, o.sab, o.domfer, o.total];
+
+for (const [year, m] of [[2025, 1], [2025, 7], [2026, 1]]) {
+  test(`jornada reduzida ${m}/${year}: excesso após 5h não vira banco automaticamente e segue ressalvado nos totais`, () => {
+    const a = month([day({ totalMin: 390, targetMin: 300 })], {}, { year, month: m });
+    const s = rec.summarizeMonth(a);
+    assert.equal(s.worked.total, 90);
+    assert.equal(s.bank.total, 0);
+    assert.equal(lost.JEPessoasLostCalc.computeMonthLoss(a).p2, 90, 'auditoria mantém excedente informativo');
+    assert.equal(balance.computeDailyDelta({ totalMin: 390, dayTargetMinutes: 300, isClosedMonth: true,
+      homologPool: balance.createHomologPool({ uteis: 0, sab: 0, domfer: 0 }), dayOfWeek: 3
+    }).delta, 0, 'saldo não transforma excedente de 5h em crédito sem homologação');
+    assert.equal(s.pending.total, 90);
+    assert.equal(s.reducedJourneyPendingMin, 90);
+    assert.equal(s.reducedJourneyCreditMin, 90);
+    assert.equal(s.unexplainedMin, 0);
+    const totals = rec.summarizeServer([s]);
+    assert.equal(totals.reducedJourneyMonths, 1);
+    assert.equal(totals.reducedJourneyCreditMin, 90);
+    assert.equal(rec.summarizeTeam([totals, totals]).reducedJourneyPendingMin, 180);
+    assert.equal(rec.groupByMonth([{ name: 'Servidor Modelo', months: [{ ...s, key: `${year}-${m}`, label: 'Mês' }] }])[0].totals.reducedJourneyCreditMin, 90);
+  });
+}
+
+test('jornada reduzida preserva horas oficialmente homologadas e exclui híbrido/aberto dos totais', () => {
+  const a = month([day({ totalMin: 390, targetMin: 300 })], { homolog: quad(90, 0, 0) }, { year: 2025, month: 1 });
+  const s = rec.summarizeMonth(a);
+  assert.equal(s.bank.total, 90);
+  assert.equal(s.reducedJourneyPendingMin, 0);
+  const t = rec.summarizeServer([rec.summarizeMonth({ ...a, hybrid: true }), rec.summarizeMonth({ ...a, closed: false })]);
+  assert.equal(t.reducedJourneyMonths, 0);
+  assert.equal(t.reducedJourneyCreditMin, 0);
+});
 
 test('fim de semana que cobriu falta sai do pedido e soma igual nos agrupamentos', () => {
   const a = month([

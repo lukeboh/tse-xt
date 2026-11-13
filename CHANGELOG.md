@@ -1,5 +1,15 @@
 # Changelog — TSE XT
 
+## 1.2.3-Snapshot — 13/11/2026
+
+- Reconhecimento Posterior: seleção visível de um, vários ou todos os servidores, com ações de selecionar todos e limpar seleção.
+- Mudanças de seleção/período exigem nova geração antes de exportar. Controles bloqueados durante a consulta.
+- Excedentes dos meses reduzidos discriminados; opção de banco explicitamente simulada, sujeita ao ato e à autorização, na tela, CSV e impressão A4 retrato.
+- Conferência normativa: Portarias 461/2023 e 269/2025 são as fontes de julho; não confirmada proibição geral de banco para todo janeiro/julho. Conversão acima de 5h por decisão da DG nas Portarias 885/2024 e 552/2025 refere-se ao recesso forense (20/12–06/01).
+- Preservados os lançamentos homologados oficiais e a apuração de excedentes sem destino. D7 continua aberta para calendário histórico e intervalo.
+- Verificação: **209 testes**, incluindo consultas, CSV e impressão para 1/2/todos, invalidação de exportação, cálculos de jornada reduzida nos três consumidores, totais, exclusão de híbrido/aberto e empacotamento.
+- Conferência visual autenticada pendente: sessão do Meu Espaço expirada e recuperação automática parou em CAPTCHA. Snapshot de desenvolvimento; a tag estável 1.2.0 e seus materiais de distribuição permanecem preservados.
+
 ## 1.2.2-Snapshot — 12/11/2026
 
 - Executar testes e empacotamento da tag com Windows PowerShell no GitHub Actions, evitando herdar o ambiente de módulos do PowerShell 7.

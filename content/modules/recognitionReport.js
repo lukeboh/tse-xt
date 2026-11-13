@@ -22,7 +22,7 @@ window.JEPessoasRecognitionReport = (function () {
   const FETCH_THROTTLE_MS = 120;
   const CONFIRM_REQUESTS = 150;
   const COLS = 13;
-  const CALCULATION_VERSION = 1;
+  const CALCULATION_VERSION = 2;
 
   const KIND_LABEL = { uteis: 'Dia útil', sab: 'Sábado', domfer: 'Domingo/feriado' };
 
@@ -31,6 +31,7 @@ window.JEPessoasRecognitionReport = (function () {
   let aborted = false;
   let team = [];
   let current = null;
+  let selectionDirty = false;
   // Agrupamento da tabela: 'server' (servidor → mês) ou 'month' (mês → servidor).
   let groupBy = 'server';
   const openServers = new Set();
@@ -61,7 +62,7 @@ window.JEPessoasRecognitionReport = (function () {
       { head: 'Sábado', tip: 'Parte do Perdido em sábado.' },
       { head: 'Dom./fer.', tip: 'Parte do Perdido em domingo, feriado, recesso ou ponto facultativo.' },
       { head: reason('teto-10h').label, tip: reason('teto-10h').tip + ' Já está somado no Perdido.' },
-      { head: 'Crédito (b)', tip: 'Opção (b): o Perdido convertido em crédito no banco de horas, com os fatores ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' }
+      { head: 'Crédito simulado (b)', tip: 'Simulação da opção (b), sujeita à autorização e ao ato do período. Não é crédito adquirido: aplica ×1 (dia útil), ×1,5 (sábado) e ×2 (domingo e feriado).' }
     ];
   }
 
@@ -310,6 +311,7 @@ window.JEPessoasRecognitionReport = (function () {
 
     result.generatedAt = new Date().toISOString();
     result.partial = loggedOut || aborted;
+    selectionDirty = false;
     await saveStored(result);
 
     running = false;
@@ -358,8 +360,13 @@ window.JEPessoasRecognitionReport = (function () {
           </div>
         </div>
 
-        <details class="je-recog-team" id="je-recog-team">
+        <details class="je-recog-team" id="je-recog-team" open>
           <summary id="je-recog-team-summary">Servidores</summary>
+          <div class="je-recog-team-actions">
+            <button type="button" class="je-audit-btn" id="je-recog-all">Selecionar todos</button>
+            <button type="button" class="je-audit-btn" id="je-recog-none">Limpar seleção</button>
+            <span>Marque um ou mais servidores para gerar o relatório.</span>
+          </div>
           <div class="je-recog-team-list" id="je-recog-team-list"></div>
         </details>
 
@@ -385,11 +392,15 @@ window.JEPessoasRecognitionReport = (function () {
     overlay.querySelector('#je-recog-cancel').addEventListener('click', () => { aborted = true; });
     overlay.querySelector('#je-recog-csv').addEventListener('click', exportCSV);
     overlay.querySelector('#je-recog-print').addEventListener('click', printReport);
+    overlay.querySelector('#je-recog-all').addEventListener('click', () => selectTeam(true));
+    overlay.querySelector('#je-recog-none').addEventListener('click', () => selectTeam(false));
+    ['#je-recog-from', '#je-recog-to'].forEach((s) => overlay.querySelector(s).addEventListener('change', selectionChanged));
     overlay.querySelector('#je-recog-team-list').addEventListener('change', (e) => {
       const i = e.target && e.target.dataset ? e.target.dataset.i : null;
       if (i == null) return;
       team[+i].checked = e.target.checked;
       paintTeamSummary();
+      selectionChanged();
     });
     overlay.querySelectorAll('input[name="je-recog-group"]').forEach((r) => r.addEventListener('change', (e) => {
       if (!e.target.checked) return;
@@ -415,10 +426,29 @@ window.JEPessoasRecognitionReport = (function () {
     const box = overlay.querySelector('#je-recog-team-list');
     box.innerHTML = team.map((s, i) => `
       <label class="je-recog-team-item">
-        <input type="checkbox" data-i="${i}"${s.checked ? ' checked' : ''}>
+        <input type="checkbox" data-i="${i}"${s.checked ? ' checked' : ''}${running ? ' disabled' : ''}>
         <span>${escapeHTML(s.name)}</span>
       </label>`).join('');
     paintTeamSummary();
+  }
+
+  function selectTeam(checked) {
+    if (running) return;
+    team.forEach((s) => { s.checked = checked; });
+    paintTeam();
+    selectionChanged();
+  }
+
+  function selectionChanged() {
+    selectionDirty = true;
+    // Um resultado da equipe inteira não pode ser exportado como se fosse da seleção nova.
+    if (current) {
+      current = null;
+      overlay.querySelector('#je-recog-body').innerHTML = '<div class="je-audit-alert">Seleção alterada. Clique em <strong>Gerar relatório</strong> para consultar os servidores selecionados.</div>';
+    }
+    overlay.querySelector('#je-recog-csv').disabled = true;
+    overlay.querySelector('#je-recog-print').disabled = true;
+    overlay.querySelector('#je-recog-run').disabled = !team.some((s) => s.checked);
   }
 
   function paintTeamSummary() {
@@ -432,6 +462,8 @@ window.JEPessoasRecognitionReport = (function () {
   function showProgress(on) {
     overlay.querySelector('#je-recog-progress').hidden = !on;
     ['#je-recog-run', '#je-recog-csv', '#je-recog-print'].forEach((s) => { overlay.querySelector(s).disabled = on; });
+    ['#je-recog-all', '#je-recog-none', '#je-recog-from', '#je-recog-to'].forEach((s) => { overlay.querySelector(s).disabled = on; });
+    overlay.querySelectorAll('#je-recog-team-list input').forEach((el) => { el.disabled = on; });
   }
 
   // Barra com previsão de término (JEPessoasProgress).
@@ -467,7 +499,7 @@ window.JEPessoasRecognitionReport = (function () {
     }
 
     if (result.calculationVersion !== CALCULATION_VERSION) {
-      body.innerHTML = '<div class="je-audit-alert">O relatório salvo foi calculado antes da cobertura de dias curtos pelo fim de semana. Clique em <strong>Gerar relatório</strong> para recalcular o período.</div>';
+      body.innerHTML = '<div class="je-audit-alert">O relatório salvo usa regras anteriores. Clique em <strong>Gerar relatório</strong> para atualizar a apuração e as ressalvas da jornada reduzida.</div>';
       current = null;
       overlay.querySelector('#je-recog-csv').disabled = true;
       overlay.querySelector('#je-recog-print').disabled = true;
@@ -482,6 +514,7 @@ window.JEPessoasRecognitionReport = (function () {
 
     const T = terms();
     const notes = [];
+    if (t.reducedJourneyMonths > 0) notes.push(`${t.reducedJourneyMonths} mês(es) com jornada reduzida: ${fmt(t.reducedJourneyPendingMin)} de excedente sem destino; ${fmt(t.reducedJourneyCreditMin)} de crédito apenas simulado, sujeito à análise do ato e da autorização aplicáveis.`);
     if (t.aboveCap.total > 0) notes.push(`Do Perdido, <strong>${fmt(t.aboveCap.total)}</strong> passaram do limite de 10h por dia em sábado, domingo ou feriado (selo <em>${escapeHTML(reason('teto-10h').label)}</em>).`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário. O que passou soma <strong>${fmt(t.overMonthlyMin)}</strong>.`);
     if (t.unexplainedMin !== 0) notes.push(`${T.naoConciliado.label}: <strong>${fmt(t.unexplainedMin)}</strong> em parte dos meses (selo <em>Conferir</em>). Confira esses meses no Espelho de Ponto.`);
@@ -505,6 +538,7 @@ window.JEPessoasRecognitionReport = (function () {
         ${card(T.pago.label, t.paid.total, T.pago.tip)}
         ${card(T.banco.label, t.bank.total, T.banco.tip)}
       </div>
+      ${t.reducedJourneyMonths > 0 ? `<div class="je-audit-alert">${escapeHTML(window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE)}</div>` : ''}
       <p class="je-audit-foot je-recog-equation">Os mesmos nomes da linha <em>Destino do mês</em> do Espelho de Ponto: ${T.excedente.label} = ${T.compensou.label} + ${T.cobriuFds.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}. A cobertura de fim de semana mostra horas trabalhadas; com os fatores, cobriram ${fmt(t.weekendCoverageMin)} de falta.</p>
 
       <div class="je-recog-options">
@@ -515,7 +549,7 @@ window.JEPessoasRecognitionReport = (function () {
         </div>
         <div class="je-recog-option">
           <div class="je-recog-option-h">Opção (b) · Registro em banco de horas</div>
-          <div class="je-recog-option-row"><strong>${fmt(t.creditMin)}</strong> de crédito</div>
+          <div class="je-recog-option-row"><strong>${fmt(t.creditMin)}</strong> de crédito simulado, sujeito à autorização</div>
           <div class="je-recog-option-row"><span>dias úteis ×1 + sábados ×1,5 + domingos e feriados ×2</span></div>
         </div>
       </div>
@@ -561,6 +595,7 @@ window.JEPessoasRecognitionReport = (function () {
         <p><strong>${T.cobriuFds.label}:</strong> ${T.cobriuFds.tip} Essas horas cobriram a jornada e ficam fora do pedido de reconhecimento.</p>
         <p><strong>${T.perdido.label}:</strong> o que sobra, e é o que se pede para reconhecer. Em cada mês fechado, ${T.excedente.label} = ${T.compensou.label} + ${T.cobriuFds.label} + ${T.pago.label} + ${T.banco.label} + ${T.perdido.label}; quando a conta não fecha, o mês recebe o selo <em>Conferir</em> (${T.naoConciliado.label}). Os motivos do Perdido são os selos do Espelho: ${seals.map((s) => `<em>${escapeHTML(s)}</em>`).join(', ')}.</p>
         <p>Mês em regime híbrido e mês ainda aberto aparecem na lista, mas ficam fora dos totais.</p>
+        <p>${escapeHTML(window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE)}</p>
       </div>
       <div class="je-audit-def">
         <div class="je-audit-def-h">O que cada coluna mostra</div>
@@ -743,11 +778,11 @@ window.JEPessoasRecognitionReport = (function () {
     if (!current || !current.servers || !current.servers.length) { alert('Gere o relatório antes de exportar.'); return; }
     const rows = [['Servidor', 'Matricula', 'Mes', 'Situacao', 'Excedente', 'CompensouDiasCurtos', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'Pago', 'Banco',
       'Perdido', 'Perdido_DiaUtil', 'Perdido_Sabado', 'Perdido_DomFer', 'AcimaDe10h',
-      'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoBanco', 'NaoConciliado', 'Hibrido_info', 'DiferencaDebito']];
+      'OpcaoA_Acrescimo50', 'OpcaoA_Acrescimo100', 'OpcaoB_CreditoSimulado_SujeitoAutorizacao', 'NaoConciliado', 'Hibrido_info', 'DiferencaDebito', 'JornadaReduzida_ExcedenteInformativo', 'JornadaReduzida_CreditoSimulado', 'RessalvaNormativa']];
     const line = (srv, s) => rows.push([srv.name, srv.matricula, s.label, STATUS_CSV[s.status] || s.status,
       fmt(s.worked.total), fmt(s.compensatedMin), fmt(s.weekendCompensatedMin), fmt(s.weekendCoverageMin), fmt(s.paid.total), fmt(s.bank.total),
       fmt(s.pending.total), fmt(s.pending.uteis), fmt(s.pending.sab), fmt(s.pending.domfer), fmt(s.aboveCap.total),
-      fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin), fmt(s.debitDifferenceMin)]);
+      fmt(s.pay50Min), fmt(s.pay100Min), fmt(s.creditMin), fmt(s.unexplainedMin), fmt(s.hybridMin), fmt(s.debitDifferenceMin), fmt(s.reducedJourneyPendingMin), fmt(s.reducedJourneyCreditMin), window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE]);
     // A ordem das linhas segue o agrupamento escolhido na tela.
     if (groupBy === 'month') {
       calc().groupByMonth(current.servers).forEach((g) => g.rows.forEach((r) => line(current.servers[r.index], r.month)));
@@ -838,6 +873,8 @@ window.JEPessoasRecognitionReport = (function () {
       }).join('');
 
     const notes = [];
+    notes.push(escapeHTML(window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE));
+    if (t.reducedJourneyMonths > 0) notes.push(`Jornada reduzida: ${t.reducedJourneyMonths} mês(es), ${fmt(t.reducedJourneyPendingMin)} de excedente sem destino e ${fmt(t.reducedJourneyCreditMin)} de crédito apenas simulado, sujeito à análise do ato e da autorização aplicáveis.`);
     if (current.partial) notes.push('A consulta foi interrompida antes do fim: este relatório é parcial.');
     if (t.aboveCap.total > 0) notes.push(`Do ${T.perdido.label}, ${fmt(t.aboveCap.total)} passaram do limite de 10h por dia em sábado, domingo ou feriado.`);
     if (t.overMonthlyMin > 0) notes.push(`Há meses acima de 60h de serviço extraordinário; o que passou soma ${fmt(t.overMonthlyMin)}.`);
@@ -859,8 +896,8 @@ window.JEPessoasRecognitionReport = (function () {
       ${printTable([byMonth ? 'Mês' : 'Servidor'].concat(lossCols), lossRows)}
 
       <h2>2. Opções de reconhecimento</h2>
-      <p><strong>(a) Pagamento em pecúnia:</strong> horas com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados). <strong>(b) Registro em banco de horas:</strong> crédito com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados).</p>
-      ${printTable(['Servidor', T.perdido.label, '(a) Horas a 50%', '(a) Horas a 100%', '(b) Crédito no banco'], optionRows)}
+      <p><strong>(a) Pagamento em pecúnia:</strong> simulação de horas com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados). <strong>(b) Registro em banco de horas:</strong> crédito simulado com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados), sujeito à autorização e ao ato do período.</p>
+      ${printTable(['Servidor', T.perdido.label, '(a) Horas a 50%', '(a) Horas a 100%', '(b) Crédito simulado'], optionRows)}
 
       ${notes.length ? `<h2>3. Observações</h2><ul>${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
 
@@ -905,7 +942,7 @@ window.JEPessoasRecognitionReport = (function () {
   async function open() {
     createDOM();
     overlay.classList.add('active');
-    if (!current) render(await loadStored());
+    if (!current && !selectionDirty) render(await loadStored());
     if (!team.length) {
       overlay.querySelector('#je-recog-team-summary').textContent = 'Servidores: carregando…';
       const loaded = await loadTeam();

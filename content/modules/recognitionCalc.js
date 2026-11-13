@@ -81,6 +81,7 @@ window.JEPessoasRecognition = (function () {
       status,
       estimate: status === STATUS.ABERTO,
       heAuthorized: !!a.heAuthorized,
+      reducedJourney: !!(window.JEPessoasLegal && window.JEPessoasLegal.isReducedRecessMonth(a.year, a.month)),
       worked: zero(),
       paid: zero(),
       bank: zero(),
@@ -104,6 +105,9 @@ window.JEPessoasRecognition = (function () {
     s.pay50Min = s.pending.uteis + s.pending.sab;
     s.pay100Min = s.pending.domfer;
     s.creditMin = creditFor(s.pending);
+    // Simulação para instruir o pedido: nunca um lançamento automático no banco.
+    s.reducedJourneyPendingMin = s.reducedJourney ? s.pending.total : 0;
+    s.reducedJourneyCreditMin = s.reducedJourney ? s.creditMin : 0;
     s.extraordinaryMin = s.paid.total + s.bank.total + s.pending.total;
     s.overMonthlyMin = Math.max(0, s.extraordinaryMin - legal('MAX_HE_MES_MIN', 3600));
     s.unexplainedMin = s.worked.total - s.paid.total - s.bank.total - s.compensatedMin - s.weekendCompensatedMin - s.pending.total - s.hybridMin;
@@ -244,6 +248,9 @@ window.JEPessoasRecognition = (function () {
       months: 0,
       monthsWithPending: 0,
       monthsWithDebitDifference: 0,
+      reducedJourneyMonths: 0,
+      reducedJourneyPendingMin: 0,
+      reducedJourneyCreditMin: 0,
       worked: zero(),
       paid: zero(),
       bank: zero(),
@@ -268,6 +275,9 @@ window.JEPessoasRecognition = (function () {
     t.months += 1;
     if (s.pending.total > 0) t.monthsWithPending += 1;
     if (s.debitDifferenceMin) t.monthsWithDebitDifference += 1;
+    if (s.reducedJourney) t.reducedJourneyMonths += 1;
+    t.reducedJourneyPendingMin += s.reducedJourneyPendingMin || 0;
+    t.reducedJourneyCreditMin += s.reducedJourneyCreditMin || 0;
     addQuad(t.worked, s.worked);
     addQuad(t.paid, s.paid);
     addQuad(t.bank, s.bank);
@@ -306,7 +316,7 @@ window.JEPessoasRecognition = (function () {
     const t = emptyTotals();
     (serverTotals || []).forEach((s) => {
       if (!s) return;
-      ['months', 'monthsWithPending', 'monthsWithDebitDifference', 'compensatedMin', 'weekendCompensatedMin', 'weekendCoverageMin', 'pay50Min', 'pay100Min', 'unexplainedMin',
+      ['months', 'monthsWithPending', 'monthsWithDebitDifference', 'reducedJourneyMonths', 'reducedJourneyPendingMin', 'reducedJourneyCreditMin', 'compensatedMin', 'weekendCompensatedMin', 'weekendCoverageMin', 'pay50Min', 'pay100Min', 'unexplainedMin',
         'overMonthlyMin', 'hybridMonths', 'hybridMin', 'openMonths', 'openPendingMin'].forEach((k) => { t[k] += s[k] || 0; });
       ['worked', 'paid', 'bank', 'pending', 'aboveCap'].forEach((k) => addQuad(t[k], s[k]));
     });

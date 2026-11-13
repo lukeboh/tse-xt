@@ -66,10 +66,12 @@
 
 ## D7 — Jornada de 5h no recesso: escopo e datas exatas
 
+**Conferência em 13/11/2026:** não confirmada proibição geral de banco em janeiro/julho. A conversão por decisão da DG do art. 4º das Portarias 885/2024 e 552/2025 refere-se ao recesso forense (20/12–06/01). Corrigida a referência de julho para Portarias 461/2023 e 269/2025, que fixam 02–31/07 e não contêm vedação geral expressa. Ver [regras §3.10](regras-calculo-frequencia.md#310-recesso--jornada-reduzida-a-5h-e-acúmulo-de-banco-restrito).
+
 | | |
 | :--- | :--- |
 | **Por que importa** | O TSE XT já adota jornada de **5h** em janeiro e em julho de ano não eleitoral para o turno único ([regras-calculo-frequencia.md §3.10](regras-calculo-frequencia.md#310-recesso--jornada-reduzida-a-5h-e-acúmulo-de-banco-restrito)). Isso muda a meta do mês e a categoria **P2** da Auditoria de Horas Perdidas. Se o recorte estiver errado, a auditoria super/subestima janeiros e julhos inteiros. |
-| **O que se sabe** | Portaria-TSE 885/2024 (e sucessoras anuais, ex. 552/2025): no recesso o trabalho é presencial e observa **limite de 5h diárias**, salvo exceção justificada e pré-autorizada; o que excede 5h **só vira banco por decisão da DG**. Res.-TSE 461/2023: expediente de julho das 13h às 18h. As portarias são **anuais** — a data exata de início/fim em janeiro varia (o recesso forense de 20/12 a 06/01 já é dispensa à parte). |
+| **O que se sabe** | Portarias 885/2024 e 552/2025: no **recesso forense de 20/12 a 06/01**, limite de 5h e conversão do excedente em banco por decisão da DG. De 07 a 31/01, expediente das 13h às 18h. Portarias 461/2023 e 269/2025: expediente de 02 a 31/07 das 13h às 18h. Os atos são anuais; não há neles vedação geral de banco para o mês inteiro. |
 | **Em aberto** | (a) A redução para 5h vale também para quem cumpre jornada **com intervalo** (8h), ou só para o turno único? (b) Quais os dias exatos de janeiro (todo o mês? a partir de 07/01?). (c) Confirmar que julho de **ano par** (eleitoral) nunca tem redução. (d) A cada dezembro, cadastrar a portaria do ano seguinte. |
 | **Como resolver** | Inspecionar via CDP um espelho fechado de janeiro e de julho ímpar (ex.: 01/2025, 07/2025) e ver o alvo diário que o sistema aplicou; confirmar com `frequencia@tse.jus.br`. |
 | **Status** | Aberta — implementação atual assume mês inteiro e só turno único. |

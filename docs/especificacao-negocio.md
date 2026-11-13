@@ -27,17 +27,19 @@ A extensão opera diretamente sobre a página legada do **Meu Espaço** (`/porta
   $$\Delta_{\text{dia}} = \text{Horas Excedentes}_{\text{dia}} - \text{Pecúnia}_{\text{dia}}$$
 
 ### 2.2. Banco de Horas em Regime Híbrido, Recesso e Mês com HE Autorizado
-- **Regra Regulamentar:** Nos meses em que o servidor possui **pelo menos 1 dia** registrado como `TRABALHO HÍBRIDO` ou `TELETRABALHO`, **não há geração nem consumo de Banco de Horas** (Portaria 490/2022 art. 22/23). No **recesso** (janeiro; julho de ano não eleitoral), o acúmulo só ocorre por decisão da Diretoria-Geral (Portaria-TSE 885/2024). Num mês com **hora extra autorizada** pelo SAEX, a Portaria 380/2026 art. 13 veda a **utilização** (consumo) do banco, mas não a **aquisição** — ver detalhamento dos três estados e o que ainda falta implementar em [roadmap-conformidade.md R3](roadmap-conformidade.md#r3--🔴-três-estados-de-banco-de-horas).
+- **Regra Regulamentar:** Nos meses em que o servidor possui **pelo menos 1 dia** registrado como `TRABALHO HÍBRIDO` ou `TELETRABALHO`, **não há geração nem consumo de Banco de Horas** (Portaria 490/2022 art. 22/23). No **recesso forense de 20/12 a 06/01**, a conversão acima de 5h depende de decisão da DG (Portarias 885/2024 e 552/2025); não se estende essa condição a todo janeiro/julho. Num mês com **hora extra autorizada** pelo SAEX, a Portaria 380/2026 art. 13 veda a **utilização** (consumo) do banco, mas não a **aquisição** — ver detalhamento dos três estados e o que ainda falta implementar em [roadmap-conformidade.md R3](roadmap-conformidade.md#r3--🔴-três-estados-de-banco-de-horas).
 - **Comportamento no Sistema:**
   - Em regime híbrido, a coluna **`SALDO ACUM.`** é **automaticamente suprimida** da tabela (não é exibida no cabeçalho, nas linhas nem no rodapé).
-  - O KPI **Banco de Horas** exibe o saldo homologado + o que o mês tende a **adicionar** (horas homologáveis) ou **consumir**, com insígnia por regime: `Sem acúmulo` (híbrido), `Consumo vedado` (HE autorizado, art. 13) ou `Acúmulo só por decisão da DG` (recesso).
+  - O KPI **Banco de Horas** exibe o saldo homologado + o que o mês tende a **adicionar** (horas homologáveis) ou **consumir**, com insígnia por regime: `Sem acúmulo` (híbrido), `Consumo vedado` (HE autorizado, art. 13) ou `Conferir ato e autorização` (recesso).
   - O KPI **Saída p/ Zerar Mês** (hoje fundido em "Saída de Hoje") é desativado quando o consumo do banco está vedado no mês.
   - O KPI **Meta do Mês** acompanha exclusivamente a jornada ordinária dos dias com exigência presencial pactuada.
 
 ### 2.3. Carga Horária Ordinária Diária (7h / 8h / 5h no recesso)
+
+**Revisão 1.2.3-Snapshot:** o calendário mensal abaixo continua sendo referência do aplicativo, com limites históricos em D7. Não se presume proibição geral de banco em janeiro/julho. A conversão por decisão da DG nas Portarias 885/2024 e 552/2025 refere-se ao recesso forense de 20/12 a 06/01; ver [regras §3.10](regras-calculo-frequencia.md#310-recesso--jornada-reduzida-a-5h-e-acúmulo-de-banco-restrito).
 - **Turno Único (Padrão):** 7 horas diárias ($420\text{ min}$) — 1 entrada e 1 saída, sem intervalo.
 - **Com Intervalo de Almoço:** 8 horas diárias ($480\text{ min}$) — o gatilho é a **2ª entrada** registrada no dia (`E2`), não mais a exigência das 4 batidas completas.
-- **Recesso (janeiro; julho de ano não eleitoral):** jornada reduzida a **5 horas** para quem cumpre turno único (Portaria-TSE 885/2024 e sucessoras anuais; Res.-TSE 461/2023 para julho); dias com intervalo de almoço seguem 8h.
+- **Recesso (janeiro; julho de ano não eleitoral):** jornada reduzida a **5 horas** para quem cumpre turno único (Portaria-TSE 885/2024 e sucessoras anuais; Portaria-TSE 461/2023 para julho); dias com intervalo de almoço seguem 8h.
 - **Fonte única:** `legalConfig.dailyTargetMinutes({ e2, e3, year, month })`, usada pelo cálculo de saldo, pelos KPIs e pela Auditoria de Horas Perdidas — ver [roadmap-conformidade.md R4](roadmap-conformidade.md#r4--🟡-jornada-alvo-diária-7h--8h--5h-no-recesso).
 
 ### 2.4. Tratamento de Fins de Semana, Feriados e Multiplicadores de Saldo
@@ -100,7 +102,7 @@ A extensão opera diretamente sobre a página legada do **Meu Espaço** (`/porta
 - **Objetivo:** Informar o saldo histórico homologado no banco de horas institucional e o que o mês corrente tende a adicionar (horas homologáveis) ou consumir dele.
 - **Fonte de Dados:** Saldo capturado do rodapé da página legada (*"Saldo Acumulado do Banco de Horas"*); tendência calculada a partir do saldo do mês e da parcela `Horas Excedentes Homologadas`.
 - **Ícone:** Guarda-sol institucional (representando descanso / folga compensatória).
-- **Estados por Regime:** Normal · Híbrido (`Sem acúmulo`) · HE autorizado (`Consumo vedado` + prévia homologável) · Recesso (`Acúmulo só por decisão da DG`) — ver [§2.2](#22-banco-de-horas-em-regime-híbrido-recesso-e-mês-com-he-autorizado).
+- **Estados por Regime:** Normal · Híbrido (`Sem acúmulo`) · HE autorizado (`Consumo vedado` + prévia homologável) · Recesso (`Conferir ato e autorização`) — ver [§2.2](#22-banco-de-horas-em-regime-híbrido-recesso-e-mês-com-he-autorizado).
 
 ### 3.4. Card 4 — Hora Extra em Pecúnia (Executado × Autorizado via SAEX)
 - **Objetivo:** Mostrar quanto de hora extra remunerada (pecúnia) já foi feito frente ao autorizado, separado por tipo de dia.
@@ -177,6 +179,8 @@ Na linha `Totais:` da tabela principal:
 
 ### 5.3. Relatório de Reconhecimento Posterior
 **Introduzido na v1.1.11.** Modal para a chefia, aberto pelo botão de ações rápidas ou pela busca (Ctrl+K). Varre o Espelho de Ponto de cada servidor da equipe no período escolhido e serve de anexo ao pedido de reconhecimento posterior das horas excedentes.
+
+**1.2.3-Snapshot:** seleção de servidores aberta por padrão, com caixas individuais e ações **Selecionar todos** / **Limpar seleção**. Consultas, CSV e impressão contêm somente os selecionados na geração. Alterar servidores ou período exige nova geração antes da exportação; controles ficam bloqueados durante a consulta. Meses com jornada reduzida têm seus excedentes e créditos simulados discriminados; a simulação não representa crédito adquirido e depende do ato e da autorização aplicáveis.
 
 Desde a v1.1.15 o relatório usa os nomes do Espelho de Ponto: os da linha **Destino do mês** e os selos da coluna Ocorrência. Os nomes e as explicações ficam num só lugar (`TERMS` e `reasonInfo` em `lostHoursCalc.js`), usado pelo Espelho e pelo relatório. Cada coluna tem a explicação no título (tooltip) e na seção "O que cada coluna mostra", na tela e na versão para impressão.
 

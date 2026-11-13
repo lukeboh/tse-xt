@@ -303,8 +303,8 @@ window.JEPessoasKPI = (function () {
     const hasAuthorizedHEInMonth = !hasHybridWorkInMonth && (hasAuthIcon || (pecuniaWeekdaySatMinutes + pecuniaSundayHolidayMinutes) > 0);
 
     // R4 — mês de recesso com jornada reduzida a 5h (janeiro; julho não eleitoral).
-    // Nesses meses a jornada em turno único é 5h e o acúmulo de banco só ocorre
-    // por decisão da DG (Portaria-TSE 885/2024). Detecta pelo mês/ano visualizado.
+    // Referência mensal de 5h em turno único; conferir o ato anual (D7).
+    // O art. 4º da Portaria 885/2024 trata do recesso forense, não do mês inteiro.
     let viewYear = null, viewMonth = null;
     const mSel = document.getElementById('mesSelecionado');
     const aSel = document.getElementById('anoSelecionado');

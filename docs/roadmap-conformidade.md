@@ -59,13 +59,15 @@
 
 ## R4 — 🟡 Jornada-alvo diária (7h / 8h / 5h no recesso)
 
+**Revisão 1.2.3-Snapshot (13/11/2026):** corrigidas as fontes de julho e a extensão indevida da exigência de decisão da DG para todo janeiro/julho. Essa exigência nos arts. 4º das Portarias 885/2024 e 552/2025 refere-se ao recesso forense (20/12–06/01). Não foi confirmada vedação geral nos meses inteiros. Relatórios distinguem apuração e simulação de crédito; calendário histórico diário e jornada com intervalo continuam em D7. Ver regras §3.10.
+
 - **Regra oficial:**
   - Servidor do TSE cumpre **40h/semana** (≈ 8h/dia — Lei 8.112/1990 art. 19).
   - Admite-se **7h/dia** (35h/semana) para quem cumpre a jornada em **turno único** (1 entrada / 1 saída, **sem intervalo**). Havendo **2ª entrada** registrada (intervalo tirado), a jornada do dia é **8h** e o excedente só começa a contar depois disso.
   - A faixa 7ª–8ª hora, para quem faz turno único, é **complementação da jornada mensal ordinária**, não HE (Portaria 380/2026 art. 7º §2º).
-  - **Recesso — jornada reduzida a 5h:** em **janeiro** (todo ano) e em **julho de anos não eleitorais**, para o turno único, a jornada passa a **5h** e o acúmulo de banco de horas só ocorre **por decisão da Diretoria-Geral** (Portaria-TSE 885/2024 e sucessoras anuais; Res.-TSE 461/2023 para julho). Dias com intervalo de almoço seguem 8h.
+  - **Recesso — jornada reduzida a 5h:** em **janeiro** (todo ano) e em **julho de anos não eleitorais**, para o turno único, a jornada passa a **5h** e o excedente não gera crédito automático; conferir ato e autorização aplicáveis (Portaria-TSE 885/2024 e sucessoras anuais; Portaria-TSE 461/2023 para julho). Dias com intervalo de almoço seguem 8h.
 - **Implementado (v0.4.3):** `legalConfig.dailyTargetMinutes({ e2, e3, year, month })` é a fonte única — usada por `kpiExtractor`, `domModernizer` (`modernizeMonthlyTable`) e `authorizationScan.analyzeEspelho` (que alimenta a Auditoria de Horas Perdidas). O gatilho de 8h passou a ser **a 2ª entrada** (`e2`), não mais as 4 batidas completas. O card **Saída Expediente** projeta com a jornada real de hoje. Meses de recesso ganham selo *"Recesso · jornada 5h"* no card Banco de Horas e *"meta reduzida · recesso 5h"* no card Meta; a Auditoria marca o regime `Recesso 5h`.
-- **Falta:** classificar a faixa 420–480 min (turno único) como complementação ordinária que **não** credita o `SALDO ACUM.` (converge com R1); e tratar a vedação de acúmulo no recesso no `SALDO ACUM.` (hoje só há aviso).
+- **Falta:** classificar a faixa 420–480 min (turno único) como complementação ordinária que **não** credita o `SALDO ACUM.` (converge com R1); e mapear os atos anuais e a regra de conversão no recesso forense, sem presumir vedação para todo janeiro/julho.
 - **Depende de:** [duvidas-normativas.md D1](duvidas-normativas.md) (a coluna `TOTAL` já vem líquida do intervalo?) e [D7](duvidas-normativas.md) (norma exata e escopo da jornada de 5h no recesso).
 - **Feature correlata no README:** "Detecção automática de jornada de 7h e 8h".
 

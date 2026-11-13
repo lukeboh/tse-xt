@@ -510,7 +510,8 @@ window.JEPessoasLostHours = (function () {
           <div class="je-audit-def">
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p2}">P2</span> Excedente de dia útil absorvido <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
             <p>Nos dias úteis, o que você trabalhou <strong>além da jornada do dia</strong> e que o sistema não pagou nem homologou. A jornada é <strong>7h</strong> em turno único (1 entrada / 1 saída, sem intervalo), <strong>8h</strong> quando há intervalo de almoço (2ª entrada registrada), e <strong>5h</strong> nos meses de recesso (janeiro; julho de ano não eleitoral). Esse tempo é absorvido pela coluna <em>HORAS AJUST.</em> / <em>Compl. Jorn. Mínima</em> para fechar a jornada do mês e some sem virar crédito. Reconstruído dia a dia (<em>total do dia − jornada</em>, líquido do pago/homologado), por isso é estimativa.</p>
-            <p class="je-audit-src">Base: ${lk('prt380_2026', 'Portaria-TSE 380/2026')}, art. 6º §2º e art. 7º §2º · jornada de 5h no recesso: ${lk('prt885_2024', 'Portaria-TSE 885/2024')} e ${lk('res461_2023', 'Res.-TSE 461/2023')} (julho) · <em>regras-calculo-frequencia.md §3.5–3.6 e §3.10</em>.</p>
+            <p class="je-audit-src">Base: ${lk('prt380_2026', 'Portaria-TSE 380/2026')}, art. 6º §2º e art. 7º §2º · expediente reduzido: ${lk('prt885_2024', 'Portaria-TSE 885/2024')}, ${lk('prt461_2023', 'Portaria-TSE 461/2023')} e ${lk('prt269_2025', 'Portaria-TSE 269/2025')} (julho) · <em>regras-calculo-frequencia.md §3.5–3.6 e §3.10</em>.</p>
+            <p>${window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE}</p>
           </div>
           <div class="je-audit-def">
             <div class="je-audit-def-h"><span class="je-audit-def-id" style="background:${CAT_COLOR.p3}">P3</span> Acima de 10h em fim de semana / feriado <span class="je-audit-tag je-audit-tag-est">estimativa</span></div>
@@ -531,7 +532,7 @@ window.JEPessoasLostHours = (function () {
             <strong>Coluna "Regime":</strong>
             <span class="je-audit-badge je-audit-badge-norm">Normal</span> mês comum ·
             <span class="je-audit-badge je-audit-badge-he">HE autoriz.</span> mês com hora extra autorizada (consumo do banco vedado, ${lk('prt380_2026', 'Portaria 380/2026')} art. 13) ·
-            <span class="je-audit-badge je-audit-badge-rec">Recesso 5h</span> janeiro / julho não eleitoral — jornada de 5h, acúmulo de banco só por decisão da DG (${lk('prt885_2024', 'Portaria 885/2024')}) ·
+            <span class="je-audit-badge je-audit-badge-rec">Recesso 5h</span> janeiro / julho não eleitoral — referência de 5h; conferir ato do período. Excedente não é crédito automático ·
             <span class="je-audit-badge je-audit-badge-hib">Híbrido</span> mês com teletrabalho/híbrido — serviço extraordinário suprimido e sem acúmulo de banco (${lk('prt490_2022', 'Portaria 490/2022')} art. 22-23); não conta como perda (o trabalho extra descartado aparece no tooltip do selo).
           </p>
         </div>
@@ -753,7 +754,7 @@ window.JEPessoasLostHours = (function () {
 
   function exportCSV() {
     if (!currentSnapshot || !currentSnapshot.months) return;
-    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'CalculoAtual']];
+    const rows = [['Mes', 'Regime', 'Fechado', 'Pecunia', 'Homologadas', 'P1_NaoHomologadas', 'P2_DiaUtilAbsorvido', 'P3_DescarteFDS', 'P4_CreditoAquemFormula', 'P5_FDSSemDestino', 'TotalPerdido', 'DescartadoHibrido_info', 'Conferir', 'CobriuDiasCurtos_FDS_Trabalhadas', 'CobriuDiasCurtos_FDS_Equivalente', 'CalculoAtual', 'RessalvaNormativa']];
     Object.values(currentSnapshot.months).map(normMonth).filter((r) => !r.empty).sort((x, y) => (x.y - y.y) || (x.m - y.m)).forEach((r) => {
       rows.push([
         r.label,
@@ -764,7 +765,7 @@ window.JEPessoasLostHours = (function () {
         fmt(r.discardedHybridMin || 0),
         (r.alerts || []).map((x) => x.date + ' ' + fmt(x.min)).join(' / '),
         fmt(r.weekendCompensatedMin || 0), fmt(r.weekendCoverageMin || 0),
-        r.calculationVersion === CALCULATION_VERSION ? 'Sim' : 'Nao: refazer Full Update'
+        r.calculationVersion === CALCULATION_VERSION ? 'Sim' : 'Nao: refazer Full Update', window.JEPessoasLegal.REDUCED_JOURNEY_NOTICE
       ]);
     });
     const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');

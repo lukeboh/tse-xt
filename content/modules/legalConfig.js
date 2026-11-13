@@ -17,7 +17,9 @@ window.JEPessoasLegal = (function () {
     prt490_2022: 'https://www.tse.jus.br/legislacao/compilada/prt/2022/portaria-no-490-de-20-de-maio-de-2022',
     prt378_2019: 'https://www.tse.jus.br/legislacao/compilada/prt/2019/portaria-no-378-de-23-de-maio-de-2019',
     prt885_2024: 'https://www.tse.jus.br/legislacao/compilada/prt/2024/portaria-no-885-de-09-de-dezembro-de-2024',
-    res461_2023: 'https://www.tse.jus.br/legislacao/compilada/res/2023/resolucao-no-461-de-14-de-marco-de-2023',
+    prt461_2023: 'https://www.tse.jus.br/legislacao/compilada/prt/2023/portaria-no-461-de-19-de-junho-de-2023',
+    prt269_2025: 'https://www.tse.jus.br/legislacao/compilada/prt/2025/portaria-no-269-de-16-de-junho-de-2025',
+    prt552_2025: 'https://www.tse.jus.br/legislacao/compilada/prt/2025/portaria-no-552-de-2-de-dezembro-de-2025',
     lei8112: 'http://www.planalto.gov.br/ccivil_03/leis/l8112cons.htm'
   };
 
@@ -33,10 +35,12 @@ window.JEPessoasLegal = (function () {
   //  - turno único (1 entrada / 1 saída, sem intervalo): 7h (35h/semana)
   //  - com intervalo (2ª entrada registrada): 8h (40h/semana), Lei 8.112/1990
   //  - recesso reduzido (janeiro todo ano; julho de ano não eleitoral): 5h,
-  //    Portaria-TSE 885/2024 e sucessoras anuais; Res.-TSE 461/2023 (julho)
+  //    Portarias anuais de expediente; julho: Portarias 461/2023 e 269/2025.
   const JORNADA_TURNO_UNICO_MIN = { valor: 420, norma: 'prática TSE (35h/semana em turno único)', artigo: '', url: URLS.res22901 };
   const JORNADA_COM_INTERVALO_MIN = { valor: 480, norma: 'Lei 8.112/1990', artigo: 'art. 19 (40h/semana)', url: URLS.lei8112 };
-  const JORNADA_RECESSO_MIN = { valor: 300, norma: 'Portaria-TSE 885/2024 (e sucessoras) · Res.-TSE 461/2023', artigo: 'jornada de 5h no recesso', url: URLS.prt885_2024 };
+  const JORNADA_RECESSO_MIN = { valor: 300, norma: 'Portarias-TSE 885/2024, 552/2025, 461/2023 e 269/2025', artigo: 'expediente reduzido; conferir ato anual', url: URLS.prt552_2025 };
+
+  const REDUCED_JOURNEY_NOTICE = 'Jornada reduzida: o excedente acima de 5h é apuração informativa, não crédito automático nem direito reconhecido a pagamento. Conferir o ato do período e as autorizações. No recesso forense de 20/12 a 06/01, a conversão das horas acima de 5h em banco depende de decisão da DG (Portarias 885/2024 e 552/2025, art. 4º, parágrafo único). As Portarias 461/2023 e 269/2025 fixam o expediente de julho, sem vedação geral de banco. Não se estende a restrição do recesso forense a todo janeiro ou julho.';
 
   // Anos eleitorais no Brasil: todo ano PAR tem eleição (geral ou municipal).
   function isElectionYear(y) { return (Number(y) % 2) === 0; }
@@ -85,6 +89,7 @@ window.JEPessoasLegal = (function () {
 
   return {
     URLS,
+    REDUCED_JOURNEY_NOTICE,
     SATURDAY_FACTOR,
     SUNDAY_HOLIDAY_FACTOR,
     JORNADA_ORDINARIA_MIN,
