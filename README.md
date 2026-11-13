@@ -53,7 +53,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 
 ## Novidades da versão 1.2
 
-- Reconhecimento Posterior da equipe: CSV e impressão A4 retrato, por servidor ou por mês.
+- Reconhecimento Posterior da equipe: CSV e impressão A4 retrato, por servidor ou por mês, com visual institucional discreto, resumo das horas, tabelas leves e páginas numeradas.
 - Auditoria de Pagamento de Pecúnias: espelho × contracheques e folhas suplementares.
 - Cobertura de dias curtos pelo fim de semana não pago com ×1,5/×2, inclusive acima de 10h, antes da perda.
 - Cinco categorias de perda, motivos por dia, Destino do mês e controle separado do crédito oficial no banco.

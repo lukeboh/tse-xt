@@ -77,6 +77,8 @@ Verificação da v1.1.16: **192 testes passando**, Full Update real de **215 mes
 
 **M4 — impressão em retrato (v1.1.17-Snapshot):** A4 retrato por padrão, conforme pedido de 12/11. As tabelas de destinos e de discriminação do Perdido foram separadas na impressão para manter todos os valores legíveis. Conferidos os dois agrupamentos no Chrome e 192 testes passando.
 
+**M4 — impressão institucional (1.2.4-Snapshot, 13/11/2026):** visual mais próximo da tela e discreto, com metadados, resumo compacto, azul institucional, tabelas leves e paginação. Mantidos A4 retrato, cálculos e ressalvas. PDFs reais renderizados e revisados nos dois agrupamentos, texto dentro das páginas e 209 testes passando. Escopo restrito ao Reconhecimento Posterior; não encerra U3 para o Espelho e demais módulos.
+
 ### Detalhamento Executivo dos Itens da Trilha C
 
 ---

@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.3-Snapshot';
+  const CURRENT_VERSION = '1.2.4-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.4-Snapshot',
+      date: '2026-11-13',
+      title: 'Impressão institucional do Reconhecimento Posterior',
+      features: [
+        'Documento em A4 retrato com cabeçalho discreto, metadados organizados e resumo dos destinos das horas.',
+        'Tipografia e azul institucional alinhados à tela, tabelas com linhas leves, totais destacados e cabeçalhos repetidos.',
+        'Numeração de páginas e separação dos detalhes e critérios de apuração, preservando os valores e as ressalvas normativas.'
+      ]
+    },
     {
       version: '1.2.3-Snapshot',
       date: '2026-11-13',

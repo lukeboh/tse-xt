@@ -1,5 +1,14 @@
 # Changelog — TSE XT
 
+## 1.2.4-Snapshot — 13/11/2026
+
+- Reconhecimento Posterior com impressão institucional: tipografia alinhada à tela, azul discreto, metadados organizados e resumo compacto de Excedente, Pago, Banco e Perdido.
+- Tabelas com linhas leves, faixas alternadas, totais destacados e cabeçalhos repetidos; rodapé com numeração de páginas. Mantidos A4 retrato e margens de 12mm.
+- Estilos de impressão isolados de fundos, sombras e elementos flutuantes do portal. Observações sem divisão interna e critérios de apuração em seção própria.
+- Mesmos valores, motivos, ressalvas normativas e agrupamentos; sem mudança nos cálculos.
+- Verificação: **209 testes passando**, PDF real nos dois agrupamentos, três páginas na amostra atual, texto dentro da página e paginação conferidos, todas as páginas renderizadas e revisadas.
+- Encerrada a pendência visual da 1.2.3 após recuperação da sessão: seleção de 1, 2 e 6 servidores, CSV e impressão conferidos, 72 consultas concluídas sem erros no período original.
+
 ## 1.2.3-Snapshot — 13/11/2026
 
 - Reconhecimento Posterior: seleção visível de um, vários ou todos os servidores, com ações de selecionar todos e limpar seleção.

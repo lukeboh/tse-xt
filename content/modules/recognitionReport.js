@@ -800,8 +800,8 @@ window.JEPessoasRecognitionReport = (function () {
     URL.revokeObjectURL(url);
   }
 
-  function printTable(head, rows) {
-    return `<table><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  function printTable(head, rows, kind = '') {
+    return `<table class="je-print-table ${kind}"><thead><tr>${head.map((h) => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
   }
 
   function printCells(o) {
@@ -855,7 +855,7 @@ window.JEPessoasRecognitionReport = (function () {
         const rows = g.rows.filter((r) => hasLoss(r.month));
         const days = rows.map((r) => {
           const dr = printDayRows(r.month, r.name);
-          return dr.length ? `<p><strong>${escapeHTML(r.name)}</strong></p>${printTable(dayHead, dr)}` : '';
+          return dr.length ? `<p class="je-print-caption"><strong>${escapeHTML(r.name)}</strong></p>${printTable(dayHead, dr, 'je-print-days')}` : '';
         }).join('');
         return `<h3>${escapeHTML(g.label)}</h3>
           ${printTable(['Servidor'].concat(cols.slice(2)), rows.map((r) => `<tr><td>${who(r.name, r.matricula)}</td>${printCells(r.month)}</tr>`))}
@@ -869,7 +869,7 @@ window.JEPessoasRecognitionReport = (function () {
         return `<h3>${escapeHTML(srv.name)} · matrícula ${escapeHTML(srv.matricula || '—')}</h3>
           ${printTable(['Mês'].concat(cols.slice(2)), months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printCells(m)}</tr>`))}
           ${printTable(['Mês'].concat(lossCols), months.map((m) => `<tr><td>${escapeHTML(m.label)}</td>${printLossCells(m)}</tr>`))}
-          ${dayRows.length ? printTable(dayHead, dayRows) : ''}`;
+          ${dayRows.length ? printTable(dayHead, dayRows, 'je-print-days') : ''}`;
       }).join('');
 
     const notes = [];
@@ -885,27 +885,44 @@ window.JEPessoasRecognitionReport = (function () {
     servers.filter((s) => s.error).forEach((s) => notes.push(`${escapeHTML(s.name)}: ${escapeHTML(s.error)}`));
 
     return `
-      <h1>Horas excedentes para reconhecimento posterior</h1>
-      <p class="meta">${current.unit ? 'Unidade: ' + escapeHTML(current.unit) + ' · ' : ''}Período: ${periodLabel(current.from)} a ${periodLabel(current.to)} · Emitido em ${when}${current.issuer ? ' por ' + escapeHTML(current.issuer) : ''}</p>
-      <p class="meta">Fonte: Espelho de Ponto do Meu Espaço TSE, lido pelo TSE XT ${escapeHTML(version)}. Documento de apoio; não substitui os registros oficiais.</p>
+      <header class="je-print-header">
+        <p class="je-print-eyebrow">TSE XT <span>Relatório de horas</span></p>
+        <h1>Horas excedentes para<br>reconhecimento posterior</h1>
+        <dl class="je-print-meta">
+          <div><dt>Unidade</dt><dd>${escapeHTML(current.unit || 'Não informada')}</dd></div>
+          <div><dt>Período</dt><dd>${periodLabel(current.from)} a ${periodLabel(current.to)}</dd></div>
+          <div><dt>Emissão</dt><dd>${when}</dd></div>
+        </dl>
+        ${current.issuer ? `<p class="meta">Emitido por ${escapeHTML(current.issuer)}</p>` : ''}
+        <p class="meta">Fonte: Espelho de Ponto do Meu Espaço TSE · TSE XT ${escapeHTML(version)}. Documento de apoio; não substitui os registros oficiais.</p>
+      </header>
+
+      <div class="je-print-metrics" aria-label="Totais do relatório">
+        <div><span>${T.excedente.label}</span><strong>${fmt(t.worked.total)}</strong></div>
+        <div><span>${T.pago.label}</span><strong>${fmt(t.paid.total)}</strong></div>
+        <div><span>${T.banco.label}</span><strong>${fmt(t.bank.total)}</strong></div>
+        <div class="je-print-metric-focus"><span>${T.perdido.label} · a analisar</span><strong>${fmt(t.pending.total)}</strong></div>
+      </div>
 
       <h2>1. Resumo por ${byMonth ? 'mês' : 'servidor'}</h2>
-      <p>Horas no formato hh:mm, com os nomes do Espelho de Ponto (linha <em>Destino do mês</em>). Em <strong>${t.months}</strong> mês(es) fechado(s), a equipe teve <strong>${fmt(t.worked.total)}</strong> de ${T.excedente.label}: <strong>${fmt(t.compensatedMin)}</strong> de dias úteis compensaram dias curtos, e <strong>${fmt(t.weekendCompensatedMin)}</strong> de fim de semana cobriram <strong>${fmt(t.weekendCoverageMin)}</strong> de falta com ×1,5/×2; <strong>${fmt(t.paid.total)}</strong> foram pagas em pecúnia (${T.pago.label}) e <strong>${fmt(t.bank.total)}</strong> foram para o ${T.banco.label}. Ficaram <strong>${fmt(t.pending.total)}</strong> como ${T.perdido.label}: sem pagamento, sem registro em banco e sem compensação.</p>
+      <p>${servers.length} servidor(es) · ${t.months} mês(es) fechado(s) fora do regime híbrido. Horas no formato <strong>hh:mm</strong>, com os nomes da linha <em>Destino do mês</em> do Espelho.</p>
+      <p><strong>${fmt(t.compensatedMin)}</strong> de dias úteis compensaram dias curtos. Outras <strong>${fmt(t.weekendCompensatedMin)}</strong> de fim de semana cobriram <strong>${fmt(t.weekendCoverageMin)}</strong> de falta com ×1,5/×2. O <strong>${T.perdido.label}</strong> é o excedente sem pagamento, registro em banco ou compensação.</p>
       ${printTable(head, summaryRows)}
-      <p><strong>Discriminação do Perdido</strong> — a parcela acima de 10h já está incluída nos totais por tipo de dia.</p>
+      <p class="je-print-caption"><strong>Discriminação do Perdido</strong> · a parcela acima de 10h já está incluída nos totais por tipo de dia.</p>
       ${printTable([byMonth ? 'Mês' : 'Servidor'].concat(lossCols), lossRows)}
 
       <h2>2. Opções de reconhecimento</h2>
       <p><strong>(a) Pagamento em pecúnia:</strong> simulação de horas com acréscimo de 50% (dias úteis e sábados) e de 100% (domingos e feriados). <strong>(b) Registro em banco de horas:</strong> crédito simulado com os fatores ×1 (dias úteis), ×1,5 (sábados) e ×2 (domingos e feriados), sujeito à autorização e ao ato do período.</p>
       ${printTable(['Servidor', T.perdido.label, '(a) Horas a 50%', '(a) Horas a 100%', '(b) Crédito simulado'], optionRows)}
 
-      ${notes.length ? `<h2>3. Observações</h2><ul>${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
+      ${notes.length ? `<section class="je-print-observations"><h2>3. Observações</h2><ul class="je-print-notes">${notes.map((n) => `<li>${n}</li>`).join('')}</ul></section>` : ''}
 
       <h2>${notes.length ? 4 : 3}. Detalhe por ${byMonth ? 'mês' : 'servidor'}</h2>
       ${detail || `<p>Nenhum ${byMonth ? 'mês' : 'servidor'} com ${T.perdido.label.toLowerCase()} no período.</p>`}
 
-      <h2>${notes.length ? 5 : 4}. Como os números foram apurados, o que cada coluna mostra e base normativa</h2>
-      ${explainHTML()}
+      <h2 class="je-print-page-start">${notes.length ? 5 : 4}. Critérios de apuração e base normativa</h2>
+      <div class="je-print-methods">${explainHTML()}</div>
+      <footer class="je-print-footer">TSE XT · Documento de apoio ao pedido de reconhecimento posterior · Valores sujeitos à conferência e decisão da autoridade competente.</footer>
     `;
   }
 
@@ -921,7 +938,7 @@ window.JEPessoasRecognitionReport = (function () {
     // @page não aceita escopo por classe: a regra só existe durante esta impressão.
     const page = document.createElement('style');
     page.id = 'je-recog-print-page';
-    page.textContent = '@page { size: A4 portrait; margin: 12mm; }';
+    page.textContent = '@page { size: A4 portrait; margin: 12mm; @bottom-left { content: "TSE XT · Reconhecimento posterior"; font: 7pt "Segoe UI", Arial, sans-serif; color: #58697b; } @bottom-right { content: counter(page) " / " counter(pages); font: 7pt "Segoe UI", Arial, sans-serif; color: #58697b; } }';
     document.head.appendChild(page);
     document.body.classList.add('je-recog-printing');
 
