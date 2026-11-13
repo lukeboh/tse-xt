@@ -46,6 +46,8 @@ Saída: dist/tse-xt-vX.Y.Z.zip. O ZIP contém manifesto na raiz, background.js, 
 
 Conferir que a tag, a main, o manifesto e o ZIP representam o mesmo código. O changelog e o registro da liberação devem identificar as verificações feitas e as limitações que permanecem.
 
+Exceção expressamente solicitada em 13/11/2026: liberação estável **1.2.6**, com tag anotada **v1.2.6**, para implantar as melhorias aprovadas sem renumerá-las para outro MINOR. Snapshots intermediários continuam sem tag; nenhuma tag publicada é movida.
+
 ## 6. Enviar à Chrome Web Store
 
 Upload e submissão são etapas separadas da preparação local:

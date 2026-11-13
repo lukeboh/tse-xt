@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.6 — 13/11/2026
+
+- Liberação estável solicitada pelo responsável, consolidando os desenvolvimentos 1.2.1 a 1.2.6 sem reescrever commits ou mover a tag 1.2.0.
+- Seleção individual, múltipla ou de toda a equipe; preferências locais dos três relatórios; PDF institucional em A4 retrato; botão flutuante discreto; ressalvas normativas e proteção de exportação.
+- Automação oficial de upload por OIDC sem chave permanente. Descrição e privacidade atualizadas no Developer Dashboard; capturas já revisadas da série 1.2 preservadas. Submissão autorizada para publicação automática após aprovação do Google.
+- Verificação: 217 testes, incluindo parâmetros restaurados, isolamento por login/servidor e inspeção do ZIP; conferências autenticadas e PDFs nos dois agrupamentos realizadas na preparação da série.
+- Artefatos e limites em [release-1.2.6.md](docs/release-1.2.6.md). As entradas Snapshot abaixo são o histórico de preparação.
+
 ## 1.2.6-Snapshot — 13/11/2026
 
 - Parâmetros dos relatórios do botão “+” persistidos em `chrome.storage.local`, separados por login.

@@ -1,7 +1,7 @@
 # Chrome Web Store — TSE XT
 
 > Fonte de verdade de tudo que é preenchido no Developer Dashboard. Atualizar aqui a cada liberação (ver [roteiro-liberacao.md](roteiro-liberacao.md)) e copiar para a loja.
-> Versão de referência: **1.2.0** (12/11/2026)
+> Versão de referência: **1.2.6** (13/11/2026)
 
 ---
 
@@ -10,7 +10,7 @@
 Copiar o bloco abaixo inteiro. O campo da loja é texto puro (sem Markdown) e aceita até 16.000 caracteres.
 
 ```text
-✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.2)
+✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.2.6)
 
 O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade de todo o portal Meu Espaço do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto) até as dezenas de telas do menu clássico, com painéis dedicados para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
 
@@ -87,7 +87,8 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Ao alterar qualquer seletor no formulário de pesquisa (Unidade, Servidor, Ano ou Mês), a consulta é disparada automaticamente, dispensando cliques repetitivos no botão "Consultar".
 
 📑 12. AÇÕES RÁPIDAS & EXPORTAÇÃO EXCEL
-• Botão flutuante (FAB) com atalhos de alta produtividade.
+• Botão flutuante (FAB) em azul institucional sólido, com sombra discreta e atalhos de alta produtividade.
+• Os relatórios lembram os últimos parâmetros por usuário: períodos, servidores e agrupamento no Reconhecimento; período e filtro no Pagamento; ordenação nas Horas Perdidas. As escolhas são salvas mesmo sem gerar o relatório.
 • Exportação completa do espelho de ponto para planilha CSV/Excel com codificação UTF-8 (acentuação perfeita) e proteção integrada contra injeção de fórmulas.
 • Atalho rápido para rolar a página diretamente para a linha do dia atual com destaque luminoso.
 
@@ -97,9 +98,11 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Interruptor visual persistente: alterna instantaneamente entre o visual moderno XT e o layout clássico original do portal para fins de conferência, a qualquer momento, com um clique.
 
 📄 14. RECONHECIMENTO POSTERIOR DA EQUIPE
+• Selecione um, vários ou todos os servidores, com ações de selecionar todos e limpar seleção.
 • Por servidor ou por mês: horas excedentes, pagas, homologadas, compensadas e que ficaram sem destino, com as alternativas de pecúnia ou banco.
 • A cobertura de dias curtos pelo fim de semana fica fora da solicitação. Meses abertos e híbridos ficam fora dos totais.
-• Período livre, previsão de término, CSV e impressão A4 retrato por padrão, com tabelas organizadas para encaminhar o pedido.
+• Período livre, previsão de término, CSV e PDF em A4 retrato, com cabeçalho institucional discreto, resumo das horas, tabelas leves e páginas numeradas.
+• Crédito em banco apresentado como simulação sujeita ao ato e à autorização aplicáveis, com ressalvas da jornada reduzida. Exportação protegida quando os parâmetros escolhidos divergem do resultado salvo.
 
 🧾 15. AUDITORIA DE PAGAMENTO DE PECÚNIAS
 • Confere suas horas de pecúnia do espelho com as rubricas e referências dos seus próprios contracheques, incluindo folhas suplementares e adicional noturno.
@@ -150,7 +153,7 @@ Todas regeradas a partir da aplicação real, com dados pessoais anonimizados (v
 | Bloco promocional pequeno (440x280) | `docs/promo-pequeno-440x280.png` | Logo, nome, versão e três destaques |
 | Bloco promocional de letreiro (1400x560) | `docs/promo-letreiro-1400x560.png` | Logo, proposta de valor e recortes do Espelho e do Reconhecimento Posterior |
 
-Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/loja/gerar-promos.mjs` — não editar os PNGs à mão. As capturas antigas de Reembolso e do modo desligado ficam como histórico no repositório e não integram a seleção de cinco imagens da versão 1.2.0.
+Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/loja/gerar-promos.mjs` — não editar os PNGs à mão. As capturas antigas de Reembolso e do modo desligado ficam como histórico no repositório e não integram a seleção de cinco imagens da versão 1.2.6.
 
 ## 4. Aba "Privacidade"
 
@@ -162,7 +165,7 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 
 | Permissão | Justificativa |
 |---|---|
-| `storage` | Guardar localmente preferências de aparência, a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia, a última Auditoria de Pagamento de Pecúnias (só as linhas de serviço extraordinário e de adicional noturno dos seus contracheques) e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
+| `storage` | Guardar localmente preferências de aparência e os últimos parâmetros dos relatórios por usuário (períodos, matrículas selecionadas/unidade, agrupamento, filtro e ordenação), a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia, a última Auditoria de Pagamento de Pecúnias (só as linhas de serviço extraordinário e de adicional noturno dos seus contracheques) e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
 | `activeTab` | Recarregar a aba ativa quando o usuário pede, na janela da extensão, para aplicar as preferências escolhidas. |
 | Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas do portal Meu Espaço e ler, com a sessão do próprio usuário, as páginas do portal usadas nos cálculos (Espelho de Ponto próprio e da equipe, autorizações de hora extra e contracheques próprios). Nenhum outro domínio é acessado. |
 | Código remoto | Não usa. Todo o JavaScript está no pacote. |
@@ -177,15 +180,13 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 - Regiões: todas.
 
 
-## 6. Novidades para o envio da versão 1.2.0
+## 6. Novidades para o envio da versão 1.2.6
 
-- Novo Relatório de Reconhecimento Posterior para a equipe: destinos das horas, alternativas de pecúnia ou banco, agrupamentos por servidor ou por mês, CSV e impressão A4 retrato.
-- Nova Auditoria de Pagamento de Pecúnias: compara o espelho com rubricas e referências dos próprios contracheques, incluindo folhas suplementares e adicional noturno; CSV e impressão.
-- Auditoria de Horas Perdidas com cinco categorias, motivos por dia e avisos para conferência; mês aberto e regime híbrido tratados separadamente.
-- Horas não pagas de sábado cobrem dias curtos com ×1,5; domingo e feriado, com ×2, inclusive acima de 10h, antes de contar a sobra como perda.
-- SALDO ACUM. de controle dia a dia, linha Destino do mês e avisos de divergência; o crédito oficial continua restrito às horas homologadas.
-- Relatórios sem limite fixo de período, com progresso e previsão de término; resultados anteriores à regra de cobertura pedem recálculo.
-- Ajuste de ponto de integrantes da equipe pela chefia, com identidade e data preenchidas no modal e validação de permissão.
-- Destaque e totais de pecúnia e adicional noturno, renderização idempotente e cabeçalho do Espelho fixo durante a rolagem.
+- Seleção de um, vários ou todos os servidores no Reconhecimento Posterior.
+- Parâmetros dos três relatórios lembrados por usuário, mesmo sem gerar outro relatório.
+- PDF em A4 retrato com visual institucional discreto, tabelas leves e páginas numeradas.
+- Ressalvas da jornada reduzida e crédito apresentado como simulação sujeita à autorização; fontes de julho corrigidas.
+- Botão de ações rápidas sem relevo metálico, com azul sólido e sombra suave.
+- Proteção de exportação quando os parâmetros divergem do resultado salvo.
 
-A publicação desta versão foi preparada localmente; enviar pacote, descrição e imagens pelo Dashboard é uma etapa separada. Ver [release-1.2.0.md](release-1.2.0.md) e [automação oficial](automacao-chrome-web-store.md).
+Liberação e implantação solicitadas em 13/11/2026. Preservar visibilidade não listada. Enviar pacote, descrição, imagens e privacidade antes de submeter para publicação automática após revisão. Ver [release-1.2.6.md](release-1.2.6.md) e [automação oficial](automacao-chrome-web-store.md).

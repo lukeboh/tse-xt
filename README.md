@@ -1,6 +1,6 @@
 # TSE XT — Extensão de Usabilidade & Modernização Visual para o Meu Espaço do TSE
 
-**Versão estável: 1.2.0 — 12/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.2.0.md)
+**Versão estável: 1.2.6 — 13/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.2.6.md)
 
 Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Edge, Brave) projetada para transformar e modernizar a interface e usabilidade do portal **Meu Espaço**, do **Tribunal Superior Eleitoral (TSE)** — não apenas o Espelho de Ponto, mas todo o menu de serviços do portal (`meuespaco.tse.jus.br/portalservidor2`).
 

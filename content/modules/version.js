@@ -5,68 +5,21 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.6-Snapshot';
+  const CURRENT_VERSION = '1.2.6';
 
   const CHANGELOG = [
     {
-      version: '1.2.6-Snapshot',
-      date: '2026-11-13',
-      title: 'Últimos parâmetros dos relatórios',
-      features: [
-        'Reconhecimento Posterior lembra período, servidores selecionados e agrupamento por usuário, inclusive sem gerar outro relatório.',
-        'Auditoria de Pagamento lembra período e filtro de pendências; Auditoria de Horas Perdidas preserva a ordenação por servidor consultado.',
-        'Preferências ficam somente neste navegador. Períodos de resultados anteriores são aproveitados na primeira abertura; seleção vazia é preservada.'
-      ]
-    },
-    {
-      version: '1.2.5-Snapshot',
-      date: '2026-11-13',
-      title: 'Acabamento do botão de ações rápidas',
-      features: [
-        'Botão flutuante com azul institucional sólido, borda discreta e sombra suave, sem o relevo nativo do navegador.',
-        'Estado aberto permanece azul e mantém a rotação do ícone de fechar, com movimento sutil ao passar o mouse.',
-        'Foco de teclado visível para facilitar a navegação das ações rápidas.'
-      ]
-    },
-    {
-      version: '1.2.4-Snapshot',
-      date: '2026-11-13',
-      title: 'Impressão institucional do Reconhecimento Posterior',
-      features: [
-        'Documento em A4 retrato com cabeçalho discreto, metadados organizados e resumo dos destinos das horas.',
-        'Tipografia e azul institucional alinhados à tela, tabelas com linhas leves, totais destacados e cabeçalhos repetidos.',
-        'Numeração de páginas e separação dos detalhes e critérios de apuração, preservando os valores e as ressalvas normativas.'
-      ]
-    },
-    {
-      version: '1.2.3-Snapshot',
-      date: '2026-11-13',
-      title: 'Seleção de servidores e ressalvas da jornada reduzida',
-      features: [
-        'Seleção visível de um, vários ou todos os servidores no Reconhecimento Posterior, com ações de selecionar todos e limpar.',
-        'Alterar servidores ou período exige nova geração antes de exportar; seleção bloqueada durante a consulta.',
-        'Excedentes da jornada reduzida discriminados; crédito apresentado como simulação sujeita à autorização, na tela, CSV e impressão.',
-        'Referências oficiais de julho corrigidas para as Portarias 461/2023 e 269/2025; restrição do recesso forense não se estende automaticamente ao mês inteiro.'
-      ]
-    },
-    {
-      version: '1.2.2-Snapshot',
-      date: '2026-11-12',
-      title: 'Compatibilidade do empacotamento no GitHub Actions',
-      features: [
-        'As etapas que executam o empacotador Windows usam o Windows PowerShell, preservando os módulos necessários aos testes da versão estável.',
-        'A versão estável continua sendo obtida da tag escolhida; esta correção não altera a tag 1.2.0.',
-        'Corrigida a incompatibilidade de ambiente identificada na primeira execução real da automação.'
-      ]
-    },
-    {
-      version: '1.2.1-Snapshot',
-      date: '2026-11-12',
-      title: 'Automação de envio à Chrome Web Store',
-      features: [
-        'Workflow manual com consulta de status, envio de pacote e submissão para revisão, usando a API oficial v2.',
-        'Autenticação temporária entre GitHub e Google Cloud por OIDC, sem chave privada permanente.',
-        'O envio usa uma tag estável validada e a submissão mantém a publicação após aprovação como uma etapa manual.'
+      "version": "1.2.6",
+      "date": "2026-11-13",
+      "title": "Relatórios personalizados, PDF institucional e preferências persistentes",
+      "features": [
+        "Reconhecimento Posterior com seleção de um, vários ou todos os servidores, ações de selecionar todos e limpar seleção.",
+        "Últimos parâmetros dos relatórios guardados por usuário neste navegador: período, seleção e agrupamento no Reconhecimento; período e filtro no Pagamento; ordenação por servidor nas Horas Perdidas.",
+        "PDF do Reconhecimento com visual institucional discreto, resumo compacto, tabelas leves e páginas numeradas, mantendo A4 retrato.",
+        "Excedentes da jornada reduzida discriminados; crédito de banco identificado como simulação sujeita ao ato e à autorização aplicáveis. Referências normativas de julho corrigidas.",
+        "Botão de ações rápidas com azul institucional sólido e sombra suave, sem relevo metálico nem brilho intenso.",
+        "Exportação bloqueada quando os parâmetros escolhidos não correspondem ao resultado salvo ou ainda não há relatório gerado.",
+        "Persistência local sem novas permissões, com restauração após navegação e migração do período dos resultados anteriores."
       ]
     },
     {

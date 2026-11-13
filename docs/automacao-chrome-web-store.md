@@ -2,6 +2,8 @@
 
 Verificado em **12/11/2026**, para a preparação do TSE XT 1.2.0.
 
+**Liberação 1.2.6 (13/11/2026):** implantação expressamente autorizada. O workflow envia o pacote da tag v1.2.6 com `upload`; descrição, imagens e justificativa de armazenamento são atualizadas no Dashboard. Nesta liberação, a submissão pelo Dashboard usa publicação automática após aprovação, conforme a autorização. O modo `submit` do workflow continua com publicação adiada (`STAGED_PUBLISH`) para os acionamentos futuros que o escolherem.
+
 ## O que pode ser automatizado
 
 A **Chrome Web Store API v2** permite atualizar um item já existente: enviar o ZIP, consultar o processamento, submeter à revisão e acompanhar o estado. O primeiro item precisa ser criado pelo Developer Dashboard. [Visão geral oficial](https://developer.chrome.com/docs/webstore/api).

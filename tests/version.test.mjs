@@ -13,7 +13,7 @@ test('version — CURRENT_VERSION em version.js corresponde ao manifest.json', (
   const V = versionMod.JEPessoasVersion;
 
   const currentVersion = V.getVersion();
-  assert.equal(currentVersion, '1.2.6-Snapshot');
+  assert.equal(currentVersion, '1.2.6');
 
   // A versao de desenvolvimento pode diferir da ultima tag estavel da loja.
   assert.equal(manifest.version_name, currentVersion);

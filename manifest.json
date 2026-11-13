@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TSE XT",
   "version": "1.2.6",
-  "version_name": "1.2.6-Snapshot",
+  "version_name": "1.2.6",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",

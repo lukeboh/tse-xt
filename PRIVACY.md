@@ -4,7 +4,7 @@
 
 **Versão da política:** 1.3.1
 
-**Extensão de referência:** 1.2.6-Snapshot
+**Extensão de referência:** 1.2.6
 
 **Repositório:** [https://github.com/lukeboh/tse-xt](https://github.com/lukeboh/tse-xt)
 

@@ -1,10 +1,10 @@
 # 🗺️ Roadmap Consolidado de Evoluções — TSE XT
 
-**Versão do documento:** 1.2.0
+**Versão do documento:** 1.2.6
 
 **Data de consolidação:** 12/11/2026
 
-**Status do projeto:** v1.2.0 estável aprovada · série 1.1 consolidada · itens abertos da Trilha C preservados
+**Status do projeto:** v1.2.6 estável autorizada em 13/11/2026 · relatórios e preferências validados · itens abertos da Trilha C preservados
 
 > Este documento é a **fonte única e centralizada da verdade** para o backlog de evolução do TSE XT. Reúne em um só lugar as pendências normativas de cálculo, melhorias de interface/experiência de usuário, novos módulos funcionais, débitos técnicos e validações regulatórias.
 
