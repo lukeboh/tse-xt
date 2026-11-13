@@ -1,5 +1,12 @@
 # Changelog — TSE XT
 
+## 1.2.5-Snapshot — 13/11/2026
+
+- Botão flutuante de ações rápidas com azul institucional sólido, borda discreta e sombra suave, removendo a borda nativa em relevo, o gradiente e o brilho intenso.
+- Estado aberto continua azul; preservada a rotação do ícone para fechar, com movimento sutil ao passar o mouse e foco visível para teclado.
+- Conferência visual no Chrome nos estados fechado, aberto e com foco; sem mudança nas ações do menu.
+- Verificação: **209 testes passando**, incluindo consistência da versão e empacotamento; acabamento conferido na página real.
+
 ## 1.2.4-Snapshot — 13/11/2026
 
 - Reconhecimento Posterior com impressão institucional: tipografia alinhada à tela, azul discreto, metadados organizados e resumo compacto de Excedente, Pago, Banco e Perdido.

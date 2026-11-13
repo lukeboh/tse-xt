@@ -255,6 +255,8 @@ Melhorias para tornar o uso diário mais ergonômico, rápido e produtivo.
 | **U3** | **Exportação Visual Aprimorada & Layout de Impressão (`@media print`)** | 💡 Médio | **Ação:** Criar folha de estilo de impressão limpa que remova botões, drawers e elementos de navegação, formatando o espelho com os 5 KPIs em página única para geração direta de PDF institucional. |
 | **U4** | **Central de Preferências Estendida** | 💡 Médio | **Ação:** Expandir a tela de popup da extensão para permitir configurar: regime de trabalho padrão (presencial / híbrido), jornada esperada (7h ou 8h), e ativação/desativação de alertas normativos específicos. |
 
+**Refinamento das ações rápidas (1.2.5-Snapshot, 13/11/2026):** botão flutuante com azul institucional sólido, sem relevo nativo, gradiente ou brilho intenso. Sombra suave, estado aberto em azul e foco de teclado visível. Conferidos os estados fechado, aberto e com foco no Chrome; ações do menu preservadas.
+
 ---
 
 ## 📦 Trilha M — Novos Módulos Dedicados & Funcionalidades de Negócio

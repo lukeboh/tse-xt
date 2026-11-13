@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.4-Snapshot';
+  const CURRENT_VERSION = '1.2.5-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.5-Snapshot',
+      date: '2026-11-13',
+      title: 'Acabamento do botão de ações rápidas',
+      features: [
+        'Botão flutuante com azul institucional sólido, borda discreta e sombra suave, sem o relevo nativo do navegador.',
+        'Estado aberto permanece azul e mantém a rotação do ícone de fechar, com movimento sutil ao passar o mouse.',
+        'Foco de teclado visível para facilitar a navegação das ações rápidas.'
+      ]
+    },
     {
       version: '1.2.4-Snapshot',
       date: '2026-11-13',

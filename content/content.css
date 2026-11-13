@@ -3581,27 +3581,43 @@ body.je-xt-disabled .je-fab-container {
 }
 
 .je-fab-main {
+  appearance: none !important;
+  -webkit-appearance: none !important;
   width: 52px !important;
   height: 52px !important;
   border-radius: var(--je-radius-full) !important;
-  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
-  box-shadow: 0 8px 24px rgba(0, 119, 255, 0.35), var(--je-glow-blue-soft) !important;
+  border: 1px solid var(--je-primary) !important;
+  background: var(--je-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(10, 37, 64, 0.16) !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   padding: 0 !important;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .je-fab-main:hover {
-  transform: scale(1.08) !important;
-  box-shadow: 0 12px 30px rgba(0, 119, 255, 0.45), var(--je-glow-blue) !important;
+  transform: translateY(-1px) !important;
+  background: #004b9b !important;
+  box-shadow: 0 6px 16px rgba(10, 37, 64, 0.2) !important;
+}
+
+.je-fab-main:focus-visible {
+  outline: 2px solid var(--je-primary-light) !important;
+  outline-offset: 3px !important;
 }
 
 .je-fab-container.active .je-fab-main {
   transform: rotate(45deg) !important;
-  background: linear-gradient(135deg, var(--je-danger-accent) 0%, var(--je-danger-text) 100%) !important;
-  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35) !important;
+  background: #004b9b !important;
+  box-shadow: 0 4px 12px rgba(10, 37, 64, 0.16) !important;
+}
+
+.je-fab-container.active .je-fab-main:hover {
+  transform: rotate(45deg) translateY(-1px) !important;
 }
 
 .je-fab-menu {
