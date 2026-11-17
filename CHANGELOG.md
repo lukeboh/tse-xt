@@ -1,5 +1,11 @@
 # Changelog — TSE XT
 
+## 1.2.11-Snapshot — 17/11/2026
+
+- **Posição do botão de liga/desliga no SPT**: quando o TSE XT está desligado no SPT (`body.je-xt-disabled.je-spt-page`), a pílula flutuante `#je-persistent-toggle-bar` passa a ficar posicionada no canto inferior direito (`bottom: 58px; right: 24px`), livre dos botões **Alterar Senha** e **Sair** do cabeçalho principal.
+- **Visual da combobox de Unidade no SPT**: neutralizada a regra global `body.je-xt-enabled input[type="text"]` dentro de `.je-spt-combobox`, eliminando a borda e o sombreamento internos duplicados ("componente acavalado no outro"), unificando altura (`38px`) e raio de borda com os demais seletores do cartão e alinhando o checkbox `Buscar unidades abaixo`.
+- Verificação: **231 testes passando** e conferência visual no Chrome (porta 9222) nos estados ligado e desligado.
+
 ## 1.2.10-Snapshot — 17/11/2026
 
 - Menu do ícone da extensão (`popup`) evoluído com a seção **Portais suportados**, contendo chaves habilitadoras independentes para cada portal (**Meu Espaço TSE** e **SPT — Frequência**) e links diretos para abrir cada portal em nova aba.

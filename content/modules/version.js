@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.10-Snapshot';
+  const CURRENT_VERSION = '1.2.11-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.11-Snapshot',
+      date: '2026-11-17',
+      title: 'Refinamento visual no SPT: posição do interruptor desligado e combo de Unidade',
+      features: [
+        'Interruptor flutuante "TSE XT Desligado" reposicionado para o canto inferior direito no SPT, evitando sobrepor os botões "Alterar Senha" e "Sair" do cabeçalho nativo.',
+        'Combobox pesquisável de Unidade no SPT ajustada para não herdar borda/sombra duplicada do input global, alinhando altura, raio de borda e opção "Buscar unidades abaixo" aos demais campos.'
+      ]
+    },
     {
       version: '1.2.10-Snapshot',
       date: '2026-11-17',
