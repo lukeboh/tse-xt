@@ -1,5 +1,10 @@
 # Changelog — TSE XT
 
+## 1.2.15-Snapshot — 17/11/2026
+
+- **Ajuste de impressão na coluna `Dias` do consolidado mensal do SPT (`sptReportModal.js`)**: subtítulo de detalhamento (`u + ho + f + dsr`) quebrado em segunda linha para não invadir a coluna `Total SPT` no rodapé consolidado da unidade.
+- Verificação: **235 testes passando**.
+
 ## 1.2.14-Snapshot — 17/11/2026
 
 - **Tela de logon do SPT modernizada (`sptModernizer.js`, `content.js`, `spt-gestao.css`)**:

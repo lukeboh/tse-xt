@@ -885,7 +885,7 @@ window.JEPessoasSptReport = (function () {
     if (ho > 0) parts.push(`${ho}ho`);
     parts.push(`${fds}f`);
     if (dsr > 0) parts.push(`${dsr}dsr`);
-    return `${m.workedDays}d <small>(${parts.join('+')})</small>`;
+    return `<strong>${m.workedDays}d</strong><br><small>${parts.join(' + ')}</small>`;
   }
 
   // ---------------------------------------------------------------------------

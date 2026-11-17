@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.14-Snapshot';
+  const CURRENT_VERSION = '1.2.15-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.15-Snapshot',
+      date: '2026-11-17',
+      title: 'SPT: quebra de linha na coluna Dias do consolidado impresso',
+      features: [
+        'Formatada a célula da coluna Dias no consolidado mensal (ex.: 303d com subtítulo 55u + 184ho + 64f + 30dsr em segunda linha) para evitar sobreposição com a coluna Total SPT no PDF.'
+      ]
+    },
     {
       version: '1.2.14-Snapshot',
       date: '2026-11-17',
