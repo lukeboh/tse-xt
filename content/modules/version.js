@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.12-Snapshot';
+  const CURRENT_VERSION = '1.2.13-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.13-Snapshot',
+      date: '2026-11-17',
+      title: 'SPT: presunção de Home Office (8h) sem batida fictícia e Reposição automática de DSR',
+      features: [
+        'Novo controle no relatório do SPT: "Presumir Home Office (8h) em dias úteis sem batida + Reposição de DSR (> 6d seguidos)", habilitado por padrão no modo TSE XT / Digi.',
+        'Em dias úteis sem marcação na catraca (para colaboradores ativos no mês), contabiliza a jornada ordinária de 08:00 concluída em Home Office sem gerar batidas fictícias, reservando automaticamente a folga de "Reposição de DSR" (CLT art. 67 / OJ 410 TST) quando o colaborador trabalhou no domingo ou superou 6 dias consecutivos.'
+      ]
+    },
     {
       version: '1.2.12-Snapshot',
       date: '2026-11-17',

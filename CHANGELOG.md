@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.13-Snapshot — 17/11/2026
+
+- **Controle de Home Office (8h) + Reposição de DSR no SPT (`sptCltCalc.js` e `sptReportModal.js`)**:
+  - Novo checkbox nos filtros do relatório: **"Presumir Home Office (8h) em dias úteis sem batida + Reposição de DSR (> 6d seguidos)"** (ativo por padrão no modo `TSE XT / Digi`, com recálculo instantâneo em memória ao marcar/desmarcar).
+  - Nos dias úteis sem passagem na catraca do SPT (para colaboradores ativos no mês), contabiliza a jornada ordinária de `08:00` como concluída (`Home Office (8h)`), **sem gerar batidas fictícias** (`E1..S3` e `Total SPT` permanecem em branco/originais).
+  - **Reposição automática de DSR (CLT art. 67 / OJ 410 TST)**: quando o colaborador trabalha no domingo / ultrapassa 6 dias seguidos, aloca automaticamente o dia de folga compensatória (`Reposição de DSR`, com jornada `00:00`, ex.: `05/10` e `30/10`), fechando os mesmos 19 dias úteis (`152:00`) do Cartão Ponto da empresa.
+- Verificação: **234 testes passando**.
+
 ## 1.2.12-Snapshot — 17/11/2026
 
 - **Novo controle de Modo no Relatório do SPT (`sptReportModal.js`)**: permite alternar entre **TSE XT / Digi** (padrão) e **SPT Puro (Bruto)** (exibe exclusivamente as marcações e o Total bruto do SPT, sem cálculos interpretativos), tanto na tela quanto no CSV e na impressão A4.

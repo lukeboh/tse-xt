@@ -3,13 +3,19 @@
  *
  * Modos suportados pelo relatório:
  *   1. 'xt_digi' (TSE XT / Digi — padrão):
- *      - Jornada ordinária de 8h00 (480 min) apenas nos dias úteis trabalhados (Seg–Sex).
+ *      - Jornada ordinária de 8h00 (480 min) nos dias úteis (Seg–Sex).
  *      - Sábados, Domingos e Feriados possuem jornada ordinária 00:00: 100% das horas
  *        trabalhadas contam como HE 100% (nunca gerando "Horas a Menos" / Débito BH
  *        quando o plantão de fim de semana é inferior a 8h).
  *      - Tolerância CLT (art. 58, § 1º): variações de até 10 minutos no total do dia útil
  *        (entre 07:50 e 08:10) contam como jornada normal cumprida (08:00), sem gerar
  *        HE 50% nem Débito BH.
+ *      - Opção "Presumir Home Office (8h) e Reposição de DSR":
+ *        em dias úteis sem batida na catraca (para colaboradores ativos no mês), presume-se
+ *        jornada ordinária de 08:00 concluída em Home Office (sem gerar batidas fictícias),
+ *        exceto quando o colaborador trabalhou no domingo / mais de 6 dias seguidos (CLT art. 67
+ *        e OJ 410 TST), hipótese em que 1 dia útil sem batida na semana é alocado como
+ *        "Reposição de DSR" (folga compensatória 00:00).
  *      - Separação entre Banco de Horas de Dias Úteis (HE 50% até 2h/dia × Débito BH)
  *        e Horas Extras 100% (Sábados, Domingos, Feriados e excedente > 2h em dia útil),
  *        espelhando o Cartão Ponto da Digisystem.
@@ -471,11 +477,17 @@ window.JEPessoasSptCltCalc = (function () {
       lunchMode,
       lunchDeductionDiffMin,
       cltWorkedMin,
+      presencialCltWorkedMin: cltWorkedMin,
       isWorkedDay,
+      isPresencialWorkedDay: isWorkedDay,
+      isHomeOfficeDay: false,
+      isDsrCompensated: false,
       isPostMidnightContinuation,
       withinTolerance,
       targetMin,
+      presencialTargetMin: targetMin,
       normalWorkedMin,
+      presencialNormalWorkedMin: normalWorkedMin,
       he50Min,
       he100Min,
       excedenteMin,
@@ -486,6 +498,7 @@ window.JEPessoasSptCltCalc = (function () {
       accumulatedBhMin: 0,
       accumulatedHe100Min: 0,
       accumulatedBalanceMin: 0,
+      baseAlerts: alerts.slice(),
       alerts
     };
   }
@@ -552,10 +565,184 @@ window.JEPessoasSptCltCalc = (function () {
     return { meta, days: analyzed };
   }
 
+  function resolveHomeOfficeAndDsr(daysList, options = {}) {
+    const presumeHomeOffice = !!options.presumeHomeOffice;
+    const todayIso = options.todayIso || new Date().toISOString().slice(0, 10);
+
+    // Restaura cada dia ao estado presencial puro antes de aplicar/remover Home Office e DSR
+    const resetList = daysList.map((d) => {
+      const isPresencial = typeof d.isPresencialWorkedDay === 'boolean' ? d.isPresencialWorkedDay : !!d.isWorkedDay;
+      const presClt = typeof d.presencialCltWorkedMin === 'number' ? d.presencialCltWorkedMin : d.cltWorkedMin;
+      const presTarget = typeof d.presencialTargetMin === 'number' ? d.presencialTargetMin : d.targetMin;
+      const presNorm = typeof d.presencialNormalWorkedMin === 'number' ? d.presencialNormalWorkedMin : (d.normalWorkedMin || 0);
+      const baseAlerts = Array.isArray(d.baseAlerts)
+        ? d.baseAlerts.slice()
+        : (d.alerts || []).filter((a) => a.code !== 'home-office' && a.code !== 'reposicao-dsr' && a.code !== 'feriado');
+
+      if (d.isHoliday && !isPresencial && !baseAlerts.some((a) => a.code === 'feriado')) {
+        baseAlerts.push({
+          code: 'feriado',
+          label: 'Feriado',
+          tip: 'Feriado nacional/forense (jornada ordinária 00:00).'
+        });
+      }
+
+      return Object.assign({}, d, {
+        isPresencialWorkedDay: isPresencial,
+        presencialCltWorkedMin: presClt,
+        presencialTargetMin: presTarget,
+        presencialNormalWorkedMin: presNorm,
+        isWorkedDay: isPresencial,
+        isHomeOfficeDay: false,
+        isDsrCompensated: false,
+        cltWorkedMin: presClt,
+        targetMin: presTarget,
+        normalWorkedMin: presNorm,
+        baseAlerts: baseAlerts.filter((a) => a.code !== 'feriado'),
+        alerts: baseAlerts
+      });
+    });
+
+    if (!presumeHomeOffice) {
+      return resetList;
+    }
+
+    // Só presume Home Office para colaboradores ativos no mês (ao menos 1 dia presencial na catraca)
+    const hasAnyPresencialWork = resetList.some((d) => d.isPresencialWorkedDay);
+    if (!hasAnyPresencialWork) {
+      return resetList;
+    }
+
+    const isEligibleUnpunchedWeekday = (d) => (
+      !d.isSpecialDay &&
+      !d.isPresencialWorkedDay &&
+      (d.punchCount === 0 || d.isPostMidnightContinuation) &&
+      !d.justificativa &&
+      (!d.dateIso || d.dateIso <= todayIso)
+    );
+
+    const dsrIndices = new Set();
+
+    // 1. Para cada domingo trabalhado (perda do DSR semanal / > 6 dias seguidos — CLT art. 67 e OJ 410 TST),
+    // aloca 1 dia útil sem batida na semana como "Reposição de DSR" (folga compensatória 00:00).
+    for (let sIdx = 0; sIdx < resetList.length; sIdx += 1) {
+      const sun = resetList[sIdx];
+      if (sun.dayOfWeek !== 0 || !sun.isPresencialWorkedDay) continue;
+
+      const weekAhead = [];
+      for (let k = sIdx + 1; k <= Math.min(resetList.length - 1, sIdx + 5); k += 1) {
+        if (isEligibleUnpunchedWeekday(resetList[k]) && !dsrIndices.has(k)) {
+          weekAhead.push(k);
+        }
+      }
+
+      if (weekAhead.length > 0) {
+        const monIdx = sIdx + 1;
+        const monIsCandidate = weekAhead.includes(monIdx) && !resetList[monIdx].isPostMidnightContinuation;
+        let hasPresencialLaterInWeek = false;
+        for (let k = sIdx + 2; k <= Math.min(resetList.length - 1, sIdx + 5); k += 1) {
+          if (resetList[k].isPresencialWorkedDay) {
+            hasPresencialLaterInWeek = true;
+            break;
+          }
+        }
+        // Se a segunda-feira está livre na catraca e o prestador voltou presencialmente na terça/quarta (ex.: Renato 05/10),
+        // a folga compensatória foi na segunda-feira; caso contrário, aloca na sexta-feira (último dia útil livre da semana, ex.: 09/10 e 30/10).
+        const chosenIdx = (monIsCandidate && hasPresencialLaterInWeek)
+          ? monIdx
+          : weekAhead[weekAhead.length - 1];
+        dsrIndices.add(chosenIdx);
+      } else {
+        // Fallback: se o domingo for no fim do mês sem dias úteis livres depois, busca na semana anterior
+        for (let k = sIdx - 1; k >= Math.max(0, sIdx - 5); k -= 1) {
+          if (isEligibleUnpunchedWeekday(resetList[k]) && !dsrIndices.has(k)) {
+            dsrIndices.add(k);
+            break;
+          }
+        }
+      }
+    }
+
+    // 2. Salvaguarda adicional CLT art. 67 / OJ 410 TST: se ainda restar alguma sequência > 6 dias seguidos
+    // sem nenhuma folga/DSR programada na própria semana, converte o último dia útil sem batida da sequência em Reposição de DSR.
+    let streak = 0;
+    let unpunchedInStreak = [];
+    for (let i = 0; i < resetList.length; i += 1) {
+      const d = resetList[i];
+      const willBeWorked = d.isPresencialWorkedDay || (isEligibleUnpunchedWeekday(d) && !dsrIndices.has(i));
+      if (willBeWorked) {
+        streak += 1;
+        if (isEligibleUnpunchedWeekday(d) && !dsrIndices.has(i)) {
+          unpunchedInStreak.push(i);
+        }
+        // Verifica se já há um DSR programado até o final desta mesma semana (próximos 5 dias)
+        let hasUpcomingDsrInWeek = false;
+        for (let k = i + 1; k <= Math.min(resetList.length - 1, i + 5); k += 1) {
+          if (dsrIndices.has(k) || (!resetList[k].isPresencialWorkedDay && resetList[k].dayOfWeek === 0)) {
+            hasUpcomingDsrInWeek = true;
+            break;
+          }
+        }
+        if (streak > 6 && !hasUpcomingDsrInWeek && unpunchedInStreak.length > 0) {
+          const dsrIdx = unpunchedInStreak.pop();
+          dsrIndices.add(dsrIdx);
+          streak = i - dsrIdx;
+        }
+      } else {
+        streak = 0;
+        unpunchedInStreak = [];
+      }
+    }
+
+    // 3. Aplica Reposição de DSR ou Home Office (8h) aos dias úteis elegíveis sem batida
+    return resetList.map((d, idx) => {
+      if (!isEligibleUnpunchedWeekday(d)) return d;
+      const nextAlerts = d.alerts.slice();
+      if (dsrIndices.has(idx)) {
+        nextAlerts.push({
+          code: 'reposicao-dsr',
+          label: 'Reposição de DSR',
+          tip: 'Folga compensatória automática (CLT art. 67 / OJ 410 TST) após trabalho no domingo / mais de 6 dias seguidos.'
+        });
+        return Object.assign({}, d, {
+          isWorkedDay: false,
+          isHomeOfficeDay: false,
+          isDsrCompensated: true,
+          cltWorkedMin: 0,
+          targetMin: 0,
+          normalWorkedMin: 0,
+          alerts: nextAlerts
+        });
+      }
+
+      nextAlerts.push({
+        code: 'home-office',
+        label: 'Home Office (8h)',
+        tip: 'Dia útil sem batida na catraca do SPT: jornada ordinária de 08:00 presumida em home office.'
+      });
+      return Object.assign({}, d, {
+        isWorkedDay: true,
+        isHomeOfficeDay: true,
+        isDsrCompensated: false,
+        cltWorkedMin: DAILY_TARGET_MIN,
+        targetMin: DAILY_TARGET_MIN,
+        normalWorkedMin: DAILY_TARGET_MIN,
+        alerts: nextAlerts
+      });
+    });
+  }
+
   function summarizeMonthClt(days, meta = {}) {
-    const list = Array.isArray(days) ? days : [];
+    const resolvedDays = resolveHomeOfficeAndDsr(Array.isArray(days) ? days : [], {
+      presumeHomeOffice: !!meta.presumeHomeOffice,
+      todayIso: meta.todayIso
+    });
+
     let workedDays = 0;
+    let presencialWorkedDays = 0;
     let workedWeekdays = 0;
+    let homeOfficeDays = 0;
+    let dsrCompensatedDays = 0;
     let workedWeekendDays = 0;
     let weekdaysInPeriod = 0;
     let weekdaysWithoutRecord = 0;
@@ -578,23 +765,30 @@ window.JEPessoasSptCltCalc = (function () {
     let runningHe100 = 0;
     let runningTotalBalance = 0;
 
-    const enrichedDays = list.map((d) => {
+    const enrichedDays = resolvedDays.map((d) => {
       if (d.justificativa) justifiedDays += 1;
       if (!d.isSpecialDay) {
         weekdaysInPeriod += 1;
-        if (!d.isWorkedDay && !d.justificativa && !d.isPostMidnightContinuation) {
+        if (!d.isPresencialWorkedDay && !d.justificativa && !d.isPostMidnightContinuation) {
           weekdaysWithoutRecord += 1;
         }
       }
+      if (d.isDsrCompensated) {
+        dsrCompensatedDays += 1;
+      }
       if (d.isWorkedDay) {
         workedDays += 1;
-        if (d.isSpecialDay) {
+        if (d.isHomeOfficeDay) {
+          homeOfficeDays += 1;
+        } else if (d.isSpecialDay) {
+          presencialWorkedDays += 1;
           workedWeekendDays += 1;
         } else {
+          presencialWorkedDays += 1;
           workedWeekdays += 1;
         }
-        sptTotalMin += d.sptTotalMin;
-        cltWorkedMin += d.cltWorkedMin;
+        sptTotalMin += d.sptTotalMin || 0;
+        cltWorkedMin += d.cltWorkedMin || 0;
         horasNormaisMin += d.normalWorkedMin || 0;
         lunchAdjustmentMin += d.lunchDeductionDiffMin || 0;
         expectedJourneyMin += d.targetMin || 0;
@@ -622,15 +816,11 @@ window.JEPessoasSptCltCalc = (function () {
       });
     });
 
-    // Na regra Digisystem/CLT:
-    // - HE 50% (dias úteis) e Débito BH (dias úteis) compensam-se entre si no Banco de Horas (saldoBhMesMin).
-    // - HE 100% (sábados, domingos, feriados e >2h úteis) permanece integral em he100BrutoMin.
     const compensadoBhMin = Math.min(he50BrutoMin, debitoBhBrutoMin);
     const he50LiquidoMin = Math.max(0, he50BrutoMin - compensadoBhMin);
     const debitoBhLiquidoMin = Math.max(0, debitoBhBrutoMin - compensadoBhMin);
     const saldoBhMesMin = he50BrutoMin - debitoBhBrutoMin;
 
-    // Mantém campos compatíveis para visão geral (Saldo BH + HE 100%)
     const compensadoNoMesMin = compensadoBhMin;
     const excedenteLiquidoMin = he50LiquidoMin + he100BrutoMin;
     const aMenosBrutoMin = debitoBhBrutoMin;
@@ -640,8 +830,12 @@ window.JEPessoasSptCltCalc = (function () {
     return {
       ymKey: meta.ymKey || (enrichedDays[0] && enrichedDays[0].ymKey) || '',
       monthLabel: meta.monthLabel || (enrichedDays[0] && enrichedDays[0].monthLabel) || '',
+      presumeHomeOffice: !!meta.presumeHomeOffice,
       workedDays,
+      presencialWorkedDays,
       workedWeekdays,
+      homeOfficeDays,
+      dsrCompensatedDays,
       workedWeekendDays,
       weekdaysInPeriod,
       weekdaysWithoutRecord,
@@ -670,7 +864,9 @@ window.JEPessoasSptCltCalc = (function () {
         almocoAutoDays,
         batidaImparDays,
         acima2hExtraDays,
-        fdsDays
+        fdsDays,
+        homeOfficeDays,
+        dsrCompensatedDays
       },
       days: enrichedDays
     };
@@ -681,7 +877,10 @@ window.JEPessoasSptCltCalc = (function () {
     const acc = {
       monthsCount: list.length,
       workedDays: 0,
+      presencialWorkedDays: 0,
       workedWeekdays: 0,
+      homeOfficeDays: 0,
+      dsrCompensatedDays: 0,
       workedWeekendDays: 0,
       weekdaysInPeriod: 0,
       weekdaysWithoutRecord: 0,
@@ -709,12 +908,17 @@ window.JEPessoasSptCltCalc = (function () {
         almocoAutoDays: 0,
         batidaImparDays: 0,
         acima2hExtraDays: 0,
-        fdsDays: 0
+        fdsDays: 0,
+        homeOfficeDays: 0,
+        dsrCompensatedDays: 0
       }
     };
     list.forEach((m) => {
       acc.workedDays += m.workedDays || 0;
+      acc.presencialWorkedDays += m.presencialWorkedDays != null ? m.presencialWorkedDays : (m.workedDays || 0);
       acc.workedWeekdays += m.workedWeekdays || 0;
+      acc.homeOfficeDays += m.homeOfficeDays || 0;
+      acc.dsrCompensatedDays += m.dsrCompensatedDays || 0;
       acc.workedWeekendDays += m.workedWeekendDays || 0;
       acc.weekdaysInPeriod += m.weekdaysInPeriod || 0;
       acc.weekdaysWithoutRecord += m.weekdaysWithoutRecord || 0;
@@ -743,6 +947,8 @@ window.JEPessoasSptCltCalc = (function () {
         acc.alerts.batidaImparDays += m.alerts.batidaImparDays || 0;
         acc.alerts.acima2hExtraDays += m.alerts.acima2hExtraDays || 0;
         acc.alerts.fdsDays += m.alerts.fdsDays || 0;
+        acc.alerts.homeOfficeDays += m.alerts.homeOfficeDays || 0;
+        acc.alerts.dsrCompensatedDays += m.alerts.dsrCompensatedDays || 0;
       }
     });
     return acc;
@@ -753,8 +959,30 @@ window.JEPessoasSptCltCalc = (function () {
     const totals = list.map((w) => w.totals || summarizeWorkerMonths(w.months));
     const unit = summarizeWorkerMonths(totals);
     unit.workersCount = list.length;
-    unit.activeWorkersCount = totals.filter((t) => t.workedDays > 0).length;
+    unit.activeWorkersCount = totals.filter((t) => (t.presencialWorkedDays || t.workedDays) > 0).length;
     return unit;
+  }
+
+  function recomputeReportWithOptions(report, options = {}) {
+    if (!report || !Array.isArray(report.workers)) return report;
+    const presumeHomeOffice = !!options.presumeHomeOffice;
+    const nextWorkers = report.workers.map((w) => {
+      const nextMonths = (w.months || []).map((m) => summarizeMonthClt(m.days || [], {
+        ymKey: m.ymKey,
+        monthLabel: m.monthLabel,
+        presumeHomeOffice,
+        todayIso: options.todayIso
+      }));
+      return Object.assign({}, w, {
+        months: nextMonths,
+        totals: summarizeWorkerMonths(nextMonths)
+      });
+    });
+    return Object.assign({}, report, {
+      presumeHomeOffice,
+      workers: nextWorkers,
+      unitTotals: summarizeUnitReport(nextWorkers)
+    });
   }
 
   return {
@@ -776,8 +1004,10 @@ window.JEPessoasSptCltCalc = (function () {
     parseDateInfo,
     analyzeDayClt,
     parseWorkerSheetDoc,
+    resolveHomeOfficeAndDsr,
     summarizeMonthClt,
     summarizeWorkerMonths,
-    summarizeUnitReport
+    summarizeUnitReport,
+    recomputeReportWithOptions
   };
 })();

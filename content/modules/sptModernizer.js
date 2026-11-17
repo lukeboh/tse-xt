@@ -421,7 +421,8 @@ window.JEPessoasSptModernizer = (function () {
     const parsed = c.parseWorkerSheetDoc(document);
     if (!parsed.days.length) return;
     const summary = c.summarizeMonthClt(parsed.days, {
-      monthLabel: parsed.meta.periodo
+      monthLabel: parsed.meta.periodo,
+      presumeHomeOffice: true
     });
     const fmt = (m, s = false) => c.formatMin(m, s);
 
@@ -455,7 +456,7 @@ window.JEPessoasSptModernizer = (function () {
         </div>
         <div class="je-kpi-value" style="color: var(--je-success-text);">+${fmt(summary.he50BrutoMin || 0)}</div>
         <div class="je-kpi-sub">
-          <span>${summary.workedWeekdays || 0}d úteis (jornada 08:00 · tol. ±10m)</span>
+          <span>${summary.workedWeekdays || 0}d pres.${summary.homeOfficeDays ? ` + ${summary.homeOfficeDays}d HO` : ''}${summary.dsrCompensatedDays ? ` · ${summary.dsrCompensatedDays}d DSR` : ''} (tol. ±10m)</span>
         </div>
       </div>
 

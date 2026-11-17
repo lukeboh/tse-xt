@@ -221,8 +221,72 @@ test('sptCltCalc — summarizeMonthClt separa Saldo BH (50% x Debito BH em dias 
 test('sptReportModal — possui controle Modo com TSE XT / Digi como padrao e SPT Puro para dados brutos', () => {
   const modalSrc = readFileSync(path.join(rootDir, 'content', 'modules', 'sptReportModal.js'), 'utf8');
   assert.match(modalSrc, /let calcMode = 'xt_digi'/);
+  assert.match(modalSrc, /let presumeHomeOffice = true/);
   assert.match(modalSrc, /value="xt_digi" checked/);
   assert.match(modalSrc, /value="spt_puro"/);
+  assert.match(modalSrc, /id="je-spt-rep-homeoffice" checked/);
   assert.match(modalSrc, /TSE XT \/ Digi/);
   assert.match(modalSrc, /SPT Puro/);
+});
+
+test('sptCltCalc — presumeHomeOffice contabiliza 8h sem batida ficticia e aloca Reposicao de DSR apos domingo trabalhado (> 6d)', () => {
+  // Simula outubro/2026 completo do Renato Farias de Matos na catraca do SPT
+  const punchedMap = {
+    '01/10/2026': { punches: ['08:54', '12:00', '13:29', '17:46', '', ''], total: '07:23:00' },
+    '02/10/2026': { punches: ['09:56', '18:26', '', '', '', ''], total: '07:30:00' },
+    '03/10/2026': { punches: ['09:25', '19:00', '', '', '', ''], total: '08:35:00' }, // Sáb
+    '04/10/2026': { punches: ['14:18', '23:39', '', '', '', ''], total: '08:21:00' }, // Dom
+    '06/10/2026': { punches: ['09:22', '12:12', '13:15', '18:34', '', ''], total: '08:09:00' },
+    '07/10/2026': { punches: ['10:33', '12:03', '13:13', '19:45', '', ''], total: '08:02:00' },
+    '09/10/2026': { punches: ['08:38', '11:52', '13:46', '20:03', '', ''], total: '09:31:00' },
+    '10/10/2026': { punches: ['09:31', '18:31', '', '', '', ''], total: '08:00:00' }, // Sáb
+    '17/10/2026': { punches: ['08:21', '13:26', '', '', '', ''], total: '05:05:00' }, // Sáb
+    '24/10/2026': { punches: ['09:34', '12:58', '14:15', '20:52', '', ''], total: '10:01:00' }, // Sáb
+    '25/10/2026': { punches: ['14:13', '23:59', '', '', '', ''], total: '11:22:00' }, // Dom
+    '26/10/2026': { punches: ['00:00', '02:35', '', '', '', ''], total: '00:00' } // Continuação pós-meia-noite
+  };
+
+  const rawRows = [];
+  for (let d = 1; d <= 31; d += 1) {
+    const dd = String(d).padStart(2, '0');
+    const date = `${dd}/10/2026`;
+    const p = punchedMap[date] || { punches: ['', '', '', '', '', ''], total: '' };
+    rawRows.push({ date, punches: p.punches, justificativa: '', total: p.total });
+  }
+  const analyzed = rawRows.map((r, i) => C.analyzeDayClt(r, i > 0 ? rawRows[i - 1] : null));
+
+  const mHo = C.summarizeMonthClt(analyzed, {
+    ymKey: '2026-10',
+    monthLabel: '10/2026',
+    presumeHomeOffice: true,
+    todayIso: '2026-11-17'
+  });
+
+  // 5 dias úteis presenciais + 14 dias em Home Office = 19 dias úteis (152h00 de jornada esperada, igual à Digisystem!)
+  assert.equal(mHo.workedWeekdays, 5);
+  assert.equal(mHo.homeOfficeDays, 14);
+  assert.equal(mHo.dsrCompensatedDays, 2); // 05/10 (Seg) e 30/10 (Sex)
+  assert.equal(mHo.workedWeekendDays, 6);
+  assert.equal(mHo.expectedJourneyMin, 19 * 480); // 152:00
+
+  const d05 = mHo.days.find((d) => d.date === '05/10/2026');
+  const d30 = mHo.days.find((d) => d.date === '30/10/2026');
+  const d08 = mHo.days.find((d) => d.date === '08/10/2026');
+  assert.equal(d05.isDsrCompensated, true);
+  assert.equal(d30.isDsrCompensated, true);
+  assert.equal(d08.isHomeOfficeDay, true);
+  assert.equal(d08.cltWorkedMin, 480);
+  // Não gera batidas fictícias
+  assert.deepEqual(d08.punches.filter(Boolean), []);
+
+  // Recomputar com presumeHomeOffice: false restaura os valores puramente presenciais (idempotência)
+  const mNoHo = C.summarizeMonthClt(mHo.days, {
+    ymKey: '2026-10',
+    monthLabel: '10/2026',
+    presumeHomeOffice: false
+  });
+  assert.equal(mNoHo.homeOfficeDays, 0);
+  assert.equal(mNoHo.dsrCompensatedDays, 0);
+  assert.equal(mNoHo.workedDays, 11);
+  assert.equal(mNoHo.expectedJourneyMin, 5 * 480);
 });
