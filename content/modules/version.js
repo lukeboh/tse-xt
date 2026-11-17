@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.9-Snapshot';
+  const CURRENT_VERSION = '1.2.10-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.10-Snapshot',
+      date: '2026-11-17',
+      title: 'Popup com chaves habilitadoras independentes e links para cada portal',
+      features: [
+        'Menu do ícone da extensão (popup) evoluído com a seção "Portais suportados", trazendo chaves habilitadoras independentes para o Meu Espaço TSE e para o SPT — Frequência.',
+        'Links diretos no popup para acessar cada portal processado em nova aba, com sincronização imediata do estado Ativo/Desligado entre o popup e o interruptor da página.'
+      ]
+    },
     {
       version: '1.2.9-Snapshot',
       date: '2026-11-17',

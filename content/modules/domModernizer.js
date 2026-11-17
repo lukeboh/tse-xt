@@ -180,7 +180,7 @@ window.JEPessoasModernizer = (function () {
         const nextState = !currentlyEnabled;
 
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+        chrome.storage?.local?.set({ xtThemeEnabled: nextState, xtEnabledMeuEspaco: nextState }, () => {
           reloadAfterThemeToggle();
         });
       });
@@ -255,7 +255,11 @@ window.JEPessoasModernizer = (function () {
         const nextState = !currentlyEnabled;
 
         applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+        const isSpt = window.location.pathname.includes('/spt-consultafrequencia') || !!document.querySelector('header.navbar-custom');
+        const payload = isSpt
+          ? { xtEnabledSpt: nextState }
+          : { xtThemeEnabled: nextState, xtEnabledMeuEspaco: nextState };
+        chrome.storage?.local?.set(payload, () => {
           reloadAfterThemeToggle();
         });
       });

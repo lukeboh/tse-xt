@@ -295,10 +295,14 @@
     const isEspelhoDia = profileId === 'espelhoDia';
     const isHeGestao = profileId === 'heGestaoChefes';
 
-    // Carrega preferências salvas ou padrão (7h para JE/TSE, XT Ativo)
-    chrome.storage?.local?.get({ targetHours: 7, xtThemeEnabled: true }, (items) => {
+    // Carrega preferências salvas ou padrão (7h para JE/TSE, chave habilitadora por portal)
+    chrome.storage?.local?.get({ targetHours: 7, xtThemeEnabled: true, xtEnabledMeuEspaco: null, xtEnabledSpt: true }, (items) => {
       const targetHours = items.targetHours || 7;
-      const isEnabled = items.xtThemeEnabled !== false;
+      const isEnabled = isSpt
+        ? items.xtEnabledSpt !== false
+        : (items.xtEnabledMeuEspaco !== null && items.xtEnabledMeuEspaco !== undefined
+            ? items.xtEnabledMeuEspaco !== false
+            : items.xtThemeEnabled !== false);
 
       // Executa toda a montagem do DOM em um único frame atômico do navegador.
       // requestAnimationFrame é pausado em abas em segundo plano — um fallback
@@ -563,4 +567,22 @@
       }
     });
   }
+
+  // Sincroniza em tempo real quando o usuário alterna a chave habilitadora do portal pelo popup da extensão
+  try {
+    chrome.storage?.onChanged?.addListener((changes, area) => {
+      if (area !== 'local' || !document.body) return;
+      const isSpt = window.location.pathname.includes('/spt-consultafrequencia') || !!document.querySelector('header.navbar-custom');
+      const key = isSpt ? 'xtEnabledSpt' : 'xtEnabledMeuEspaco';
+      const change = changes[key] || (!isSpt ? changes.xtThemeEnabled : null);
+      if (!change) return;
+      const nextState = change.newValue !== false;
+      const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
+      if (nextState === currentlyEnabled) return;
+      if (window.JEPessoasModernizer && window.JEPessoasModernizer.applyThemeState) {
+        window.JEPessoasModernizer.applyThemeState(nextState, true);
+      }
+      setTimeout(() => window.location.reload(), 250);
+    });
+  } catch (e) {}
 })();

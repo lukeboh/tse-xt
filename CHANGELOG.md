@@ -1,5 +1,11 @@
 # Changelog — TSE XT
 
+## 1.2.10-Snapshot — 17/11/2026
+
+- Menu do ícone da extensão (`popup`) evoluído com a seção **Portais suportados**, contendo chaves habilitadoras independentes para cada portal (**Meu Espaço TSE** e **SPT — Frequência**) e links diretos para abrir cada portal em nova aba.
+- Sincronização bidirecional entre as chaves habilitadoras do popup e o interruptor de tema dentro de cada portal (`xtEnabledMeuEspaco` e `xtEnabledSpt`).
+- Verificação: **231 testes passando**, incluindo os novos testes de chaves e links do popup (`popupPortals.test.mjs`), versão e empacotamento; conferência visual do popup no Chrome.
+
 ## 1.2.9-Snapshot — 17/11/2026
 
 - Primeira expansão do TSE XT além do Meu Espaço: suporte ao **SPT — Gestão de Frequência de Prestadores** (`https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao`), aplicando o Design System Glassmorfismo Tátil (topbar, banner de título, interruptor de tema, cartões, tabelas e 5 KPIs CLT no acompanhamento individual).

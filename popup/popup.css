@@ -3,7 +3,7 @@
   --primary-light: #0077ff;
   --glow-blue: 0 0 0 3px rgba(0, 140, 255, 0.25), 0 0 14px rgba(0, 170, 255, 0.35);
   --bg-color: #f8fafc;
-  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-bg: rgba(255, 255, 255, 0.92);
   --border-color: rgba(0, 102, 204, 0.12);
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -11,7 +11,7 @@
 body {
   margin: 0;
   padding: 0;
-  width: 320px;
+  width: 340px;
   font-family: var(--font-family);
   background: linear-gradient(145deg, #f0f6ff 0%, #e6f0fa 100%);
   color: #1e293b;
@@ -19,15 +19,15 @@ body {
 }
 
 .popup-container {
-  padding: 16px;
+  padding: 12px 14px 14px;
 }
 
 .popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -44,7 +44,7 @@ body {
   font-size: 11px;
   background: rgba(0, 119, 255, 0.1);
   color: var(--primary-light);
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 999px;
   font-weight: 600;
 }
@@ -53,19 +53,150 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 9px 11px;
+  margin-bottom: 8px;
   box-shadow: 0 4px 12px rgba(10, 37, 64, 0.04);
 }
 
 .section-label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: #64748b;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+/* Lista de Portais (chaves habilitadoras e links) */
+.portal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.portal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  background: #f8fafc;
+  border: 1px solid rgba(10, 37, 64, 0.08);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.portal-row:hover {
+  border-color: rgba(0, 119, 255, 0.25);
+  background: #ffffff;
+}
+
+.portal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.portal-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portal-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.portal-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.portal-status-pill.is-off {
+  background: rgba(100, 116, 139, 0.14);
+  color: #64748b;
+}
+
+.portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--primary-light);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.portal-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+/* Switch estilo pílula do TSE XT */
+.portal-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.portal-switch input {
+  position: absolute;
+  clip-path: inset(50%);
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+.portal-slider {
+  position: absolute;
+  inset: 0;
+  background-color: #cbd5e1;
+  border-radius: 999px;
+  transition: background-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.portal-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(10, 37, 64, 0.25);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portal-switch input:checked + .portal-slider {
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%);
+}
+
+.portal-switch input:checked + .portal-slider::before {
+  transform: translateX(18px);
+}
+
+.portal-switch input:focus-visible + .portal-slider {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
 }
 
 .segmented-control {
@@ -80,7 +211,7 @@ body {
   flex: 1;
   border: none;
   background: transparent;
-  padding: 7px;
+  padding: 6px 7px;
   font-size: 12px;
   font-weight: 600;
   color: #475569;
@@ -96,7 +227,7 @@ body {
 }
 
 .section-hint {
-  margin: 8px 2px 0;
+  margin: 7px 2px 0;
   font-size: 10.5px;
   color: #94a3b8;
   line-height: 1.4;

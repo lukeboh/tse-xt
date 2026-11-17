@@ -18,6 +18,54 @@
       <span class="version-tag" id="popupVersion">v0.0.0</span>
     </div>
 
+    <div class="popup-section popup-portals-section">
+      <label class="section-label">Portais suportados</label>
+      <div class="portal-list">
+        <div class="portal-row" data-portal="meuespaco">
+          <div class="portal-info">
+            <div class="portal-title-line">
+              <span class="portal-name">Meu Espaço TSE</span>
+              <span class="portal-status-pill" id="statusMeuEspaco">Ativo</span>
+            </div>
+            <a href="https://meuespaco.tse.jus.br/portalservidor2/" target="_blank" rel="noopener noreferrer" class="portal-link" data-portal-url="https://meuespaco.tse.jus.br/portalservidor2/" title="Abrir o portal Meu Espaço TSE em nova aba">
+              <span>meuespaco.tse.jus.br</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
+          <label class="portal-switch" title="Habilitar ou desabilitar o TSE XT no Meu Espaço">
+            <input type="checkbox" id="toggleMeuEspaco" data-portal-key="xtEnabledMeuEspaco" checked>
+            <span class="portal-slider"></span>
+          </label>
+        </div>
+
+        <div class="portal-row" data-portal="spt">
+          <div class="portal-info">
+            <div class="portal-title-line">
+              <span class="portal-name">SPT — Frequência</span>
+              <span class="portal-status-pill" id="statusSpt">Ativo</span>
+            </div>
+            <a href="https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao" target="_blank" rel="noopener noreferrer" class="portal-link" data-portal-url="https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao" title="Abrir o portal SPT - Gestão de Frequência em nova aba">
+              <span>spt-consultafrequencia.tse.jus.br</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
+          <label class="portal-switch" title="Habilitar ou desabilitar o TSE XT no SPT">
+            <input type="checkbox" id="toggleSpt" data-portal-key="xtEnabledSpt" checked>
+            <span class="portal-slider"></span>
+          </label>
+        </div>
+      </div>
+      <p class="section-hint">Ative ou desative o visual e os relatórios em cada sistema de forma independente, ou clique no endereço para abrir o portal.</p>
+    </div>
+
     <div class="popup-section">
       <label class="section-label">Preenchimento dos cards de KPI</label>
       <div class="segmented-control" data-setting="kpiCardStyle">

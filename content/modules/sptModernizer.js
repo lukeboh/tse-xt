@@ -191,7 +191,7 @@ window.JEPessoasSptModernizer = (function () {
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
         window.JEPessoasModernizer.applyThemeState(nextState, true);
-        chrome.storage?.local?.set({ xtThemeEnabled: nextState }, () => {
+        chrome.storage?.local?.set({ xtEnabledSpt: nextState }, () => {
           setTimeout(() => window.location.reload(), 250);
         });
       });
