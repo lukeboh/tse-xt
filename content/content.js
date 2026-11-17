@@ -48,6 +48,18 @@
       id: 'heGestaoChefes',
       isMatch: () => window.location.href.includes('HoraExtraGestao_visaoChefes') || !!document.getElementById('tbServidoresAutorizados'),
     },
+    {
+      id: 'sptGestao',
+      isMatch: () => window.location.pathname.includes('/spt-consultafrequencia') && !!document.getElementById('cbUnidades'),
+    },
+    {
+      id: 'sptAcompanhamento',
+      isMatch: () => window.location.pathname.includes('/spt-consultafrequencia') && !document.getElementById('cbUnidades') && !!document.getElementById('maintable'),
+    },
+    {
+      id: 'sptGeneric',
+      isMatch: () => window.location.pathname.includes('/spt-consultafrequencia'),
+    },
   ];
 
   function resolveProfileId() {
@@ -273,7 +285,8 @@
     // gasto no fluxo de "Acesso Extranet" (SSO) é majoritariamente TTFB
     // do backend (até a resposta começar a chegar) — isso nenhum content
     // script alcança, não tem documento pra rodar ainda.
-    if (!document.getElementById('container')) {
+    const isSpt = window.location.pathname.includes('/spt-consultafrequencia') || !!document.querySelector('header.navbar-custom');
+    if (!document.getElementById('container') && !isSpt) {
       return;
     }
 
@@ -320,8 +333,22 @@
           // são block por padrão), então não é seguro só "criar escondido"
           // — tem que nem rodar enquanto o tema estiver desligado.
           if (!isEnabled) {
+            if (isSpt) document.body.classList.add('je-spt-page');
             if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
               window.JEPessoasModernizer.createPersistentToggle();
+            }
+            return;
+          }
+
+          if (isSpt) {
+            if (window.JEPessoasSptModernizer) {
+              window.JEPessoasSptModernizer.mount(profileId);
+            }
+            if (window.JEPessoasQuickActions) {
+              window.JEPessoasQuickActions.init();
+            }
+            if (window.JEPessoasVersion) {
+              window.JEPessoasVersion.maybeShowDisclaimer();
             }
             return;
           }

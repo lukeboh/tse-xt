@@ -5,15 +5,55 @@
 window.JEPessoasQuickActions = (function () {
   'use strict';
 
+  function isSptContext() {
+    return window.location.pathname.includes('/spt-consultafrequencia') || !!document.querySelector('header.navbar-custom');
+  }
+
+  function setSafeHTML(el, htmlString) {
+    if (!el) return;
+    const doc = new DOMParser().parseFromString(`<!DOCTYPE html><html><body>${htmlString}</body></html>`, 'text/html');
+    el.replaceChildren(...Array.from(doc.body.childNodes));
+  }
+
   function createFloatingActions() {
     if (document.getElementById('je-floating-actions')) return;
 
+    const spt = isSptContext();
     const fabContainer = document.createElement('div');
     fabContainer.id = 'je-floating-actions';
     fabContainer.className = 'je-fab-container';
 
-    fabContainer.innerHTML = `
-      <div class="je-fab-menu" id="je-fab-menu">
+    const menuItemsHTML = spt
+      ? `
+        <button type="button" class="je-fab-item" id="je-fab-spt-report" title="Relatório consolidado de horas por unidade (mensal CLT e espelho diário)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="8" y1="13" x2="16" y2="13"></line>
+            <line x1="8" y1="17" x2="16" y2="17"></line>
+          </svg>
+          <span>Relatório de Horas (CLT)</span>
+        </button>
+
+        <button type="button" class="je-fab-item" id="je-fab-export-csv" title="Exportar tabela atual para CSV/Excel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Exportar CSV</span>
+        </button>
+
+        <button type="button" class="je-fab-item" id="je-fab-print" title="Imprimir / Salvar PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span>Imprimir / PDF</span>
+        </button>
+      `
+      : `
         <button type="button" class="je-fab-item" id="je-fab-export-csv" title="Exportar tabela para CSV/Excel">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -66,20 +106,24 @@ window.JEPessoasQuickActions = (function () {
           </svg>
           <span>Imprimir / PDF</span>
         </button>
+      `;
+
+    setSafeHTML(fabContainer, `
+      <div class="je-fab-menu" id="je-fab-menu">
+        ${menuItemsHTML}
       </div>
 
-      <button type="button" class="je-fab-main" id="je-fab-main" title="Ações Rápidas JE Pessoas XT">
+      <button type="button" class="je-fab-main" id="je-fab-main" title="Ações Rápidas TSE XT">
         <svg class="je-fab-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       </button>
-    `;
+    `);
 
     document.body.appendChild(fabContainer);
 
     const mainBtn = fabContainer.querySelector('#je-fab-main');
-    const fabMenu = fabContainer.querySelector('#je-fab-menu');
 
     mainBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -87,31 +131,50 @@ window.JEPessoasQuickActions = (function () {
       fabContainer.classList.toggle('active');
     });
 
-    fabContainer.querySelector('#je-fab-export-csv').addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      exportTableToCSV();
-      fabContainer.classList.remove('active');
-    });
+    const exportBtn = fabContainer.querySelector('#je-fab-export-csv');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        exportTableToCSV();
+        fabContainer.classList.remove('active');
+      });
+    }
 
-    fabContainer.querySelector('#je-fab-today').addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const todayRow = document.querySelector('.je-row-today');
-      if (todayRow) {
-        todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        todayRow.style.outline = '2px solid var(--je-primary-light)';
-        setTimeout(() => { todayRow.style.outline = ''; }, 2000);
-      }
-      fabContainer.classList.remove('active');
-    });
+    const todayBtn = fabContainer.querySelector('#je-fab-today');
+    if (todayBtn) {
+      todayBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const todayRow = document.querySelector('.je-row-today');
+        if (todayRow) {
+          todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          todayRow.style.outline = '2px solid var(--je-primary-light)';
+          setTimeout(() => { todayRow.style.outline = ''; }, 2000);
+        }
+        fabContainer.classList.remove('active');
+      });
+    }
 
-    fabContainer.querySelector('#je-fab-print').addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.print();
-      fabContainer.classList.remove('active');
-    });
+    const printBtn = fabContainer.querySelector('#je-fab-print');
+    if (printBtn) {
+      printBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.print();
+        fabContainer.classList.remove('active');
+      });
+    }
+
+    const sptRepBtn = fabContainer.querySelector('#je-fab-spt-report');
+    if (sptRepBtn) {
+      sptRepBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.JEPessoasSptReport) window.JEPessoasSptReport.open();
+        fabContainer.classList.remove('active');
+      });
+    }
 
     const auditBtn = fabContainer.querySelector('#je-fab-audit');
     if (auditBtn) {
@@ -149,9 +212,9 @@ window.JEPessoasQuickActions = (function () {
   }
 
   function exportTableToCSV() {
-    const table = document.getElementById('tblEspelhoPontoMesCorrente');
+    const table = document.getElementById('tblEspelhoPontoMesCorrente') || document.getElementById('maintable');
     if (!table) {
-      alert('Tabela de espelho de ponto não encontrada.');
+      alert('Tabela de frequência não encontrada.');
       return;
     }
 

@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.9-Snapshot — 17/11/2026
+
+- Primeira expansão do TSE XT além do Meu Espaço: suporte ao **SPT — Gestão de Frequência de Prestadores** (`https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao`), aplicando o Design System Glassmorfismo Tátil (topbar, banner de título, interruptor de tema, cartões, tabelas e 5 KPIs CLT no acompanhamento individual).
+- Seleção de **Unidade** por digitação/pesquisa instantânea (combobox pesquisável por nome, caminho hierárquico ou código) na tela principal e no modal de relatório.
+- Botão flutuante **(+)** no SPT com o **Relatório Consolidado de Horas por Unidade (Regras CLT)**: parâmetros de Unidade (obrigatório), Período com data inicial e final (obrigatório, pré-preenchido com o mês anterior ao atual), Contrato (opcional), Nome do Prestador (carregado dinamicamente conforme unidade e contrato) e Detalhe **Mensal** (consolidação CLT: jornada de 8h diárias, intervalo mínimo de 1h de almoço, horas excedentes, horas a menos, compensação dentro do mês e saldo líquido) ou **Diário** (espelho de ponto completo por prestador), com exportação CSV e impressão A4.
+- Proteção no `background.js` para não recarregar automaticamente abas abertas no Espelho de Ponto durante atualizações da extensão.
+- Verificação: **229 testes passando**, incluindo cálculos CLT, fatiamento de períodos multi-mês, hierarquia de unidades, versão e empacotamento; conferência visual ao vivo no SPT via CDP (porta 9222).
+
 ## 1.2.8-Snapshot — 13/11/2026
 
 - Rótulos padronizados como **Compensou dias curtos** e **Compensou dias curtos (FDS)**, conforme solicitado. Espelho e Reconhecimento Posterior (tela e impressão) usam o vocabulário compartilhado; cabeçalhos CSV do Reconhecimento e das Horas Perdidas também adotam Compensou.

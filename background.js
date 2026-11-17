@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   chrome.tabs?.query({ url: ['*://meuespaco.tse.jus.br/*', '*://*.tse.jus.br/*'] }, (tabs) => {
     if (tabs && tabs.length > 0) {
       tabs.forEach((tab) => {
-        if (tab.id) {
+        if (tab.id && !/EspelhoPonto/i.test(tab.url || '')) {
           chrome.tabs.reload(tab.id);
         }
       });

@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.8-Snapshot';
+  const CURRENT_VERSION = '1.2.9-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.9-Snapshot',
+      date: '2026-11-17',
+      title: 'Expansão para o SPT — Gestão de Frequência de Prestadores e Relatório Consolidado CLT',
+      features: [
+        'Suporte ao SPT (https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao) com o mesmo Design System Glassmorfismo Tátil do Meu Espaço: topbar, banner de título, interruptor de tema, cartões, tabelas e 5 KPIs CLT no acompanhamento individual.',
+        'Seleção de Unidade por digitação/pesquisa instantânea (combobox pesquisável por nome, caminho hierárquico ou código) na tela principal e no relatório.',
+        'Botão flutuante (+) com o Relatório Consolidado de Horas por Unidade (SPT · CLT): filtro obrigatório por Unidade e Período (pré-preenchido com o mês anterior ao atual), Contrato opcional, seleção dinâmica de Prestadores e alternância entre Detalhe Mensal (regras CLT: jornada de 8h diárias, mínimo de 1h de almoço, horas excedentes, horas a menos e compensação dentro do mês) e Detalhe Diário (espelho de ponto completo), com exportação CSV e impressão A4.'
+      ]
+    },
     {
       version: '1.2.8-Snapshot',
       date: '2026-11-13',
