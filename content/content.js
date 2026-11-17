@@ -29,7 +29,7 @@
       // (com título/breadcrumb do Espelho) por cima do formulário nativo
       // cru.
       id: 'login',
-      isMatch: () => !!document.getElementById('box-login') || (window.location.pathname.includes('/spt-consultafrequencia') && !document.querySelector('header.navbar-custom') && !!document.querySelector('input[type="password"]')),
+      isMatch: () => !!document.getElementById('box-login') || (window.location.pathname.includes('/spt-consultafrequencia') && !document.querySelector('header.navbar-custom') && (!!document.querySelector('form[action*="process-login"]') || !!document.querySelector('input[type="password"]') || window.location.pathname.includes('/login') || window.location.pathname.includes('/recuperarSenha'))),
     },
     {
       id: 'espelhoMes',
@@ -346,7 +346,9 @@
 
           if (isSpt) {
             if (profileId === 'login') {
-              document.body.classList.add('je-spt-page', 'je-login-page');
+              if (window.JEPessoasSptModernizer && window.JEPessoasSptModernizer.mountLoginPage) {
+                window.JEPessoasSptModernizer.mountLoginPage();
+              }
               return;
             }
             if (window.JEPessoasSptModernizer) {

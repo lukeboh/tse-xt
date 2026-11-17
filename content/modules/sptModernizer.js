@@ -552,9 +552,101 @@ window.JEPessoasSptModernizer = (function () {
     }
   }
 
+  function mountLoginPage() {
+    document.body.classList.add('je-spt-page');
+
+    if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
+      window.JEPessoasModernizer.createPersistentToggle();
+    }
+    const loginToggleEnabled = document.body.classList.contains('je-xt-enabled');
+    const loginToggleLabel = document.querySelector('#je-persistent-toggle-bar .je-toggle-label');
+    if (loginToggleLabel) {
+      setSafeHTML(
+        loginToggleLabel,
+        loginToggleEnabled
+          ? '✨ <strong>TSE XT</strong> Ativo'
+          : '🏛️ <strong>TSE XT</strong> Desligado'
+      );
+    }
+
+    if (!loginToggleEnabled) return;
+
+    document.documentElement.classList.add('je-login-page', 'je-spt-login-page');
+    document.body.classList.add('je-login-page', 'je-spt-login-page');
+
+    const card = document.querySelector('.card');
+    if (card && !document.getElementById('je-spt-login-brand')) {
+      const parentFlex = card.parentElement;
+      if (parentFlex) {
+        parentFlex.classList.add('je-spt-login-wrapper');
+      }
+
+      const versaoExtensao = window.JEPessoasVersion ? window.JEPessoasVersion.getVersion() : '';
+      const iconUrl = chrome.runtime?.getURL ? chrome.runtime.getURL('icons/base.png') : '';
+
+      const brandBlock = document.createElement('div');
+      brandBlock.id = 'je-spt-login-brand';
+      brandBlock.className = 'je-spt-login-brand';
+      setSafeHTML(brandBlock, `
+        <div class="je-spt-login-logo-row">
+          ${iconUrl ? `<img src="${escapeHTML(iconUrl)}" alt="" width="42" height="42" class="je-spt-login-logo" />` : ''}
+          <div class="je-spt-login-brand-text">
+            <span class="je-spt-login-title">SPT <strong>Frequência</strong></span>
+            <span class="je-spt-login-subtitle">Tribunal Superior Eleitoral · Gestão de Prestadores</span>
+          </div>
+        </div>
+        <div class="je-spt-login-badges">
+          <span class="je-brand-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            TSE XT
+          </span>
+          ${versaoExtensao ? `<span class="je-brand-version">v${escapeHTML(versaoExtensao)}</span>` : ''}
+        </div>
+      `);
+      card.parentNode.insertBefore(brandBlock, card);
+    }
+
+    // Boot Splash na transição real de login (beforeunload), igual ao Meu Espaço
+    let pendingSplashMsg = null;
+    const triggerLoginSplash = (msg) => {
+      pendingSplashMsg = msg || 'Autenticando suas credenciais no SPT…';
+    };
+
+    if (!window.__jeSptLoginSplashBound) {
+      window.__jeSptLoginSplashBound = true;
+      window.addEventListener('beforeunload', () => {
+        if (!pendingSplashMsg) return;
+        const msg = pendingSplashMsg;
+        document.documentElement.classList.add('je-logging-in', 'je-xt-boot');
+        document.body.classList.add('je-logging-in');
+        document.documentElement.style.backgroundColor = '#0a2540';
+        if (window.JEPessoasBoot && window.JEPessoasBoot.showSplash) {
+          window.JEPessoasBoot.showSplash(msg);
+        }
+      });
+    }
+
+    const loginForm = document.querySelector('form[action*="process-login"], form');
+    if (loginForm && !loginForm.dataset.jeSptLoginBound) {
+      loginForm.dataset.jeSptLoginBound = 'true';
+      loginForm.addEventListener('submit', () => triggerLoginSplash('Autenticando suas credenciais no SPT…'), true);
+      const submitBtn = loginForm.querySelector('button[type="submit"], input[type="submit"]');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', () => triggerLoginSplash('Autenticando suas credenciais no SPT…'), true);
+      }
+    }
+  }
+
   function mount(profileId) {
     if (!isSptPage()) return;
     document.body.classList.add('je-spt-page');
+    if (profileId === 'login') {
+      mountLoginPage();
+      return;
+    }
     modernizeSptTopbar();
     injectSptTitleBanner(profileId);
 
@@ -567,6 +659,7 @@ window.JEPessoasSptModernizer = (function () {
 
   return {
     isSptPage,
+    mountLoginPage,
     mount
   };
 })();

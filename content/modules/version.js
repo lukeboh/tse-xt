@@ -5,9 +5,17 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.13-Snapshot';
+  const CURRENT_VERSION = '1.2.14-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.14-Snapshot',
+      date: '2026-11-17',
+      title: 'SPT: tela de logon modernizada no padrão do Meu Espaço',
+      features: [
+        'Tela de logon do SPT (/spt-consultafrequencia/login) estilizada com o mesmo Design System da tela de logon do Meu Espaço: cabeçalho institucional com logo e selo de versão, cartão Glassmorfismo com glow azul animado, botões empilhados (Login em degradê azul e Recuperar senha secundário), interruptor flutuante do tema e Boot Splash na transição.'
+      ]
+    },
     {
       version: '1.2.13-Snapshot',
       date: '2026-11-17',

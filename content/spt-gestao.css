@@ -870,3 +870,265 @@ body.je-xt-enabled .je-spt-select:focus {
 .je-spt-daily-table tr.je-spt-row-empty td {
   color: #94a3b8;
 }
+
+.je-spt-ho-toggle {
+  background: rgba(0, 119, 255, 0.06);
+  border: 1px solid rgba(0, 119, 255, 0.16);
+  border-radius: var(--je-radius-sm);
+  padding: 6px 12px !important;
+}
+
+/* ==========================================================================
+   Tela de Logon do SPT (body.je-xt-enabled.je-spt-login-page)
+   Espelha o visual Glassmorfismo + Glow da tela de logon do Meu Espaço
+   ========================================================================== */
+
+body.je-xt-disabled .je-spt-login-brand {
+  display: none !important;
+}
+
+html.je-logging-in.je-spt-login-page .card,
+body.je-logging-in.je-spt-login-page .card,
+html.je-logging-in.je-spt-login-page .je-spt-login-brand,
+body.je-logging-in.je-spt-login-page .je-spt-login-brand {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+body.je-xt-enabled.je-spt-login-page {
+  background: var(--je-bg-gradient) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+}
+
+body.je-xt-enabled.je-spt-login-page #je-persistent-toggle-bar {
+  display: block !important;
+  top: 20px !important;
+  bottom: auto !important;
+  right: 24px !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .vh-100.bg-light,
+body.je-xt-enabled.je-spt-login-page .je-spt-login-wrapper {
+  background: transparent !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: calc(100vh - 56px) !important;
+  height: auto !important;
+  padding: 32px 16px !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .je-spt-login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 20px 0;
+  margin: 0 auto 22px auto;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  border-bottom: 1px solid var(--je-glass-border-subtle);
+}
+
+.je-spt-login-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.je-spt-login-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.2);
+}
+
+.je-spt-login-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.je-spt-login-title {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--je-primary-dark);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.je-spt-login-title strong {
+  color: var(--je-primary-light);
+}
+
+.je-spt-login-subtitle {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.je-spt-login-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body.je-xt-enabled.je-spt-login-page .card {
+  background: rgba(255, 255, 255, 0.97) !important;
+  backdrop-filter: var(--je-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--je-backdrop-blur) !important;
+  border: 1px solid var(--je-glass-border) !important;
+  border-radius: var(--je-radius-lg) !important;
+  padding: 32px 32px 28px !important;
+  width: 340px !important;
+  max-width: calc(100vw - 32px) !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  animation: jeCardGlowPulse 3.2s ease-in-out infinite !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card h2 {
+  font-family: var(--je-font) !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  text-align: center !important;
+  margin: 0 0 14px 0 !important;
+  padding: 0 0 12px 0 !important;
+  border-bottom: 1px solid rgba(10, 37, 64, 0.08) !important;
+  letter-spacing: -0.01em !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card fieldset {
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card label {
+  font-family: var(--je-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  margin: 10px 0 4px !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-group:first-of-type label {
+  margin-top: 0 !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card input[type="text"],
+body.je-xt-enabled.je-spt-login-page .card input[type="password"],
+body.je-xt-enabled.je-spt-login-page .card input.form-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: var(--je-radius-sm) !important;
+  border: 1px solid rgba(0, 102, 204, 0.22) !important;
+  background: #ffffff !important;
+  padding: 8px 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  box-sizing: border-box !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-top: 16px !important;
+  width: 100% !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-actions button[type="submit"],
+body.je-xt-enabled.je-spt-login-page .card .form-actions .btn-success {
+  background: linear-gradient(135deg, #0056b3 0%, #0077ff 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--je-radius-sm) !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+  box-shadow: var(--je-shadow-sm), var(--je-glow-blue-soft) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-actions button[type="submit"]:hover,
+body.je-xt-enabled.je-spt-login-page .card .form-actions .btn-success:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--je-shadow-md), var(--je-glow-blue) !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-actions a.btn,
+body.je-xt-enabled.je-spt-login-page .card .form-actions .btn-primary {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #475569 !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: var(--je-radius-sm) !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  margin: 0 !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+body.je-xt-enabled.je-spt-login-page .card .form-actions a.btn:hover,
+body.je-xt-enabled.je-spt-login-page .card .form-actions .btn-primary:hover {
+  background: #ffffff !important;
+  color: var(--je-primary-dark) !important;
+  border-color: rgba(0, 119, 255, 0.3) !important;
+  transform: none !important;
+}
+
+body.je-xt-enabled.je-spt-login-page footer.bg-white {
+  background: transparent !important;
+  border: none !important;
+  padding: 8px 0 16px 0 !important;
+  text-align: center !important;
+}
+
+body.je-xt-enabled.je-spt-login-page footer.bg-white p {
+  margin: 0 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.05em !important;
+}

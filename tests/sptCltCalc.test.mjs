@@ -290,3 +290,13 @@ test('sptCltCalc — presumeHomeOffice contabiliza 8h sem batida ficticia e aloc
   assert.equal(mNoHo.workedDays, 11);
   assert.equal(mNoHo.expectedJourneyMin, 5 * 480);
 });
+
+test('sptModernizer — estiliza a tela de logon do SPT no padrao do Meu Espaco', () => {
+  const modSrc = readFileSync(path.join(rootDir, 'content', 'modules', 'sptModernizer.js'), 'utf8');
+  const cssSrc = readFileSync(path.join(rootDir, 'content', 'spt-gestao.css'), 'utf8');
+  assert.match(modSrc, /function mountLoginPage\(\)/);
+  assert.match(modSrc, /je-spt-login-brand/);
+  assert.match(modSrc, /je-spt-login-page/);
+  assert.match(cssSrc, /body\.je-xt-enabled\.je-spt-login-page \.card/);
+  assert.match(cssSrc, /jeCardGlowPulse/);
+});

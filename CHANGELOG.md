@@ -1,5 +1,11 @@
 # Changelog — TSE XT
 
+## 1.2.14-Snapshot — 17/11/2026
+
+- **Tela de logon do SPT modernizada (`sptModernizer.js`, `content.js`, `spt-gestao.css`)**:
+  - Aplicado o mesmo padrão visual da tela de logon do Meu Espaço à página `/spt-consultafrequencia/login`: bloco de marca superior com logo oficial e selo de versão, cartão central (`340px`) com Glassmorfismo e `jeCardGlowPulse`, campos e rótulos padronizados, botão primário `LOGIN` em degradê azul e botão secundário `Recuperar senha`, interruptor flutuante `TSE XT Ativo/Desligado` no canto superior direito e ativação do Boot Splash no `beforeunload`.
+- Verificação: **235 testes passando** e conferência visual no Chrome (porta 9222).
+
 ## 1.2.13-Snapshot — 17/11/2026
 
 - **Controle de Home Office (8h) + Reposição de DSR no SPT (`sptCltCalc.js` e `sptReportModal.js`)**:
