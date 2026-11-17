@@ -29,7 +29,7 @@
       // (com título/breadcrumb do Espelho) por cima do formulário nativo
       // cru.
       id: 'login',
-      isMatch: () => !!document.getElementById('box-login'),
+      isMatch: () => !!document.getElementById('box-login') || (window.location.pathname.includes('/spt-consultafrequencia') && !document.querySelector('header.navbar-custom') && !!document.querySelector('input[type="password"]')),
     },
     {
       id: 'espelhoMes',
@@ -345,6 +345,10 @@
           }
 
           if (isSpt) {
+            if (profileId === 'login') {
+              document.body.classList.add('je-spt-page', 'je-login-page');
+              return;
+            }
             if (window.JEPessoasSptModernizer) {
               window.JEPessoasSptModernizer.mount(profileId);
             }

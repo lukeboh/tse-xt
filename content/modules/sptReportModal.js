@@ -1,5 +1,5 @@
 /**
- * TSE XT - Relatório Consolidado de Horas por Unidade (SPT / CLT)
+ * TSE XT - Relatório Consolidado de Horas por Unidade (SPT / CLT · Digisystem)
  *
  * Acessível pelo botão flutuante (+) e pelo atalho Ctrl+K nas telas do SPT.
  * Parâmetros do relatório:
@@ -7,16 +7,19 @@
  *   b) Período — data inicial e final (obrigatório, pré-preenchido com o mês anterior ao atual)
  *   c) Contrato (opcional — quando vazio, considera todos os contratos da unidade)
  *   d) Nome do prestador (dependente da unidade e do contrato selecionados; permite selecionar todos, filtrar ou escolher um/vários)
- *   e) Detalhe:
- *      - Mensal: consolida as horas trabalhadas no mês por prestador com as regras da CLT (jornada de 8h diárias, pelo menos 1h de almoço, horas excedentes, horas a menos, compensação dentro do mês e saldo líquido).
- *      - Diário: apresenta o detalhe dia a dia (espelho de ponto completo de cada prestador) com os cálculos diários e mensais CLT.
+ *   e) Modo:
+ *      - TSE XT / Digi (padrão): aplica as regras CLT / Digisystem (jornada 8h Seg–Sex, tolerância ±10 min art. 58 §1º, almoço mín. 1h art. 71, Sáb/Dom/Feriado com jornada 00:00 gerando 100% HE 100%, e separação entre Saldo BH 50% × Débito BH e HE 100%).
+ *      - SPT Puro: apresenta exclusivamente os dados brutos da catraca do SPT (batidas, justificativa e Total SPT), sem cálculos interpretativos.
+ *   f) Detalhe:
+ *      - Mensal: consolidação mensal por prestador.
+ *      - Diário: espelho de ponto dia a dia de cada prestador.
  */
 
 window.JEPessoasSptReport = (function () {
   'use strict';
 
-  const STORAGE_KEY = 'je_xt_spt_report_v1';
-  const PREFS_KEY = 'je_xt_spt_report_prefs_v1';
+  const STORAGE_KEY = 'je_xt_spt_report_v2';
+  const PREFS_KEY = 'je_xt_spt_report_prefs_v2';
   const PONTO_GESTAO_URL = '/spt-consultafrequencia/gestao/ponto-gestao';
   const GESTAO_HOME_URL = '/spt-consultafrequencia/gestao';
   const FETCH_THROTTLE_MS = 80;
@@ -32,6 +35,7 @@ window.JEPessoasSptReport = (function () {
   let workersList = []; // [{ codigo, matricula, cpf, contrato, numContrato, nome, checked }]
   let workerSearchQuery = '';
   let selectedSingleWorkerCode = '__ALL__'; // '__ALL__' | '__CUSTOM__' | codigo específico
+  let calcMode = 'xt_digi'; // 'xt_digi' (padrão) | 'spt_puro'
   let detailMode = 'mensal'; // 'mensal' | 'diario'
   let showOnlyActiveDaysInDaily = false;
   let currentResult = null;
@@ -52,20 +56,6 @@ window.JEPessoasSptReport = (function () {
     if (!el) return;
     const doc = new DOMParser().parseFromString(`<!DOCTYPE html><html><body>${htmlString}</body></html>`, 'text/html');
     el.replaceChildren(...Array.from(doc.body.childNodes));
-  }
-
-  function setSafeTableSectionHTML(sectionEl, tagName, htmlString) {
-    if (!sectionEl) return;
-    const doc = new DOMParser().parseFromString(
-      `<!DOCTYPE html><html><body><table><${tagName}>${htmlString}</${tagName}></table></body></html>`,
-      'text/html'
-    );
-    const parsedSection = doc.querySelector(tagName);
-    if (parsedSection) {
-      sectionEl.replaceChildren(...Array.from(parsedSection.childNodes));
-    } else {
-      sectionEl.replaceChildren();
-    }
   }
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -181,8 +171,6 @@ window.JEPessoasSptReport = (function () {
 
     let list = await queryWithDate(refDateIso, periodInfo);
 
-    // Se o período selecionado for de um mês onde um contrato específico ainda não tem
-    // período aberto na data consultada, tenta também na data do último período conhecido
     if (list.length === 0 && periodInfo.tuple && periodInfo.tuple[3]) {
       const fallbackIso = c.brToIso(periodInfo.tuple[3]);
       if (fallbackIso && fallbackIso !== refDateIso) {
@@ -190,8 +178,6 @@ window.JEPessoasSptReport = (function () {
       }
     }
 
-    // Se "Todos os contratos" (-1) foi consultado numa data do mês atual sem vigência para algum contrato,
-    // mescla também com o dia 15 do mês anterior para garantir que todos os prestadores possíveis apareçam
     const prev = c.previousMonthPeriod();
     if (contractParam === '-1' && prev.toIso && prev.toIso !== refDateIso) {
       try {
@@ -298,6 +284,7 @@ window.JEPessoasSptReport = (function () {
       fromIso: overlay.querySelector('#je-spt-rep-from')?.value || '',
       toIso: overlay.querySelector('#je-spt-rep-to')?.value || '',
       contrato: overlay.querySelector('#je-spt-rep-contrato')?.value || '',
+      calcMode,
       detailMode
     };
     try {
@@ -314,7 +301,7 @@ window.JEPessoasSptReport = (function () {
     overlay.className = 'je-modal-overlay je-audit-modal je-recog-modal je-spt-report-modal';
 
     setSafeHTML(overlay, `
-      <div class="je-modal-content je-audit-content je-spt-report-content" role="dialog" aria-modal="true" aria-label="Relatório Consolidado de Horas por Unidade (CLT)">
+      <div class="je-modal-content je-audit-content je-spt-report-content" role="dialog" aria-modal="true" aria-label="Relatório Consolidado de Horas por Unidade">
         <div class="je-audit-head">
           <div class="je-audit-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="stroke: var(--je-primary);" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -323,7 +310,7 @@ window.JEPessoasSptReport = (function () {
               <line x1="8" y1="13" x2="16" y2="13"></line>
               <line x1="8" y1="17" x2="16" y2="17"></line>
             </svg>
-            <span>Relatório Consolidado de Horas por Unidade (SPT · Regras CLT)</span>
+            <span>Relatório Consolidado de Horas por Unidade (SPT · TSE XT / Digi)</span>
           </div>
           <button type="button" class="je-audit-x" id="je-spt-rep-close" title="Fechar (Esc)">&times;</button>
         </div>
@@ -365,16 +352,30 @@ window.JEPessoasSptReport = (function () {
               </select>
             </div>
 
+            <div class="je-spt-rep-field je-spt-rep-field-mode">
+              <span class="je-spt-rep-label-text">Modo</span>
+              <div class="je-spt-segmented" role="radiogroup" aria-label="Modo de cálculo do relatório">
+                <label class="je-spt-seg-item is-active" id="je-spt-seg-mode-xt" title="Regras CLT / Digisystem: jornada 8h Seg–Sex, tolerância ±10 min (art. 58 §1º), Sáb/Dom/Feriado com jornada 00:00 (100% HE 100%) e separação entre Saldo BH (50% × Débito) e HE 100%">
+                  <input type="radio" name="je-spt-rep-mode" value="xt_digi" checked>
+                  <span>TSE XT / Digi</span>
+                </label>
+                <label class="je-spt-seg-item" id="je-spt-seg-mode-raw" title="Dados brutos retornados pelo SPT (batidas e Total SPT), sem interpretação ou cálculo do TSE XT">
+                  <input type="radio" name="je-spt-rep-mode" value="spt_puro">
+                  <span>SPT Puro (Bruto)</span>
+                </label>
+              </div>
+            </div>
+
             <div class="je-spt-rep-field je-spt-rep-field-detail">
-              <span class="je-spt-rep-label-text">Detalhe do Relatório</span>
+              <span class="je-spt-rep-label-text">Detalhe</span>
               <div class="je-spt-segmented" role="radiogroup" aria-label="Nível de detalhe do relatório">
                 <label class="je-spt-seg-item is-active" id="je-spt-seg-mensal">
                   <input type="radio" name="je-spt-rep-detail" value="mensal" checked>
-                  <span>Mensal (Consolidado CLT)</span>
+                  <span>Mensal</span>
                 </label>
                 <label class="je-spt-seg-item" id="je-spt-seg-diario">
                   <input type="radio" name="je-spt-rep-detail" value="diario">
-                  <span>Diário (Espelho de Ponto)</span>
+                  <span>Diário (Espelho)</span>
                 </label>
               </div>
             </div>
@@ -497,6 +498,19 @@ window.JEPessoasSptReport = (function () {
       syncSingleWorkerDropdownFromCheckboxes();
       paintWorkersSummary();
       markDirtySelection();
+    });
+
+    overlay.querySelectorAll('input[name="je-spt-rep-mode"]').forEach((radio) => {
+      radio.addEventListener('change', (e) => {
+        if (!e.target.checked) return;
+        calcMode = e.target.value === 'spt_puro' ? 'spt_puro' : 'xt_digi';
+        overlay.querySelector('#je-spt-seg-mode-xt').classList.toggle('is-active', calcMode === 'xt_digi');
+        overlay.querySelector('#je-spt-seg-mode-raw').classList.toggle('is-active', calcMode === 'spt_puro');
+        savePrefs();
+        if (currentResult) {
+          renderResult(currentResult);
+        }
+      });
     });
 
     overlay.querySelectorAll('input[name="je-spt-rep-detail"]').forEach((radio) => {
@@ -758,7 +772,7 @@ window.JEPessoasSptReport = (function () {
     }
 
     const report = {
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
       issuer: loggedUserName(),
       unitId: unit.id,
@@ -794,13 +808,13 @@ window.JEPessoasSptReport = (function () {
       badges.push(`<span class="je-occ-perda je-occ-perda-info" title="Dias com jornada &gt;6h e apenas 2 batidas (1h de almoço descontada automaticamente)">Almoço 1h auto (${alertsObj.almocoAutoDays}d)</span>`);
     }
     if (alertsObj.acima2hExtraDays > 0) {
-      badges.push(`<span class="je-occ-perda je-occ-perda-danger" title="Dias com mais de 2h excedentes além da jornada de 8h (limite do art. 59 da CLT)">&gt;2h extras (${alertsObj.acima2hExtraDays}d)</span>`);
+      badges.push(`<span class="je-occ-perda je-occ-perda-danger" title="Dias úteis com mais de 2h excedentes além da jornada de 8h (limite do art. 59 da CLT)">&gt;2h úteis (${alertsObj.acima2hExtraDays}d)</span>`);
     }
     if (alertsObj.batidaImparDays > 0) {
-      badges.push(`<span class="je-occ-perda je-occ-perda-warn" title="Dias com número ímpar de batidas (possível esquecimento)">Batida ímpar (${alertsObj.batidaImparDays}d)</span>`);
+      badges.push(`<span class="je-occ-perda je-occ-perda-warn" title="Dias com número ímpar de batidas na catraca">Batida ímpar (${alertsObj.batidaImparDays}d)</span>`);
     }
     if (alertsObj.fdsDays > 0) {
-      badges.push(`<span class="je-occ-perda je-occ-perda-neutral" title="Dias trabalhados em sábado ou domingo">FDS (${alertsObj.fdsDays}d)</span>`);
+      badges.push(`<span class="je-occ-perda je-occ-perda-neutral" title="Dias trabalhados em sábado, domingo ou feriado (HE 100%)">FDS/Fer (${alertsObj.fdsDays}d)</span>`);
     }
     return badges.length ? badges.join(' ') : '<span class="je-spt-badge-ok">Regular</span>';
   }
@@ -819,7 +833,147 @@ window.JEPessoasSptReport = (function () {
     return parts.join(' ') || '·';
   }
 
+  // ---------------------------------------------------------------------------
+  // MODO 1: SPT PURO (DADOS BRUTOS)
+  // ---------------------------------------------------------------------------
+  function renderDailyMirrorRawTableHTML(monthSummary) {
+    const days = showOnlyActiveDaysInDaily
+      ? monthSummary.days.filter((d) => d.sptTotalMin > 0 || d.punchCount > 0 || d.justificativa)
+      : monthSummary.days;
+
+    if (!days.length) {
+      return '<div class="je-recog-days-none">Nenhum dia com marcação de ponto neste mês.</div>';
+    }
+
+    const rowsHTML = days.map((d) => {
+      const p = d.punches || [];
+      const rowClass = [
+        d.isWeekend ? 'je-spt-row-weekend' : '',
+        (d.sptTotalMin > 0 || d.punchCount > 0) ? 'je-spt-row-worked' : 'je-spt-row-empty'
+      ].filter(Boolean).join(' ');
+
+      return `<tr class="${rowClass}">
+        <td><strong>${escapeHTML(d.date)}</strong></td>
+        <td>${escapeHTML(d.dayLabel)}</td>
+        <td>${escapeHTML(p[0] || '·')}</td>
+        <td>${escapeHTML(p[1] || '·')}</td>
+        <td>${escapeHTML(p[2] || '·')}</td>
+        <td>${escapeHTML(p[3] || '·')}</td>
+        <td>${escapeHTML(p[4] || '·')}</td>
+        <td>${escapeHTML(p[5] || '·')}</td>
+        <td class="je-spt-col-left">${d.justificativa ? `<span class="je-spt-just-tag">${escapeHTML(d.justificativa)}</span>` : '·'}</td>
+        <td><strong>${d.sptTotalMin ? fmt(d.sptTotalMin) : '·'}</strong></td>
+      </tr>`;
+    }).join('');
+
+    const m = monthSummary;
+    return `
+      <table class="je-recog-days je-spt-daily-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Dia</th>
+            <th>Ent. 1</th>
+            <th>Saí. 1</th>
+            <th>Ent. 2</th>
+            <th>Saí. 2</th>
+            <th>Ent. 3</th>
+            <th>Saí. 3</th>
+            <th class="je-spt-col-left">Justificativa (SPT)</th>
+            <th title="Total bruto de horas calculado pelo próprio SPT">Total SPT</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+        </tbody>
+        <tfoot>
+          <tr class="je-recog-total">
+            <td colspan="9" class="je-spt-col-left"><strong>Total SPT Bruto (${escapeHTML(m.monthLabel)}) · ${m.workedDays} dia(s) com marcação válida</strong></td>
+            <td><strong>${fmt(m.sptTotalMin)}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  }
+
+  function renderMonthlyRawTableHTML(report) {
+    const rows = [];
+    report.workers.forEach((w, wIdx) => {
+      w.months.forEach((m, mIdx) => {
+        const rowId = `${wIdx}:${mIdx}`;
+        const isExpanded = expandedMonthlyRows.has(rowId);
+        rows.push(`
+          <tr class="je-audit-row je-recog-server" data-expand-row="${rowId}" role="button" tabindex="0" aria-expanded="${isExpanded}">
+            <td class="je-spt-col-left">
+              <span class="je-recog-caret">${isExpanded ? '▾' : '▸'}</span>
+              <strong>${escapeHTML(w.nome)}</strong>
+              <small class="je-spt-sub-meta">CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small>
+            </td>
+            <td>${escapeHTML(m.monthLabel)}</td>
+            <td><strong>${m.workedDays}d</strong></td>
+            <td>${m.workedWeekdays || 0}d</td>
+            <td>${m.workedWeekendDays || 0}d</td>
+            <td>${m.justifiedDays || 0}d</td>
+            <td>${(m.alerts && m.alerts.batidaImparDays) || 0}d</td>
+            <td><strong>${fmt(m.sptTotalMin)}</strong></td>
+          </tr>
+        `);
+        if (isExpanded) {
+          rows.push(`
+            <tr class="je-recog-daysrow">
+              <td colspan="8">${renderDailyMirrorRawTableHTML(m)}</td>
+            </tr>
+          `);
+        }
+      });
+    });
+
+    const u = report.unitTotals;
+    rows.push(`
+      <tr class="je-recog-total">
+        <td class="je-spt-col-left"><strong>Total Bruto da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores c/ marcação)</strong></td>
+        <td>—</td>
+        <td><strong>${u.workedDays}d</strong></td>
+        <td><strong>${u.workedWeekdays || 0}d</strong></td>
+        <td><strong>${u.workedWeekendDays || 0}d</strong></td>
+        <td><strong>${u.justifiedDays || 0}d</strong></td>
+        <td><strong>${(u.alerts && u.alerts.batidaImparDays) || 0}d</strong></td>
+        <td><strong>${fmt(u.sptTotalMin)}</strong></td>
+      </tr>
+    `);
+
+    return `
+      <div class="je-audit-tablewrap">
+        <table class="je-audit-table je-recog-table je-spt-monthly-table">
+          <thead>
+            <tr>
+              <th class="je-spt-col-left" title="Clique em qualquer prestador para abrir ou recolher o espelho bruto do SPT">Prestador / Contrato</th>
+              <th>Mês</th>
+              <th title="Total de dias com registro de frequência no SPT">Dias c/ Registro</th>
+              <th title="Dias úteis (Seg–Sex) com marcação no SPT">Seg–Sex</th>
+              <th title="Sábados, domingos e feriados com marcação no SPT">Sáb/Dom/Fer</th>
+              <th title="Dias com justificativa lançada no SPT">Justificados</th>
+              <th title="Dias com quantidade ímpar de batidas na catraca">Batidas Ímpares</th>
+              <th title="Soma pura da coluna Total retornada pelo SPT">Total de Horas (SPT)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="je-audit-foot">Modo <strong>SPT Puro (Bruto)</strong>: exibe estritamente as marcações de catraca e a soma da coluna <em>Total</em> do SPT, sem cálculos interpretativos.</p>
+    `;
+  }
+
+  // ---------------------------------------------------------------------------
+  // MODO 2: TSE XT / DIGI (REGRAS CLT / DIGISYSTEM — PADRÃO)
+  // ---------------------------------------------------------------------------
   function renderDailyMirrorTableHTML(monthSummary) {
+    if (calcMode === 'spt_puro') {
+      return renderDailyMirrorRawTableHTML(monthSummary);
+    }
+
     const days = showOnlyActiveDaysInDaily
       ? monthSummary.days.filter((d) => d.isWorkedDay || d.punchCount > 0 || d.justificativa)
       : monthSummary.days;
@@ -838,16 +992,17 @@ window.JEPessoasSptReport = (function () {
             : (d.effectiveLunchMin > 0 ? fmt(d.effectiveLunchMin) : '—')))
         : '·';
       const rowClass = [
-        d.isWeekend ? 'je-spt-row-weekend' : '',
+        d.isSpecialDay ? 'je-spt-row-weekend' : '',
         d.isWorkedDay ? 'je-spt-row-worked' : 'je-spt-row-empty'
       ].filter(Boolean).join(' ');
 
-      const saldoDiaClass = d.excedenteMin > 0
+      const accumBhClass = d.accumulatedBhMin > 0
         ? 'je-spt-pos'
-        : (d.aMenosMin > 0 ? 'je-spt-neg' : '');
-      const accumClass = d.accumulatedBalanceMin > 0
-        ? 'je-spt-pos'
-        : (d.accumulatedBalanceMin < 0 ? 'je-spt-neg' : '');
+        : (d.accumulatedBhMin < 0 ? 'je-spt-neg' : '');
+
+      const targetText = d.isWorkedDay
+        ? (d.isSpecialDay ? '00:00' : fmt(d.targetMin))
+        : '·';
 
       return `<tr class="${rowClass}">
         <td><strong>${escapeHTML(d.date)}</strong></td>
@@ -861,16 +1016,17 @@ window.JEPessoasSptReport = (function () {
         <td>${escapeHTML(lunchLabel)}</td>
         <td>${d.sptTotalMin ? fmt(d.sptTotalMin) : '·'}</td>
         <td><strong>${d.cltWorkedMin ? fmt(d.cltWorkedMin) : '·'}</strong></td>
-        <td>${d.targetMin ? fmt(d.targetMin) : '·'}</td>
-        <td class="${d.excedenteMin ? 'je-spt-pos' : ''}">${d.excedenteMin ? '+' + fmt(d.excedenteMin) : '·'}</td>
-        <td class="${d.aMenosMin ? 'je-spt-neg' : ''}">${d.aMenosMin ? '-' + fmt(d.aMenosMin) : '·'}</td>
-        <td class="${accumClass}">${d.isWorkedDay ? fmt(d.accumulatedBalanceMin, true) : '·'}</td>
+        <td>${escapeHTML(targetText)}</td>
+        <td class="${d.he50Min ? 'je-spt-pos' : ''}">${d.he50Min ? '+' + fmt(d.he50Min) : '·'}</td>
+        <td class="${d.he100Min ? 'je-spt-pos' : ''}">${d.he100Min ? '+' + fmt(d.he100Min) : '·'}</td>
+        <td class="${d.debitoBhMin ? 'je-spt-neg' : ''}">${d.debitoBhMin ? '-' + fmt(d.debitoBhMin) : '·'}</td>
+        <td class="${accumBhClass}">${d.isWorkedDay ? fmt(d.accumulatedBhMin, true) : '·'}</td>
         <td class="je-spt-col-left">${renderDayAlertsHTML(d)}</td>
       </tr>`;
     }).join('');
 
     const m = monthSummary;
-    const saldoFinalClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
+    const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
 
     return `
       <table class="je-recog-days je-spt-daily-table">
@@ -886,12 +1042,13 @@ window.JEPessoasSptReport = (function () {
             <th>Saí. 3</th>
             <th title="Intervalo intrajornada de almoço (mínimo de 1h para jornadas &gt; 6h — CLT art. 71)">Almoço</th>
             <th title="Total bruto exibido pelo SPT">Total SPT</th>
-            <th title="Horas líquidas trabalhadas segundo a CLT (garantindo pelo menos 1h de almoço em jornadas &gt; 6h)">Líquido CLT</th>
-            <th title="Jornada diária padrão CLT (8h00 por dia trabalhado)">Jornada</th>
-            <th title="Horas trabalhadas além das 8h diárias">Excedente</th>
-            <th title="Horas faltantes para completar as 8h no dia trabalhado">A Menos</th>
-            <th title="Saldo acumulado no mês após compensação dia a dia">Saldo Acum.</th>
-            <th class="je-spt-col-left">Justificativa / Ocorrências CLT</th>
+            <th title="Horas líquidas trabalhadas segundo a CLT (garantindo pelo menos 1h de almoço em jornadas &gt; 6h)">Líq. CLT</th>
+            <th title="Jornada ordinária: 08:00 de Seg–Sex e 00:00 em Sábados (Compensado), Domingos (DSR) e Feriados">Jornada</th>
+            <th title="Horas Extras / Crédito BH 50% (dias úteis até 2h, após tolerância de 10 min da CLT art. 58 §1º)">HE 50% (BH)</th>
+            <th title="Horas Extras / Crédito 100% (100% das horas de Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil)">HE 100%</th>
+            <th title="Débito de Banco de Horas nos dias úteis (variação negativa superior a 10 min para completar 08:00)">Débito BH</th>
+            <th title="Saldo acumulado do Banco de Horas de dias úteis (HE 50% − Débito BH)">Saldo BH Acum.</th>
+            <th class="je-spt-col-left">Justificativa / Ocorrências</th>
           </tr>
         </thead>
         <tbody>
@@ -899,14 +1056,15 @@ window.JEPessoasSptReport = (function () {
         </tbody>
         <tfoot>
           <tr class="je-recog-total">
-            <td colspan="9" class="je-spt-col-left"><strong>Consolidado CLT (${escapeHTML(m.monthLabel)}) · ${m.workedDays} dia(s) trabalhado(s) · Compensado no mês: ${fmt(m.compensadoNoMesMin)}</strong></td>
+            <td colspan="9" class="je-spt-col-left"><strong>Consolidado (${escapeHTML(m.monthLabel)}) · ${m.workedDays}d (${m.workedWeekdays || 0}d úteis + ${m.workedWeekendDays || 0}d FDS) · H. Normais: ${fmt(m.horasNormaisMin || 0)}</strong></td>
             <td><strong>${fmt(m.sptTotalMin)}</strong></td>
             <td><strong>${fmt(m.cltWorkedMin)}</strong></td>
             <td><strong>${fmt(m.expectedJourneyMin)}</strong></td>
-            <td class="je-spt-pos"><strong>+${fmt(m.excedenteBrutoMin)}</strong></td>
-            <td class="je-spt-neg"><strong>-${fmt(m.aMenosBrutoMin)}</strong></td>
-            <td class="${saldoFinalClass}"><strong>${fmt(m.saldoMesMin, true)}</strong></td>
-            <td class="je-spt-col-left">Exced. líq.: <strong>${fmt(m.excedenteLiquidoMin)}</strong> · A menos líq.: <strong>${fmt(m.aMenosLiquidoMin)}</strong></td>
+            <td class="je-spt-pos"><strong>+${fmt(m.he50BrutoMin || 0)}</strong></td>
+            <td class="je-spt-pos"><strong>+${fmt(m.he100BrutoMin || 0)}</strong></td>
+            <td class="je-spt-neg"><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></td>
+            <td class="${saldoBhClass}"><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
+            <td class="je-spt-col-left">Saldo BH: <strong>${fmt(m.saldoBhMesMin || 0, true)}</strong> · HE 100%: <strong>+${fmt(m.he100BrutoMin || 0)}</strong></td>
           </tr>
         </tfoot>
       </table>
@@ -914,12 +1072,17 @@ window.JEPessoasSptReport = (function () {
   }
 
   function renderMonthlyTableHTML(report) {
+    if (calcMode === 'spt_puro') {
+      return renderMonthlyRawTableHTML(report);
+    }
+
     const rows = [];
     report.workers.forEach((w, wIdx) => {
       w.months.forEach((m, mIdx) => {
         const rowId = `${wIdx}:${mIdx}`;
         const isExpanded = expandedMonthlyRows.has(rowId);
-        const saldoClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
+        const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
+        const saldoTotalClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
         rows.push(`
           <tr class="je-audit-row je-recog-server" data-expand-row="${rowId}" role="button" tabindex="0" aria-expanded="${isExpanded}">
             <td class="je-spt-col-left">
@@ -928,21 +1091,22 @@ window.JEPessoasSptReport = (function () {
               <small class="je-spt-sub-meta">CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small>
             </td>
             <td>${escapeHTML(m.monthLabel)}</td>
-            <td title="${m.weekdaysInPeriod} dias úteis no período (${m.weekdaysWithoutRecord} sem batida)">${m.workedDays}d</td>
-            <td>${fmt(m.expectedJourneyMin)}</td>
+            <td title="${m.workedWeekdays || 0}d úteis + ${m.workedWeekendDays || 0}d FDS/feriado (${m.weekdaysWithoutRecord}d úteis sem batida no SPT)">${m.workedDays}d <small>(${m.workedWeekdays || 0}u+${m.workedWeekendDays || 0}f)</small></td>
             <td>${fmt(m.sptTotalMin)}</td>
             <td><strong>${fmt(m.cltWorkedMin)}</strong></td>
-            <td class="${m.excedenteBrutoMin ? 'je-spt-pos' : ''}">${dot(m.excedenteBrutoMin, true)}</td>
-            <td class="${m.aMenosBrutoMin ? 'je-spt-neg' : ''}">${m.aMenosBrutoMin ? '-' + fmt(m.aMenosBrutoMin) : '·'}</td>
-            <td>${dot(m.compensadoNoMesMin)}</td>
-            <td class="${saldoClass}" title="Excedente líquido: +${fmt(m.excedenteLiquidoMin)} · A menos líquido: -${fmt(m.aMenosLiquidoMin)}"><strong>${fmt(m.saldoMesMin, true)}</strong></td>
+            <td>${fmt(m.horasNormaisMin || 0)}</td>
+            <td class="${m.he50BrutoMin ? 'je-spt-pos' : ''}">${dot(m.he50BrutoMin, true)}</td>
+            <td class="${m.debitoBhBrutoMin ? 'je-spt-neg' : ''}">${m.debitoBhBrutoMin ? '-' + fmt(m.debitoBhBrutoMin) : '·'}</td>
+            <td class="${saldoBhClass}" title="Saldo do Banco de Horas nos dias úteis (HE 50% − Débito BH). Compensado: ${fmt(m.compensadoBhMin || 0)}"><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
+            <td class="${m.he100BrutoMin ? 'je-spt-pos' : ''}" title="100% das horas em Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil"><strong>${dot(m.he100BrutoMin, true)}</strong></td>
+            <td class="${saldoTotalClass}" title="Saldo BH de dias úteis (${fmt(m.saldoBhMesMin || 0, true)}) + HE 100% (+${fmt(m.he100BrutoMin || 0)})"><strong>${fmt(m.saldoMesMin, true)}</strong></td>
             <td class="je-spt-col-left">${renderBadgesHTML(m.alerts)}</td>
           </tr>
         `);
         if (isExpanded) {
           rows.push(`
             <tr class="je-recog-daysrow">
-              <td colspan="11">${renderDailyMirrorTableHTML(m)}</td>
+              <td colspan="12">${renderDailyMirrorTableHTML(m)}</td>
             </tr>
           `);
         }
@@ -950,19 +1114,21 @@ window.JEPessoasSptReport = (function () {
     });
 
     const u = report.unitTotals;
+    const totalSaldoBhClass = u.saldoBhMesMin > 0 ? 'je-spt-pos' : (u.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
     const totalSaldoClass = u.saldoMesMin > 0 ? 'je-spt-pos' : (u.saldoMesMin < 0 ? 'je-spt-neg' : '');
     rows.push(`
       <tr class="je-recog-total">
         <td class="je-spt-col-left"><strong>Total Consolidado da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores ativos)</strong></td>
         <td>—</td>
-        <td><strong>${u.workedDays}d</strong></td>
-        <td><strong>${fmt(u.expectedJourneyMin)}</strong></td>
+        <td><strong>${u.workedDays}d</strong> <small>(${u.workedWeekdays || 0}u+${u.workedWeekendDays || 0}f)</small></td>
         <td><strong>${fmt(u.sptTotalMin)}</strong></td>
         <td><strong>${fmt(u.cltWorkedMin)}</strong></td>
-        <td class="je-spt-pos"><strong>+${fmt(u.excedenteBrutoMin)}</strong></td>
-        <td class="je-spt-neg"><strong>-${fmt(u.aMenosBrutoMin)}</strong></td>
-        <td><strong>${fmt(u.compensadoNoMesMin)}</strong></td>
-        <td class="${totalSaldoClass}" title="Soma dos excedentes líquidos: +${fmt(u.excedenteLiquidoMin)} · Soma de horas a menos líquidas: -${fmt(u.aMenosLiquidoMin)}"><strong>${fmt(u.saldoMesMin, true)}</strong></td>
+        <td><strong>${fmt(u.horasNormaisMin || 0)}</strong></td>
+        <td class="je-spt-pos"><strong>+${fmt(u.he50BrutoMin || 0)}</strong></td>
+        <td class="je-spt-neg"><strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong></td>
+        <td class="${totalSaldoBhClass}"><strong>${fmt(u.saldoBhMesMin || 0, true)}</strong></td>
+        <td class="je-spt-pos"><strong>+${fmt(u.he100BrutoMin || 0)}</strong></td>
+        <td class="${totalSaldoClass}"><strong>${fmt(u.saldoMesMin, true)}</strong></td>
         <td class="je-spt-col-left">${renderBadgesHTML(u.alerts)}</td>
       </tr>
     `);
@@ -974,15 +1140,16 @@ window.JEPessoasSptReport = (function () {
             <tr>
               <th class="je-spt-col-left" title="Clique em qualquer prestador para abrir ou recolher o espelho de ponto diário">Prestador / Contrato</th>
               <th>Mês</th>
-              <th title="Dias com registro de frequência trabalhada no mês">Dias</th>
-              <th title="Jornada CLT esperada para os dias trabalhados (8h00 por dia)">Jornada (8h)</th>
+              <th title="Dias trabalhados no SPT (dias úteis + fins de semana/feriados)">Dias</th>
               <th title="Soma da coluna Total do SPT">Total SPT</th>
               <th title="Total líquido trabalhado conforme CLT (garantindo mínimo de 1h de almoço em jornadas &gt; 6h)">Trab. CLT</th>
-              <th title="Soma das horas que ultrapassaram 8h nos dias trabalhados">Horas Exced.</th>
-              <th title="Soma das horas que faltaram para 8h nos dias trabalhados">Horas a Menos</th>
-              <th title="Horas excedentes que compensaram horas a menos dentro do mesmo mês (CLT art. 59 §6º)">Compensado</th>
-              <th title="Saldo líquido do mês após compensação (positivo = excedente líquido; negativo = horas a menos líquidas)">Saldo Mês (Líq.)</th>
-              <th class="je-spt-col-left">Conformidade CLT</th>
+              <th title="Horas Normais cumpridas nos dias úteis (jornada de 08:00 Seg–Sex, com tolerância de ±10 min)">H. Normais</th>
+              <th title="HE / Créditos BH 50% (excedente em dias úteis até 2h/dia, igual ao rodapé do Cartão Ponto Digisystem)">HE 50% (BH)</th>
+              <th title="Débito BH nos dias úteis (horas faltantes para 08:00 além da tolerância de 10 min, igual ao rodapé Digisystem)">Débito BH</th>
+              <th title="Saldo de Banco de Horas nos dias úteis (HE 50% − Débito BH)">Saldo BH (Úteis)</th>
+              <th title="HE / Créditos BH 100% (100% das horas trabalhadas em Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil)">HE 100% (FDS)</th>
+              <th title="Saldo Global no Mês (Saldo BH Úteis + HE 100%)">Saldo Total</th>
+              <th class="je-spt-col-left">Ocorrências</th>
             </tr>
           </thead>
           <tbody>
@@ -990,29 +1157,42 @@ window.JEPessoasSptReport = (function () {
           </tbody>
         </table>
       </div>
-      <p class="je-audit-foot">Clique em qualquer linha da tabela para expandir o <strong>Espelho de Ponto Diário</strong> daquele prestador, ou alterne o parâmetro <strong>Detalhe</strong> acima para <em>Diário (Espelho de Ponto)</em>.</p>
+      <p class="je-audit-foot">Clique em qualquer linha da tabela para expandir o <strong>Espelho de Ponto Diário</strong> daquele prestador, ou alterne o parâmetro <strong>Detalhe</strong> acima para <em>Diário (Espelho)</em>.</p>
     `;
   }
 
   function renderDailyViewHTML(report) {
+    const isRaw = calcMode === 'spt_puro';
     const blocks = report.workers.map((w) => {
       const monthBlocks = w.months.map((m) => {
-        const saldoClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
+        const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
+        const kpisHTML = isRaw
+          ? `
+            <div class="je-spt-daily-kpis">
+              <div class="je-spt-mini-kpi"><span>Dias c/ Registro</span><strong>${m.workedDays}d</strong></div>
+              <div class="je-spt-mini-kpi"><span>Seg–Sex</span><strong>${m.workedWeekdays || 0}d</strong></div>
+              <div class="je-spt-mini-kpi"><span>Sáb/Dom/Fer</span><strong>${m.workedWeekendDays || 0}d</strong></div>
+              <div class="je-spt-mini-kpi"><span>Total SPT (Bruto)</span><strong>${fmt(m.sptTotalMin)}</strong></div>
+            </div>
+          `
+          : `
+            <div class="je-spt-daily-kpis">
+              <div class="je-spt-mini-kpi"><span>H. Normais</span><strong>${fmt(m.horasNormaisMin || 0)}</strong></div>
+              <div class="je-spt-mini-kpi"><span>Trab. CLT</span><strong>${fmt(m.cltWorkedMin)}</strong></div>
+              <div class="je-spt-mini-kpi je-spt-pos"><span>HE 50% (BH)</span><strong>+${fmt(m.he50BrutoMin || 0)}</strong></div>
+              <div class="je-spt-mini-kpi je-spt-neg"><span>Débito BH</span><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></div>
+              <div class="je-spt-mini-kpi ${saldoBhClass}"><span>Saldo BH</span><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></div>
+              <div class="je-spt-mini-kpi je-spt-pos"><span>HE 100% (FDS)</span><strong>+${fmt(m.he100BrutoMin || 0)}</strong></div>
+            </div>
+          `;
         return `
           <div class="je-spt-daily-card">
             <div class="je-spt-daily-card-head">
               <div>
                 <h4 class="je-spt-daily-worker-title">${escapeHTML(w.nome)} <span class="je-spt-daily-month-pill">${escapeHTML(m.monthLabel)}</span></h4>
-                <p class="je-spt-daily-worker-sub">CPF: <strong>${escapeHTML(formatCpf(w.cpf))}</strong> · Contrato: <strong>${escapeHTML(w.empresa || w.numContrato || '—')}</strong> · Dias trabalhados: <strong>${m.workedDays}</strong></p>
+                <p class="je-spt-daily-worker-sub">CPF: <strong>${escapeHTML(formatCpf(w.cpf))}</strong> · Contrato: <strong>${escapeHTML(w.empresa || w.numContrato || '—')}</strong> · Dias c/ registro: <strong>${m.workedDays}</strong> (${m.workedWeekdays || 0} úteis + ${m.workedWeekendDays || 0} FDS)</p>
               </div>
-              <div class="je-spt-daily-kpis">
-                <div class="je-spt-mini-kpi"><span>Jornada (8h)</span><strong>${fmt(m.expectedJourneyMin)}</strong></div>
-                <div class="je-spt-mini-kpi"><span>Trab. CLT</span><strong>${fmt(m.cltWorkedMin)}</strong></div>
-                <div class="je-spt-mini-kpi je-spt-pos"><span>Excedentes</span><strong>+${fmt(m.excedenteBrutoMin)}</strong></div>
-                <div class="je-spt-mini-kpi je-spt-neg"><span>A Menos</span><strong>-${fmt(m.aMenosBrutoMin)}</strong></div>
-                <div class="je-spt-mini-kpi"><span>Compensado</span><strong>${fmt(m.compensadoNoMesMin)}</strong></div>
-                <div class="je-spt-mini-kpi ${saldoClass}"><span>Saldo Mês</span><strong>${fmt(m.saldoMesMin, true)}</strong></div>
-              </div>
+              ${kpisHTML}
             </div>
             ${renderDailyMirrorTableHTML(m)}
           </div>
@@ -1044,8 +1224,8 @@ window.JEPessoasSptReport = (function () {
       printBtn.disabled = true;
       setSafeHTML(body, `
         <div class="je-audit-empty">
-          <p>Selecione a <strong>Unidade</strong>, o <strong>Período</strong>, o <strong>Contrato</strong> (opcional) e os <strong>Prestadores</strong> e clique em <strong>Gerar relatório</strong>.</p>
-          <p>O relatório consolida as horas trabalhadas aplicando as regras da CLT: jornada de 8h diárias, intervalo mínimo de 1h de almoço, horas excedentes, horas a menos e compensação dentro do mês.</p>
+          <p>Selecione a <strong>Unidade</strong>, o <strong>Período</strong>, o <strong>Contrato</strong> (opcional), os <strong>Prestadores</strong> e o <strong>Modo</strong> (<em>TSE XT / Digi</em> ou <em>SPT Puro</em>) e clique em <strong>Gerar relatório</strong>.</p>
+          <p>No modo padrão <strong>TSE XT / Digi</strong>, o relatório aplica as regras da CLT e do Cartão Ponto da empresa: jornada de 8h de segunda a sexta (tolerância de ±10 min do art. 58 §1º), mínimo de 1h de almoço (art. 71), sábados/domingos/feriados com jornada 00:00 (100% em <strong>HE 100%</strong>) e separação entre <strong>Saldo BH (50% × Débito BH)</strong> e <strong>HE 100%</strong>.</p>
         </div>
       `);
       return;
@@ -1060,49 +1240,92 @@ window.JEPessoasSptReport = (function () {
       ? '<div class="je-audit-alert">Sessão expirada no SPT durante a consulta. Faça login novamente e gere o relatório.</div>'
       : (report.partial ? '<div class="je-audit-alert">Consulta interrompida pelo usuário. O resultado exibido é parcial.</div>' : '');
 
-    const heroBalanceSign = fmt(u.saldoMesMin, true);
+    if (calcMode === 'spt_puro') {
+      setSafeHTML(body, `
+        ${alertBanner}
+        <div class="je-audit-hero">
+          <div class="je-audit-hero-num" title="Soma pura da coluna Total retornada pelo SPT">${fmt(u.sptTotalMin)}</div>
+          <div class="je-audit-hero-cap">
+            <strong>Modo SPT Puro (Dados Brutos)</strong> · Dias com marcação: <strong>${u.workedDays}d</strong> (${u.workedWeekdays || 0}d Seg–Sex + ${u.workedWeekendDays || 0}d Sáb/Dom/Fer)
+          </div>
+          <div class="je-audit-hero-sub">
+            Unidade: <strong>${escapeHTML(report.unitName)}</strong> · Período: <strong>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</strong> · Contrato: <strong>${escapeHTML(report.contratoLabel)}</strong> · ${u.activeWorkersCount} de ${u.workersCount} prestador(es) com marcações${when ? ' · emitido em ' + escapeHTML(when) : ''}
+          </div>
+        </div>
 
-    setSafeHTML(body, `
-      ${alertBanner}
-      <div class="je-audit-hero">
-        <div class="je-audit-hero-num" title="Total líquido de horas trabalhadas na unidade segundo as regras da CLT">${fmt(u.cltWorkedMin)}</div>
-        <div class="je-audit-hero-cap">
-          <strong>Horas Trabalhadas (Líquido CLT)</strong> · Jornada esperada (8h/dia): <strong>${fmt(u.expectedJourneyMin)}</strong> · Saldo após compensação no mês: <strong>${heroBalanceSign}</strong>
+        <div class="je-audit-cards">
+          <div class="je-audit-card" title="Soma bruta da coluna Total do SPT para todos os prestadores selecionados">
+            <div class="je-audit-card-val">${fmt(u.sptTotalMin)}</div>
+            <div class="je-audit-card-title">Total SPT (Bruto)</div>
+          </div>
+          <div class="je-audit-card" title="Total de dias com registro de frequência no SPT">
+            <div class="je-audit-card-val">${u.workedDays}d</div>
+            <div class="je-audit-card-title">Dias c/ Registro</div>
+          </div>
+          <div class="je-audit-card" title="Dias de segunda a sexta com registro na catraca do SPT">
+            <div class="je-audit-card-val">${u.workedWeekdays || 0}d</div>
+            <div class="je-audit-card-title">Seg–Sex c/ Batida</div>
+          </div>
+          <div class="je-audit-card" title="Sábados, domingos e feriados com registro na catraca do SPT">
+            <div class="je-audit-card-val">${u.workedWeekendDays || 0}d</div>
+            <div class="je-audit-card-title">Sáb/Dom/Fer</div>
+          </div>
+          <div class="je-audit-card" title="Dias com quantidade ímpar de batidas na catraca">
+            <div class="je-audit-card-val">${(u.alerts && u.alerts.batidaImparDays) || 0}d</div>
+            <div class="je-audit-card-title">Batidas Ímpares</div>
+          </div>
         </div>
-        <div class="je-audit-hero-sub">
-          Unidade: <strong>${escapeHTML(report.unitName)}</strong> · Período: <strong>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</strong> · Contrato: <strong>${escapeHTML(report.contratoLabel)}</strong> · ${u.activeWorkersCount} de ${u.workersCount} prestador(es) com marcações${when ? ' · emitido em ' + escapeHTML(when) : ''}
-        </div>
-      </div>
 
-      <div class="je-audit-cards">
-        <div class="je-audit-card" title="Soma das horas líquidas trabalhadas por todos os prestadores selecionados (descontando ao menos 1h de almoço em jornadas &gt; 6h)">
-          <div class="je-audit-card-val">${fmt(u.cltWorkedMin)}</div>
-          <div class="je-audit-card-title">Trabalhado CLT</div>
-        </div>
-        <div class="je-audit-card" title="Jornada de 8h00 por dia efetivamente trabalhado (${u.workedDays} dias somados na equipe)">
-          <div class="je-audit-card-val">${fmt(u.expectedJourneyMin)}</div>
-          <div class="je-audit-card-title">Jornada Esperada (8h)</div>
-        </div>
-        <div class="je-audit-card" title="Soma das horas feitas além das 8h diárias nos dias trabalhados">
-          <div class="je-audit-card-val je-spt-pos">+${fmt(u.excedenteBrutoMin)}</div>
-          <div class="je-audit-card-title">Horas Excedentes</div>
-        </div>
-        <div class="je-audit-card" title="Soma das horas faltantes para 8h nos dias trabalhados">
-          <div class="je-audit-card-val je-spt-neg">-${fmt(u.aMenosBrutoMin)}</div>
-          <div class="je-audit-card-title">Horas a Menos</div>
-        </div>
-        <div class="je-audit-card" title="Parcela das horas excedentes que compensou horas a menos dentro do mesmo mês (CLT art. 59 §6º)">
-          <div class="je-audit-card-val">${fmt(u.compensadoNoMesMin)}</div>
-          <div class="je-audit-card-title">Compensado no Mês</div>
-        </div>
-      </div>
+        <p class="je-audit-foot je-recog-equation">
+          <strong>Modo SPT Puro:</strong> Exibe exclusivamente os horários de catraca e a coluna <strong>Total</strong> fornecidos pelo sistema SPT do TSE, sem deduções adicionais e sem apuração interpretativa de jornada, banco de horas ou horas extras.
+        </p>
 
-      <p class="je-audit-foot je-recog-equation">
-        <strong>Regras CLT aplicadas:</strong> Jornada de <strong>8h00/dia</strong> · Intervalo mínimo de <strong>1h00 de almoço</strong> para jornadas acima de 6h (art. 71 da CLT) · <strong>Compensação intra-mês</strong> (art. 59 §6º da CLT): Excedente Bruto (<strong>+${fmt(u.excedenteBrutoMin)}</strong>) − Compensado no Mês (<strong>${fmt(u.compensadoNoMesMin)}</strong>) = Excedente Líquido (<strong>+${fmt(u.excedenteLiquidoMin)}</strong>) · Horas a Menos Líquidas: <strong>-${fmt(u.aMenosLiquidoMin)}</strong>.
-      </p>
+        ${detailMode === 'diario' ? renderDailyViewHTML(report) : renderMonthlyTableHTML(report)}
+      `);
+    } else {
+      const saldoBhSign = fmt(u.saldoBhMesMin || 0, true);
+      setSafeHTML(body, `
+        ${alertBanner}
+        <div class="je-audit-hero">
+          <div class="je-audit-hero-num" title="Total líquido de horas trabalhadas na unidade segundo as regras da CLT">${fmt(u.cltWorkedMin)}</div>
+          <div class="je-audit-hero-cap">
+            <strong>Modo TSE XT / Digi</strong> · Horas Normais (Seg–Sex): <strong>${fmt(u.horasNormaisMin || 0)}</strong> · Saldo BH (50% − Déb.): <strong>${saldoBhSign}</strong> · HE 100% (FDS): <strong>+${fmt(u.he100BrutoMin || 0)}</strong>
+          </div>
+          <div class="je-audit-hero-sub">
+            Unidade: <strong>${escapeHTML(report.unitName)}</strong> · Período: <strong>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</strong> · Contrato: <strong>${escapeHTML(report.contratoLabel)}</strong> · ${u.activeWorkersCount} de ${u.workersCount} prestador(es) com marcações${when ? ' · emitido em ' + escapeHTML(when) : ''}
+          </div>
+        </div>
 
-      ${detailMode === 'diario' ? renderDailyViewHTML(report) : renderMonthlyTableHTML(report)}
-    `);
+        <div class="je-audit-cards">
+          <div class="je-audit-card" title="Soma das horas líquidas trabalhadas (H. Normais: ${fmt(u.horasNormaisMin || 0)} · Total SPT: ${fmt(u.sptTotalMin)})">
+            <div class="je-audit-card-val">${fmt(u.cltWorkedMin)}</div>
+            <div class="je-audit-card-title">Trabalhado CLT</div>
+          </div>
+          <div class="je-audit-card" title="Horas Extras / Créditos BH 50% (excedentes em dias úteis até 2h/dia, após tolerância de 10 min da CLT art. 58 §1º)">
+            <div class="je-audit-card-val je-spt-pos">+${fmt(u.he50BrutoMin || 0)}</div>
+            <div class="je-audit-card-title">HE / Créd. BH 50%</div>
+          </div>
+          <div class="je-audit-card" title="Débito de Banco de Horas nos dias úteis (faltas/atrasos além da tolerância de 10 min para completar 08:00)">
+            <div class="je-audit-card-val je-spt-neg">-${fmt(u.debitoBhBrutoMin || 0)}</div>
+            <div class="je-audit-card-title">Débito BH (Úteis)</div>
+          </div>
+          <div class="je-audit-card" title="Saldo líquido do Banco de Horas de dias úteis no mês (HE 50% − Débito BH)">
+            <div class="je-audit-card-val ${(u.saldoBhMesMin || 0) >= 0 ? 'je-spt-pos' : 'je-spt-neg'}">${saldoBhSign}</div>
+            <div class="je-audit-card-title">Saldo BH (Úteis)</div>
+          </div>
+          <div class="je-audit-card" title="Horas Extras / Créditos BH 100%: 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária 00:00) + excedente &gt; 2h em dia útil">
+            <div class="je-audit-card-val je-spt-pos">+${fmt(u.he100BrutoMin || 0)}</div>
+            <div class="je-audit-card-title">HE / Créd. 100% (FDS)</div>
+          </div>
+        </div>
+
+        <p class="je-audit-foot je-recog-equation">
+          <strong>Regras TSE XT / Digi aplicadas:</strong> Jornada de <strong>8h00 (Seg–Sex)</strong> com tolerância legal de <strong>±10 min/dia</strong> (CLT art. 58 §1º) e mínimo de <strong>1h00 de almoço</strong> para turnos &gt; 6h (art. 71) · <strong>Sábados, Domingos e Feriados</strong> têm jornada ordinária <strong>00:00</strong> (100% das horas vão para <strong>HE 100%</strong>, sem gerar Débito BH) · <strong>Banco de Horas (Dias Úteis):</strong> HE 50% (<strong>+${fmt(u.he50BrutoMin || 0)}</strong>) − Débito BH (<strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong>) = Saldo BH (<strong>${saldoBhSign}</strong>) · <strong>HE 100%:</strong> <strong>+${fmt(u.he100BrutoMin || 0)}</strong>.
+        </p>
+
+        ${detailMode === 'diario' ? renderDailyViewHTML(report) : renderMonthlyTableHTML(report)}
+      `);
+    }
 
     const toggleActiveEl = body.querySelector('#je-spt-daily-only-active');
     if (toggleActiveEl) {
@@ -1136,73 +1359,139 @@ window.JEPessoasSptReport = (function () {
   function exportCSV() {
     if (!currentResult || !currentResult.workers || !currentResult.workers.length) return;
     const rows = [];
+    const isRaw = calcMode === 'spt_puro';
 
     if (detailMode === 'diario') {
-      rows.push([
-        'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes', 'Data', 'DiaSemana',
-        'Entrada1', 'Saida1', 'Entrada2', 'Saida2', 'Entrada3', 'Saida3',
-        'IntervaloAlmoco', 'TotalSPT', 'LiquidoCLT', 'Jornada8h',
-        'ExcedenteDia', 'AMenosDia', 'SaldoAcumuladoMes', 'Justificativa', 'AlertasCLT'
-      ]);
-      currentResult.workers.forEach((w) => {
-        w.months.forEach((m) => {
-          m.days.forEach((d) => {
-            if (showOnlyActiveDaysInDaily && !d.isWorkedDay && !d.punchCount && !d.justificativa) return;
-            const p = d.punches || [];
-            rows.push([
-              currentResult.unitName,
-              w.nome,
-              formatCpf(w.cpf),
-              w.numContrato,
-              m.monthLabel,
-              d.date,
-              d.dayLabel,
-              p[0] || '',
-              p[1] || '',
-              p[2] || '',
-              p[3] || '',
-              p[4] || '',
-              p[5] || '',
-              d.isWorkedDay ? fmt(d.effectiveLunchMin) : '',
-              d.sptTotalMin ? fmt(d.sptTotalMin) : '00:00',
-              d.cltWorkedMin ? fmt(d.cltWorkedMin) : '00:00',
-              d.targetMin ? fmt(d.targetMin) : '00:00',
-              fmt(d.excedenteMin),
-              fmt(d.aMenosMin),
-              d.isWorkedDay ? fmt(d.accumulatedBalanceMin, true) : '00:00',
-              d.justificativa || '',
-              (d.alerts || []).map((a) => a.label).join(' | ')
-            ]);
+      if (isRaw) {
+        rows.push([
+          'Modo', 'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes', 'Data', 'DiaSemana',
+          'Entrada1', 'Saida1', 'Entrada2', 'Saida2', 'Entrada3', 'Saida3',
+          'JustificativaSPT', 'TotalSPT'
+        ]);
+        currentResult.workers.forEach((w) => {
+          w.months.forEach((m) => {
+            m.days.forEach((d) => {
+              if (showOnlyActiveDaysInDaily && !d.sptTotalMin && !d.punchCount && !d.justificativa) return;
+              const p = d.punches || [];
+              rows.push([
+                'SPT Puro',
+                currentResult.unitName,
+                w.nome,
+                formatCpf(w.cpf),
+                w.numContrato,
+                m.monthLabel,
+                d.date,
+                d.dayLabel,
+                p[0] || '',
+                p[1] || '',
+                p[2] || '',
+                p[3] || '',
+                p[4] || '',
+                p[5] || '',
+                d.justificativa || '',
+                d.sptTotalMin ? fmt(d.sptTotalMin) : '00:00'
+              ]);
+            });
           });
         });
-      });
-    } else {
+      } else {
+        rows.push([
+          'Modo', 'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes', 'Data', 'DiaSemana',
+          'Entrada1', 'Saida1', 'Entrada2', 'Saida2', 'Entrada3', 'Saida3',
+          'IntervaloAlmoco', 'TotalSPT', 'LiquidoCLT', 'JornadaEsperada',
+          'HorasNormais', 'HE50_BH', 'HE100_FDS', 'Debito_BH', 'SaldoBH_Acumulado',
+          'Justificativa', 'Ocorrencias'
+        ]);
+        currentResult.workers.forEach((w) => {
+          w.months.forEach((m) => {
+            m.days.forEach((d) => {
+              if (showOnlyActiveDaysInDaily && !d.isWorkedDay && !d.punchCount && !d.justificativa) return;
+              const p = d.punches || [];
+              rows.push([
+                'TSE XT / Digi',
+                currentResult.unitName,
+                w.nome,
+                formatCpf(w.cpf),
+                w.numContrato,
+                m.monthLabel,
+                d.date,
+                d.dayLabel,
+                p[0] || '',
+                p[1] || '',
+                p[2] || '',
+                p[3] || '',
+                p[4] || '',
+                p[5] || '',
+                d.isWorkedDay ? fmt(d.effectiveLunchMin) : '',
+                d.sptTotalMin ? fmt(d.sptTotalMin) : '00:00',
+                d.cltWorkedMin ? fmt(d.cltWorkedMin) : '00:00',
+                d.isWorkedDay ? fmt(d.targetMin) : '00:00',
+                fmt(d.normalWorkedMin || 0),
+                fmt(d.he50Min || 0),
+                fmt(d.he100Min || 0),
+                fmt(d.debitoBhMin || 0),
+                d.isWorkedDay ? fmt(d.accumulatedBhMin || 0, true) : '00:00',
+                d.justificativa || '',
+                (d.alerts || []).map((a) => a.label).join(' | ')
+              ]);
+            });
+          });
+        });
+      }
+    } else if (isRaw) {
       rows.push([
-        'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes', 'DiasTrabalhados',
-        'DiasUteisPeriodo', 'DiasUteisSemBatida', 'JornadaEsperada8h', 'TotalSPT',
-        'TrabalhadoLiquidoCLT', 'HorasExcedentesBruto', 'HorasAMenosBruto',
-        'CompensadoNoMes', 'ExcedenteLiquido', 'AMenosLiquido', 'SaldoFinalMes',
-        'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar'
+        'Modo', 'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes',
+        'DiasComRegistro', 'DiasSegSex', 'DiasSabDomFer', 'DiasJustificados',
+        'DiasBatidaImpar', 'TotalSPT'
       ]);
       currentResult.workers.forEach((w) => {
         w.months.forEach((m) => {
           rows.push([
+            'SPT Puro',
             currentResult.unitName,
             w.nome,
             formatCpf(w.cpf),
             w.numContrato,
             m.monthLabel,
             String(m.workedDays),
-            String(m.weekdaysInPeriod),
-            String(m.weekdaysWithoutRecord),
+            String(m.workedWeekdays || 0),
+            String(m.workedWeekendDays || 0),
+            String(m.justifiedDays || 0),
+            String((m.alerts && m.alerts.batidaImparDays) || 0),
+            fmt(m.sptTotalMin)
+          ]);
+        });
+      });
+    } else {
+      rows.push([
+        'Modo', 'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes',
+        'DiasTrabalhados', 'DiasUteisTrabalhados', 'DiasFdsTrabalhados',
+        'JornadaEsperadaUteis', 'TotalSPT', 'TrabalhadoLiquidoCLT',
+        'HorasNormais', 'HE_Credito_BH_50', 'Debito_BH', 'Compensado_BH',
+        'Saldo_BH_Uteis', 'HE_Credito_BH_100', 'SaldoGlobalMes',
+        'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar'
+      ]);
+      currentResult.workers.forEach((w) => {
+        w.months.forEach((m) => {
+          rows.push([
+            'TSE XT / Digi',
+            currentResult.unitName,
+            w.nome,
+            formatCpf(w.cpf),
+            w.numContrato,
+            m.monthLabel,
+            String(m.workedDays),
+            String(m.workedWeekdays || 0),
+            String(m.workedWeekendDays || 0),
             fmt(m.expectedJourneyMin),
             fmt(m.sptTotalMin),
             fmt(m.cltWorkedMin),
-            fmt(m.excedenteBrutoMin),
-            fmt(m.aMenosBrutoMin),
-            fmt(m.compensadoNoMesMin),
-            fmt(m.excedenteLiquidoMin),
-            fmt(m.aMenosLiquidoMin),
+            fmt(m.horasNormaisMin || 0),
+            fmt(m.he50BrutoMin || 0),
+            fmt(m.debitoBhBrutoMin || 0),
+            fmt(m.compensadoBhMin || 0),
+            fmt(m.saldoBhMesMin || 0, true),
+            fmt(m.he100BrutoMin || 0),
             fmt(m.saldoMesMin, true),
             String(m.alerts.intervaloCurtoDays),
             String(m.alerts.almocoAutoDays),
@@ -1217,7 +1506,8 @@ window.JEPessoasSptReport = (function () {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `TSE_XT_SPT_${detailMode === 'diario' ? 'Diario' : 'Mensal'}_${currentResult.fromIso}_a_${currentResult.toIso}.csv`;
+    const modeSlug = isRaw ? 'SPT_Puro' : 'XT_Digi';
+    a.download = `TSE_XT_SPT_${modeSlug}_${detailMode === 'diario' ? 'Diario' : 'Mensal'}_${currentResult.fromIso}_a_${currentResult.toIso}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1228,7 +1518,117 @@ window.JEPessoasSptReport = (function () {
     const u = report.unitTotals || calc().summarizeUnitReport(report.workers);
     const when = report.generatedAt ? new Date(report.generatedAt).toLocaleString('pt-BR') : '';
     const version = (window.JEPessoasVersion && window.JEPessoasVersion.getVersion && window.JEPessoasVersion.getVersion()) || '';
+    const isRaw = calcMode === 'spt_puro';
 
+    if (isRaw) {
+      const monthlyRows = [];
+      report.workers.forEach((w) => {
+        w.months.forEach((m) => {
+          monthlyRows.push(`
+            <tr>
+              <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small></td>
+              <td>${escapeHTML(m.monthLabel)}</td>
+              <td>${m.workedDays}</td>
+              <td>${m.workedWeekdays || 0}</td>
+              <td>${m.workedWeekendDays || 0}</td>
+              <td>${m.justifiedDays || 0}</td>
+              <td>${(m.alerts && m.alerts.batidaImparDays) || 0}</td>
+              <td><strong>${fmt(m.sptTotalMin)}</strong></td>
+            </tr>
+          `);
+        });
+      });
+
+      monthlyRows.push(`
+        <tr class="total">
+          <td class="l">Total Bruto da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores)</td>
+          <td>—</td>
+          <td>${u.workedDays}</td>
+          <td>${u.workedWeekdays || 0}</td>
+          <td>${u.workedWeekendDays || 0}</td>
+          <td>${u.justifiedDays || 0}</td>
+          <td>${(u.alerts && u.alerts.batidaImparDays) || 0}</td>
+          <td>${fmt(u.sptTotalMin)}</td>
+        </tr>
+      `);
+
+      let dailySection = '';
+      if (detailMode === 'diario') {
+        const workerTables = report.workers.map((w) => {
+          return w.months.map((m) => {
+            const days = showOnlyActiveDaysInDaily
+              ? m.days.filter((d) => d.sptTotalMin > 0 || d.punchCount > 0 || d.justificativa)
+              : m.days;
+            if (!days.length) return '';
+            const dRows = days.map((d) => {
+              const p = d.punches || [];
+              return `<tr>
+                <td>${escapeHTML(d.date)} (${escapeHTML(d.dayLabel)})</td>
+                <td>${escapeHTML(p[0] || '—')}</td>
+                <td>${escapeHTML(p[1] || '—')}</td>
+                <td>${escapeHTML(p[2] || '—')}</td>
+                <td>${escapeHTML(p[3] || '—')}</td>
+                <td>${escapeHTML(p[4] || '—')}</td>
+                <td>${escapeHTML(p[5] || '—')}</td>
+                <td class="l">${escapeHTML(d.justificativa || '—')}</td>
+                <td><strong>${d.sptTotalMin ? fmt(d.sptTotalMin) : '—'}</strong></td>
+              </tr>`;
+            }).join('');
+            return `
+              <h3>${escapeHTML(w.nome)} · CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato)} · ${escapeHTML(m.monthLabel)}</h3>
+              <table class="je-print-table je-print-days">
+                <thead>
+                  <tr>
+                    <th>Data</th><th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>E3</th><th>S3</th><th>Justificativa (SPT)</th><th>Total SPT</th>
+                  </tr>
+                </thead>
+                <tbody>${dRows}</tbody>
+              </table>
+            `;
+          }).join('');
+        }).join('');
+        dailySection = `<h2>2. Espelho de Ponto Diário — SPT Puro (Dados Brutos)</h2>${workerTables}`;
+      }
+
+      return `
+        <header class="je-print-header">
+          <p class="je-print-eyebrow">TSE XT · SPT <span>Modo: SPT Puro (Dados Brutos)</span></p>
+          <h1>Relatório de Horas por Unidade — SPT Puro (${detailMode === 'diario' ? 'Detalhe Diário e Mensal' : 'Consolidado Mensal'})</h1>
+          <dl class="je-print-meta">
+            <div><dt>Unidade</dt><dd>${escapeHTML(report.unitName)}</dd></div>
+            <div><dt>Período</dt><dd>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</dd></div>
+            <div><dt>Contrato</dt><dd>${escapeHTML(report.contratoLabel)}</dd></div>
+            <div><dt>Modo</dt><dd>SPT Puro (Dados Brutos)</dd></div>
+            <div><dt>Emissão</dt><dd>${escapeHTML(when)}</dd></div>
+          </dl>
+          ${report.issuer ? `<p class="meta">Emitido por ${escapeHTML(report.issuer)}</p>` : ''}
+          <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Modo SPT Puro: dados brutos da catraca sem cálculos interpretativos.</p>
+        </header>
+
+        <div class="je-print-metrics">
+          <div class="je-print-metric-focus"><span>Total SPT (Bruto)</span><strong>${fmt(u.sptTotalMin)}</strong></div>
+          <div><span>Dias c/ Registro</span><strong>${u.workedDays}d</strong></div>
+          <div><span>Dias Seg–Sex</span><strong>${u.workedWeekdays || 0}d</strong></div>
+          <div><span>Dias Sáb/Dom/Fer</span><strong>${u.workedWeekendDays || 0}d</strong></div>
+          <div><span>Batidas Ímpares</span><strong>${(u.alerts && u.alerts.batidaImparDays) || 0}d</strong></div>
+        </div>
+
+        <h2>1. Consolidação Mensal por Prestador (SPT Puro)</h2>
+        <table class="je-print-table">
+          <thead>
+            <tr>
+              <th>Prestador / Contrato</th><th>Mês</th><th>Dias c/ Reg.</th><th>Seg–Sex</th><th>Sáb/Dom/Fer</th><th>Justificados</th><th>Batidas Ímpares</th><th>Total SPT</th>
+            </tr>
+          </thead>
+          <tbody>${monthlyRows.join('')}</tbody>
+        </table>
+
+        ${dailySection}
+        <footer class="je-print-footer">TSE XT · Relatório de frequência (Modo SPT Puro — Dados Brutos).</footer>
+      `;
+    }
+
+    // Modo TSE XT / Digi (padrão)
     const monthlyRows = [];
     report.workers.forEach((w) => {
       w.months.forEach((m) => {
@@ -1236,15 +1636,14 @@ window.JEPessoasSptReport = (function () {
           <tr>
             <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small></td>
             <td>${escapeHTML(m.monthLabel)}</td>
-            <td>${m.workedDays}</td>
-            <td>${fmt(m.expectedJourneyMin)}</td>
+            <td>${m.workedDays} (${m.workedWeekdays || 0}u+${m.workedWeekendDays || 0}f)</td>
             <td>${fmt(m.sptTotalMin)}</td>
             <td><strong>${fmt(m.cltWorkedMin)}</strong></td>
-            <td>+${fmt(m.excedenteBrutoMin)}</td>
-            <td>-${fmt(m.aMenosBrutoMin)}</td>
-            <td>${fmt(m.compensadoNoMesMin)}</td>
-            <td><strong>+${fmt(m.excedenteLiquidoMin)}</strong></td>
-            <td><strong>-${fmt(m.aMenosLiquidoMin)}</strong></td>
+            <td>${fmt(m.horasNormaisMin || 0)}</td>
+            <td>+${fmt(m.he50BrutoMin || 0)}</td>
+            <td>-${fmt(m.debitoBhBrutoMin || 0)}</td>
+            <td><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
+            <td><strong>+${fmt(m.he100BrutoMin || 0)}</strong></td>
             <td><strong>${fmt(m.saldoMesMin, true)}</strong></td>
           </tr>
         `);
@@ -1255,15 +1654,14 @@ window.JEPessoasSptReport = (function () {
       <tr class="total">
         <td class="l">Total Consolidado da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores)</td>
         <td>—</td>
-        <td>${u.workedDays}</td>
-        <td>${fmt(u.expectedJourneyMin)}</td>
+        <td>${u.workedDays} (${u.workedWeekdays || 0}u+${u.workedWeekendDays || 0}f)</td>
         <td>${fmt(u.sptTotalMin)}</td>
         <td>${fmt(u.cltWorkedMin)}</td>
-        <td>+${fmt(u.excedenteBrutoMin)}</td>
-        <td>-${fmt(u.aMenosBrutoMin)}</td>
-        <td>${fmt(u.compensadoNoMesMin)}</td>
-        <td>+${fmt(u.excedenteLiquidoMin)}</td>
-        <td>-${fmt(u.aMenosLiquidoMin)}</td>
+        <td>${fmt(u.horasNormaisMin || 0)}</td>
+        <td>+${fmt(u.he50BrutoMin || 0)}</td>
+        <td>-${fmt(u.debitoBhBrutoMin || 0)}</td>
+        <td>${fmt(u.saldoBhMesMin || 0, true)}</td>
+        <td>+${fmt(u.he100BrutoMin || 0)}</td>
         <td>${fmt(u.saldoMesMin, true)}</td>
       </tr>
     `);
@@ -1279,6 +1677,7 @@ window.JEPessoasSptReport = (function () {
           const dRows = days.map((d) => {
             const p = d.punches || [];
             const alertsTxt = [d.justificativa].concat((d.alerts || []).map((a) => a.label)).filter(Boolean).join(' · ');
+            const targetTxt = d.isWorkedDay ? (d.isSpecialDay ? '00:00' : fmt(d.targetMin)) : '—';
             return `<tr>
               <td>${escapeHTML(d.date)} (${escapeHTML(d.dayLabel)})</td>
               <td>${escapeHTML(p[0] || '—')}</td>
@@ -1288,10 +1687,11 @@ window.JEPessoasSptReport = (function () {
               <td>${d.isWorkedDay ? fmt(d.effectiveLunchMin) : '—'}</td>
               <td>${d.sptTotalMin ? fmt(d.sptTotalMin) : '—'}</td>
               <td><strong>${d.cltWorkedMin ? fmt(d.cltWorkedMin) : '—'}</strong></td>
-              <td>${d.targetMin ? fmt(d.targetMin) : '—'}</td>
-              <td>${d.excedenteMin ? '+' + fmt(d.excedenteMin) : '—'}</td>
-              <td>${d.aMenosMin ? '-' + fmt(d.aMenosMin) : '—'}</td>
-              <td>${d.isWorkedDay ? fmt(d.accumulatedBalanceMin, true) : '—'}</td>
+              <td>${escapeHTML(targetTxt)}</td>
+              <td>${d.he50Min ? '+' + fmt(d.he50Min) : '—'}</td>
+              <td>${d.he100Min ? '+' + fmt(d.he100Min) : '—'}</td>
+              <td>${d.debitoBhMin ? '-' + fmt(d.debitoBhMin) : '—'}</td>
+              <td>${d.isWorkedDay ? fmt(d.accumulatedBhMin || 0, true) : '—'}</td>
               <td class="l">${escapeHTML(alertsTxt || '—')}</td>
             </tr>`;
           }).join('');
@@ -1301,7 +1701,7 @@ window.JEPessoasSptReport = (function () {
               <thead>
                 <tr>
                   <th>Data</th><th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>Almoço</th>
-                  <th>Total SPT</th><th>Trab. CLT</th><th>Jornada</th><th>Exced.</th><th>A Menos</th><th>Saldo Acum.</th><th>Observações</th>
+                  <th>Total SPT</th><th>Trab. CLT</th><th>Jornada</th><th>HE 50%</th><th>HE 100%</th><th>Débito BH</th><th>Saldo BH Acum.</th><th>Observações</th>
                 </tr>
               </thead>
               <tbody>${dRows}</tbody>
@@ -1309,44 +1709,46 @@ window.JEPessoasSptReport = (function () {
           `;
         }).join('');
       }).join('');
-      dailySection = `<h2>2. Espelho de Ponto Diário por Prestador</h2>${workerTables}`;
+      dailySection = `<h2>2. Espelho de Ponto Diário por Prestador (TSE XT / Digi)</h2>${workerTables}`;
     }
 
     return `
       <header class="je-print-header">
-        <p class="je-print-eyebrow">TSE XT · SPT <span>Relatório de Frequência de Prestadores</span></p>
-        <h1>Relatório Consolidado de Horas por Unidade (${detailMode === 'diario' ? 'Detalhe Diário e Mensal' : 'Consolidado Mensal CLT'})</h1>
+        <p class="je-print-eyebrow">TSE XT · SPT <span>Modo: TSE XT / Digi (Regras CLT / Digisystem)</span></p>
+        <h1>Relatório Consolidado de Horas por Unidade (${detailMode === 'diario' ? 'Detalhe Diário e Mensal' : 'Consolidado Mensal'})</h1>
         <dl class="je-print-meta">
           <div><dt>Unidade</dt><dd>${escapeHTML(report.unitName)}</dd></div>
           <div><dt>Período</dt><dd>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</dd></div>
           <div><dt>Contrato</dt><dd>${escapeHTML(report.contratoLabel)}</dd></div>
+          <div><dt>Modo</dt><dd>TSE XT / Digi</dd></div>
           <div><dt>Emissão</dt><dd>${escapeHTML(when)}</dd></div>
         </dl>
         ${report.issuer ? `<p class="meta">Emitido por ${escapeHTML(report.issuer)}</p>` : ''}
-        <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Regras CLT: jornada de 8h/dia, intervalo mínimo de 1h de almoço (art. 71) e compensação mensal (art. 59 §6º).</p>
+        <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Regras TSE XT / Digi: jornada 8h Seg–Sex (tolerância ±10 min art. 58 §1º), almoço mín. 1h (art. 71), Sáb/Dom/Feriados com jornada 00:00 (100% em HE 100%) e separação entre Saldo BH (50% − Débito BH) e HE 100%.</p>
       </header>
 
       <div class="je-print-metrics">
         <div><span>Trabalhado CLT</span><strong>${fmt(u.cltWorkedMin)}</strong></div>
-        <div><span>Jornada (8h/dia)</span><strong>${fmt(u.expectedJourneyMin)}</strong></div>
-        <div><span>Excedente Bruto</span><strong>+${fmt(u.excedenteBrutoMin)}</strong></div>
-        <div><span>Compensado no Mês</span><strong>${fmt(u.compensadoNoMesMin)}</strong></div>
-        <div class="je-print-metric-focus"><span>Saldo Final do Mês</span><strong>${fmt(u.saldoMesMin, true)}</strong></div>
+        <div><span>Horas Normais</span><strong>${fmt(u.horasNormaisMin || 0)}</strong></div>
+        <div><span>HE / Créd. BH 50%</span><strong>+${fmt(u.he50BrutoMin || 0)}</strong></div>
+        <div><span>Débito BH</span><strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong></div>
+        <div><span>Saldo BH (Úteis)</span><strong>${fmt(u.saldoBhMesMin || 0, true)}</strong></div>
+        <div class="je-print-metric-focus"><span>HE / Créd. 100% (FDS)</span><strong>+${fmt(u.he100BrutoMin || 0)}</strong></div>
       </div>
 
-      <h2>1. Consolidação Mensal por Prestador (Regras CLT)</h2>
+      <h2>1. Consolidação Mensal por Prestador (TSE XT / Digi)</h2>
       <table class="je-print-table">
         <thead>
           <tr>
-            <th>Prestador / Contrato</th><th>Mês</th><th>Dias</th><th>Jornada</th><th>Total SPT</th><th>Trab. CLT</th>
-            <th>Excedente</th><th>A Menos</th><th>Compensado</th><th>Exced. Líq.</th><th>A Menos Líq.</th><th>Saldo Mês</th>
+            <th>Prestador / Contrato</th><th>Mês</th><th>Dias</th><th>Total SPT</th><th>Trab. CLT</th><th>H. Normais</th>
+            <th>HE 50% (BH)</th><th>Débito BH</th><th>Saldo BH (Úteis)</th><th>HE 100% (FDS)</th><th>Saldo Total</th>
           </tr>
         </thead>
         <tbody>${monthlyRows.join('')}</tbody>
       </table>
 
       ${dailySection}
-      <footer class="je-print-footer">TSE XT · Relatório de apoio à gestão contratual e fiscalização de frequência (SPT/TSE).</footer>
+      <footer class="je-print-footer">TSE XT · Relatório de apoio à gestão contratual e fiscalização de frequência (SPT/TSE · Modo TSE XT / Digi).</footer>
     `;
   }
 
@@ -1390,7 +1792,6 @@ window.JEPessoasSptReport = (function () {
     const mainContratoSelect = document.getElementById('cbContratos');
     const mainSubunitsCheck = document.getElementById('cbxBuscarUnidAbaixo');
 
-    // Sincroniza a Unidade inicial com a tela principal (ou com a preferência salva se a tela principal estiver no default '1')
     const mainUnitId = mainUnitSelect ? mainUnitSelect.value : '';
     const initialUnitId = (mainUnitId && mainUnitId !== '1')
       ? mainUnitId
@@ -1410,7 +1811,6 @@ window.JEPessoasSptReport = (function () {
     });
     unitMount.appendChild(unitWidget.root);
 
-    // Popula select de Contratos
     const contratoSelect = overlay.querySelector('#je-spt-rep-contrato');
     const currentContractVal = (mainContratoSelect && mainContratoSelect.value && mainContratoSelect.value !== '-1')
       ? mainContratoSelect.value
@@ -1428,7 +1828,6 @@ window.JEPessoasSptReport = (function () {
       contratoSelect.appendChild(opt);
     });
 
-    // Período: sempre pré-preenchido com o mês anterior ao atual por padrão
     const prev = calc().previousMonthPeriod();
     overlay.querySelector('#je-spt-rep-from').value = (prefs && prefs.fromIso) || prev.fromIso;
     overlay.querySelector('#je-spt-rep-to').value = (prefs && prefs.toIso) || prev.toIso;
@@ -1438,6 +1837,17 @@ window.JEPessoasSptReport = (function () {
     } else if (prefs && typeof prefs.buscarAbaixo === 'boolean') {
       overlay.querySelector('#je-spt-rep-subunits').checked = prefs.buscarAbaixo;
     }
+
+    if (prefs && (prefs.calcMode === 'spt_puro' || prefs.calcMode === 'xt_digi')) {
+      calcMode = prefs.calcMode;
+    } else {
+      calcMode = 'xt_digi';
+    }
+    overlay.querySelectorAll('input[name="je-spt-rep-mode"]').forEach((r) => {
+      r.checked = r.value === calcMode;
+    });
+    overlay.querySelector('#je-spt-seg-mode-xt').classList.toggle('is-active', calcMode === 'xt_digi');
+    overlay.querySelector('#je-spt-seg-mode-raw').classList.toggle('is-active', calcMode === 'spt_puro');
 
     if (prefs && (prefs.detailMode === 'diario' || prefs.detailMode === 'mensal')) {
       detailMode = prefs.detailMode;

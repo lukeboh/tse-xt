@@ -5,9 +5,18 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.11-Snapshot';
+  const CURRENT_VERSION = '1.2.12-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.12-Snapshot',
+      date: '2026-11-17',
+      title: 'SPT: cálculo alinhado ao Cartão Ponto (TSE XT / Digi) e modo SPT Puro',
+      features: [
+        'Novo seletor de Modo no Relatório Consolidado do SPT: "TSE XT / Digi" (padrão, com regras CLT/Digisystem) e "SPT Puro (Bruto)" (apenas batidas e Total SPT sem recálculo).',
+        'No modo TSE XT / Digi: jornada ordinária 00:00 em Sábados, Domingos e Feriados (100% em HE 100%, sem gerar Horas a Menos), tolerância CLT de ±10 min/dia nos dias úteis (art. 58 §1º) e separação entre Saldo BH de dias úteis (HE 50% − Débito BH) e HE 100%.'
+      ]
+    },
     {
       version: '1.2.11-Snapshot',
       date: '2026-11-17',

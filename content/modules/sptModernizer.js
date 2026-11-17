@@ -431,10 +431,10 @@ window.JEPessoasSptModernizer = (function () {
     dashboard = document.createElement('div');
     dashboard.className = 'je-kpi-dashboard je-spt-kpi-dashboard';
 
-    const isPositive = summary.saldoMesMin >= 0;
-    const saldoColor = summary.saldoMesMin > 0
+    const isPositive = (summary.saldoBhMesMin || 0) >= 0;
+    const saldoBhColor = (summary.saldoBhMesMin || 0) > 0
       ? 'var(--je-success-text)'
-      : (summary.saldoMesMin < 0 ? 'var(--je-danger-text)' : '#475569');
+      : ((summary.saldoBhMesMin || 0) < 0 ? 'var(--je-danger-text)' : '#475569');
 
     setSafeHTML(dashboard, `
       <div class="je-kpi-card je-kpi-highlight">
@@ -444,51 +444,51 @@ window.JEPessoasSptModernizer = (function () {
         </div>
         <div class="je-kpi-value">${fmt(summary.cltWorkedMin)}</div>
         <div class="je-kpi-sub">
-          <span>Total SPT: <strong>${fmt(summary.sptTotalMin)}</strong> · ${summary.workedDays} dia(s)</span>
+          <span>H. Normais: <strong>${fmt(summary.horasNormaisMin || 0)}</strong> · Total SPT: <strong>${fmt(summary.sptTotalMin)}</strong></span>
         </div>
       </div>
 
       <div class="je-kpi-card">
         <div class="je-kpi-header">
-          <span class="je-kpi-label">Jornada CLT (8h/dia)</span>
-          <span class="je-kpi-icon" style="background: rgba(100, 116, 139, 0.12); color: #475569;">📅</span>
-        </div>
-        <div class="je-kpi-value">${fmt(summary.expectedJourneyMin)}</div>
-        <div class="je-kpi-sub">
-          <span>${summary.workedDays}d × 08:00 · Mín. 1h almoço</span>
-        </div>
-      </div>
-
-      <div class="je-kpi-card">
-        <div class="je-kpi-header">
-          <span class="je-kpi-label">Horas Excedentes</span>
+          <span class="je-kpi-label">HE / Créd. BH 50%</span>
           <span class="je-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--je-success-text);">📈</span>
         </div>
-        <div class="je-kpi-value" style="color: var(--je-success-text);">+${fmt(summary.excedenteBrutoMin)}</div>
+        <div class="je-kpi-value" style="color: var(--je-success-text);">+${fmt(summary.he50BrutoMin || 0)}</div>
         <div class="je-kpi-sub">
-          <span>Líquido após compensar: <strong>+${fmt(summary.excedenteLiquidoMin)}</strong></span>
+          <span>${summary.workedWeekdays || 0}d úteis (jornada 08:00 · tol. ±10m)</span>
         </div>
       </div>
 
       <div class="je-kpi-card">
         <div class="je-kpi-header">
-          <span class="je-kpi-label">Horas a Menos &amp; Comp.</span>
+          <span class="je-kpi-label">Débito BH (Dias Úteis)</span>
           <span class="je-kpi-icon" style="background: rgba(250, 204, 21, 0.14); color: var(--je-warning-text);">⚖️</span>
         </div>
-        <div class="je-kpi-value" style="color: ${summary.aMenosLiquidoMin > 0 ? 'var(--je-danger-text)' : '#475569'};">-${fmt(summary.aMenosBrutoMin)}</div>
+        <div class="je-kpi-value" style="color: ${(summary.debitoBhBrutoMin || 0) > 0 ? 'var(--je-danger-text)' : '#475569'};">-${fmt(summary.debitoBhBrutoMin || 0)}</div>
         <div class="je-kpi-sub">
-          <span>Compensado no mês: <strong>${fmt(summary.compensadoNoMesMin)}</strong></span>
+          <span>Compensado no BH: <strong>${fmt(summary.compensadoBhMin || 0)}</strong></span>
         </div>
       </div>
 
       <div class="je-kpi-card">
         <div class="je-kpi-header">
-          <span class="je-kpi-label">Saldo Final do Mês (CLT)</span>
-          <span class="je-kpi-icon" style="background: ${isPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(236, 72, 153, 0.12)'}; color: ${saldoColor};">${isPositive ? '✅' : '⚠️'}</span>
+          <span class="je-kpi-label">Saldo BH (50% − Déb.)</span>
+          <span class="je-kpi-icon" style="background: ${isPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(236, 72, 153, 0.12)'}; color: ${saldoBhColor};">${isPositive ? '✅' : '⚠️'}</span>
         </div>
-        <div class="je-kpi-value" style="color: ${saldoColor};">${fmt(summary.saldoMesMin, true)}</div>
+        <div class="je-kpi-value" style="color: ${saldoBhColor};">${fmt(summary.saldoBhMesMin || 0, true)}</div>
         <div class="je-kpi-sub">
-          <span>${summary.alerts.intervaloCurtoDays ? `${summary.alerts.intervaloCurtoDays}d almoço &lt;1h · ` : ''}${summary.alerts.acima2hExtraDays ? `${summary.alerts.acima2hExtraDays}d &gt;2h extras` : 'Conformidade CLT apurada'}</span>
+          <span>Variação líquida do BH em dias úteis</span>
+        </div>
+      </div>
+
+      <div class="je-kpi-card">
+        <div class="je-kpi-header">
+          <span class="je-kpi-label">HE / Créd. 100% (FDS)</span>
+          <span class="je-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: var(--je-success-text);">🌟</span>
+        </div>
+        <div class="je-kpi-value" style="color: var(--je-success-text);">+${fmt(summary.he100BrutoMin || 0)}</div>
+        <div class="je-kpi-sub">
+          <span>${summary.workedWeekendDays || 0}d Sáb/Dom/Fer (jornada 00:00)</span>
         </div>
       </div>
     `);

@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { loadModule } from './helpers.mjs';
 
+const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mod = loadModule('sptCltCalc.js');
 const C = mod.JEPessoasSptCltCalc;
 
@@ -76,8 +80,8 @@ test('sptCltCalc — parseUnitsFromSelect e filterUnits constroem hierarquia e f
   assert.equal(byId[0].id, '1184');
 });
 
-test('sptCltCalc — analyzeDayClt aplica jornada de 8h e regra de pelo menos 1h de almoco', () => {
-  // Caso 1: 4 batidas com intervalo >= 1h (08:46-12:06 e 13:10-19:41 = 9h51, intervalo 1h04)
+test('sptCltCalc — analyzeDayClt aplica jornada 8h em dias uteis e 00:00 em Sabados/Domingos/Feriados', () => {
+  // Caso 1: Dia útil (02/10/2026 Sex) com 4 batidas e intervalo >= 1h (9h51 -> +01:51 em HE 50%)
   const d1 = C.analyzeDayClt({
     date: '02/10/2026',
     punches: ['08:46', '12:06', '13:10', '19:41', '', ''],
@@ -87,10 +91,12 @@ test('sptCltCalc — analyzeDayClt aplica jornada de 8h e regra de pelo menos 1h
   assert.equal(d1.cltWorkedMin, 591);
   assert.equal(d1.effectiveLunchMin, 64);
   assert.equal(d1.targetMin, 480);
-  assert.equal(d1.excedenteMin, 111); // +01:51
-  assert.equal(d1.aMenosMin, 0);
+  assert.equal(d1.he50Min, 111); // +01:51 em HE 50%
+  assert.equal(d1.he100Min, 0);
+  assert.equal(d1.debitoBhMin, 0);
 
-  // Caso 2: 2 batidas > 6h onde o SPT NAO descontou 1h (ex.: 10:59-17:02 = 06:03 no SPT)
+  // Caso 2: Sábado (10/10/2026) com 2 batidas > 6h (10:59-17:02 = 06:03 no SPT -> 05:03 CLT)
+  // No Sábado a jornada ordinária é 00:00: 100% das 05:03 vão para HE 100% e Débito BH é 0!
   const d2 = C.analyzeDayClt({
     date: '10/10/2026',
     punches: ['10:59', '17:02', '', '', '', ''],
@@ -100,18 +106,21 @@ test('sptCltCalc — analyzeDayClt aplica jornada de 8h e regra de pelo menos 1h
   assert.equal(d2.sptTotalMin, 363);
   assert.equal(d2.cltWorkedMin, 303); // 05:03 após descontar 1h de almoço CLT
   assert.equal(d2.lunchMode, 'auto-1h');
-  assert.equal(d2.aMenosMin, 177); // 08:00 - 05:03 = 02:57
+  assert.equal(d2.targetMin, 0);
+  assert.equal(d2.he100Min, 303); // +05:03 em HE 100%
+  assert.equal(d2.aMenosMin, 0);
+  assert.equal(d2.debitoBhMin, 0);
 
-  // Caso 3: 4 batidas com intervalo < 1h (ex.: 58 min, onde o SPT ja descontou os 2 min faltantes: 08:09)
-  const d3 = C.analyzeDayClt({
-    date: '24/10/2026',
-    punches: ['11:02', '14:06', '15:04', '20:11', '', ''],
+  // Caso 3: Sábado (17/10/2026) Renato 08:21-13:26 = 05:05 -> +05:05 em HE 100%, sem débito
+  const dRenatoSab = C.analyzeDayClt({
+    date: '17/10/2026',
+    punches: ['08:21', '13:26', '', '', '', ''],
     justificativa: '',
-    total: '08:09:00'
+    total: '05:05:00'
   });
-  assert.equal(d3.measuredLunchMin, 58);
-  assert.equal(d3.cltWorkedMin, 489); // 08:09, sem descontar em dobro
-  assert.ok(d3.alerts.some((a) => a.code === 'intervalo-curto'));
+  assert.equal(dRenatoSab.targetMin, 0);
+  assert.equal(dRenatoSab.he100Min, 305); // 05:05
+  assert.equal(dRenatoSab.debitoBhMin, 0);
 
   // Caso 4: 4 batidas com intervalo < 1h (16 min) onde o SPT nao descontou os 44 min faltantes (08:19-12:23 e 12:39-14:35 = 06:00)
   const d4 = C.analyzeDayClt({
@@ -123,6 +132,43 @@ test('sptCltCalc — analyzeDayClt aplica jornada de 8h e regra de pelo menos 1h
   assert.equal(d4.measuredLunchMin, 16);
   assert.equal(d4.cltWorkedMin, 316); // 360 - (60 - 16) = 316 (05:16)
   assert.equal(d4.lunchDeductionDiffMin, 44);
+});
+
+test('sptCltCalc — aplica tolerancia CLT de ate 10 min/dia nos dias uteis (art. 58 §1º)', () => {
+  // Renato 06/10/2026 (Ter): 08:09 (+9 min <= 10 min) -> 08:00 normais, 0 HE, 0 Débito
+  const dMais9 = C.analyzeDayClt({
+    date: '06/10/2026',
+    punches: ['09:22', '12:12', '13:15', '18:34', '', ''],
+    justificativa: '',
+    total: '08:09:00'
+  });
+  assert.equal(dMais9.withinTolerance, true);
+  assert.equal(dMais9.normalWorkedMin, 480);
+  assert.equal(dMais9.he50Min, 0);
+  assert.equal(dMais9.debitoBhMin, 0);
+
+  // Renato 23/10/2026 (Sex): 07:52 (-8 min <= 10 min) -> 08:00 normais, 0 HE, 0 Débito
+  const dMenos8 = C.analyzeDayClt({
+    date: '23/10/2026',
+    punches: ['09:08', '13:00', '14:00', '18:00', '', ''],
+    justificativa: '',
+    total: '07:52:00'
+  });
+  assert.equal(dMenos8.withinTolerance, true);
+  assert.equal(dMenos8.normalWorkedMin, 480);
+  assert.equal(dMenos8.he50Min, 0);
+  assert.equal(dMenos8.debitoBhMin, 0);
+
+  // Renato 20/10/2026 (Ter): 08:12 (+12 min > 10 min) -> +00:12 em HE 50%
+  const dMais12 = C.analyzeDayClt({
+    date: '20/10/2026',
+    punches: ['09:15', '13:00', '14:00', '18:27', '', ''],
+    justificativa: '',
+    total: '08:12:00'
+  });
+  assert.equal(dMais12.withinTolerance, false);
+  assert.equal(dMais12.he50Min, 12);
+  assert.equal(dMais12.debitoBhMin, 0);
 });
 
 test('sptCltCalc — continuacao pos-meia-noite (00:00 com Total SPT 00:00 apos 23:59) nao duplica nem gera debito de 8h', () => {
@@ -141,31 +187,42 @@ test('sptCltCalc — continuacao pos-meia-noite (00:00 com Total SPT 00:00 apos 
   const dPrev = C.analyzeDayClt(rawPrev, null);
   const dNext = C.analyzeDayClt(rawNext, rawPrev);
 
-  assert.equal(dPrev.cltWorkedMin, 682); // 11:22
-  assert.equal(dPrev.excedenteMin, 202); // +03:22
+  assert.equal(dPrev.cltWorkedMin, 682); // 11:22 no Domingo -> 100% HE 100%
+  assert.equal(dPrev.he100Min, 682);
   assert.equal(dNext.isPostMidnightContinuation, true);
   assert.equal(dNext.isWorkedDay, false);
   assert.equal(dNext.cltWorkedMin, 0);
   assert.equal(dNext.targetMin, 0);
-  assert.equal(dNext.aMenosMin, 0);
+  assert.equal(dNext.debitoBhMin, 0);
 });
 
-test('sptCltCalc — summarizeMonthClt consolida excedentes, horas a menos e compensacao intra-mes', () => {
+test('sptCltCalc — summarizeMonthClt separa Saldo BH (50% x Debito BH em dias uteis) de HE 100% (FDS)', () => {
   const days = [
-    C.analyzeDayClt({ date: '01/10/2026', punches: ['08:54', '12:00', '13:29', '17:46', '', ''], total: '07:23:00' }), // -37m
-    C.analyzeDayClt({ date: '02/10/2026', punches: ['09:56', '18:26', '', '', '', ''], total: '07:30:00' }), // -30m
-    C.analyzeDayClt({ date: '03/10/2026', punches: ['09:25', '19:00', '', '', '', ''], total: '08:35:00' }), // +35m
-    C.analyzeDayClt({ date: '04/10/2026', punches: ['14:18', '23:39', '', '', '', ''], total: '08:21:00' }), // +21m
-    C.analyzeDayClt({ date: '05/10/2026', punches: ['', '', '', '', '', ''], total: '' }) // dia em branco
+    C.analyzeDayClt({ date: '01/10/2026', punches: ['08:54', '12:00', '13:29', '17:46', '', ''], total: '07:23:00' }), // Qui: -37m Débito BH
+    C.analyzeDayClt({ date: '02/10/2026', punches: ['09:56', '18:26', '', '', '', ''], total: '07:30:00' }), // Sex: -30m Débito BH
+    C.analyzeDayClt({ date: '03/10/2026', punches: ['09:25', '19:00', '', '', '', ''], total: '08:35:00' }), // Sáb: +08:35 HE 100%
+    C.analyzeDayClt({ date: '04/10/2026', punches: ['14:18', '23:39', '', '', '', ''], total: '08:21:00' }), // Dom: +08:21 HE 100%
+    C.analyzeDayClt({ date: '09/10/2026', punches: ['08:38', '11:52', '13:46', '20:03', '', ''], total: '09:31:00' }) // Sex: +01:31 HE 50%
   ];
 
   const m = C.summarizeMonthClt(days, { ymKey: '2026-10', monthLabel: '10/2026' });
-  assert.equal(m.workedDays, 4);
-  assert.equal(m.expectedJourneyMin, 4 * 480);
-  assert.equal(m.excedenteBrutoMin, 56); // 35 + 21
-  assert.equal(m.aMenosBrutoMin, 67); // 37 + 30
-  assert.equal(m.compensadoNoMesMin, 56); // min(56, 67)
-  assert.equal(m.excedenteLiquidoMin, 0);
-  assert.equal(m.aMenosLiquidoMin, 11); // 67 - 56 = 11 min a menos líquidos
-  assert.equal(m.saldoMesMin, -11);
+  assert.equal(m.workedDays, 5);
+  assert.equal(m.workedWeekdays, 3);
+  assert.equal(m.workedWeekendDays, 2);
+  assert.equal(m.expectedJourneyMin, 3 * 480); // Apenas os 3 dias úteis têm jornada ordinária de 8h
+  assert.equal(m.he50BrutoMin, 91); // +01:31
+  assert.equal(m.debitoBhBrutoMin, 67); // 37 + 30 = 01:07
+  assert.equal(m.compensadoBhMin, 67); // min(91, 67)
+  assert.equal(m.saldoBhMesMin, 24); // 91 - 67 = +00:24 de Saldo BH em dias úteis
+  assert.equal(m.he100BrutoMin, 515 + 501); // 08:35 + 08:21 = 16:56 (1016 min) em HE 100%
+  assert.equal(m.saldoMesMin, 24 + 1016);
+});
+
+test('sptReportModal — possui controle Modo com TSE XT / Digi como padrao e SPT Puro para dados brutos', () => {
+  const modalSrc = readFileSync(path.join(rootDir, 'content', 'modules', 'sptReportModal.js'), 'utf8');
+  assert.match(modalSrc, /let calcMode = 'xt_digi'/);
+  assert.match(modalSrc, /value="xt_digi" checked/);
+  assert.match(modalSrc, /value="spt_puro"/);
+  assert.match(modalSrc, /TSE XT \/ Digi/);
+  assert.match(modalSrc, /SPT Puro/);
 });

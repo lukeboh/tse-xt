@@ -1,5 +1,14 @@
 # Changelog — TSE XT
 
+## 1.2.12-Snapshot — 17/11/2026
+
+- **Novo controle de Modo no Relatório do SPT (`sptReportModal.js`)**: permite alternar entre **TSE XT / Digi** (padrão) e **SPT Puro (Bruto)** (exibe exclusivamente as marcações e o Total bruto do SPT, sem cálculos interpretativos), tanto na tela quanto no CSV e na impressão A4.
+- **Regras CLT / Digisystem no modo TSE XT / Digi (`sptCltCalc.js`)**:
+  - **Sábados, Domingos e Feriados com jornada ordinária `00:00`**: 100% das horas trabalhadas em fim de semana/feriado contam como **HE 100%** (e nunca geram "Horas a Menos" / Débito BH quando o plantão for inferior a 8h).
+  - **Tolerância CLT (art. 58, § 1º — até 10 min/dia)** nos dias úteis: variações diárias entre `07:50` e `08:10` contam como jornada normal (`08:00`), sem gerar HE 50% nem Débito BH.
+  - **Separação de colunas igual ao rodapé do Cartão Ponto da Digisystem**: **H. Normais**, **HE 50% (BH)**, **Débito BH**, **Saldo BH (Úteis = HE 50% − Débito BH)** e **HE 100% (FDS / >2h)**.
+- Verificação: **233 testes passando** e conferência ao vivo no Chrome (porta 9222).
+
 ## 1.2.11-Snapshot — 17/11/2026
 
 - **Posição do botão de liga/desliga no SPT**: quando o TSE XT está desligado no SPT (`body.je-xt-disabled.je-spt-page`), a pílula flutuante `#je-persistent-toggle-bar` passa a ficar posicionada no canto inferior direito (`bottom: 58px; right: 24px`), livre dos botões **Alterar Senha** e **Sair** do cabeçalho principal.

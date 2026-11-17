@@ -1,26 +1,51 @@
 /**
- * TSE XT - Motor de Cálculo CLT e Parser de Frequência do SPT
+ * TSE XT - Motor de Cálculo CLT / Digisystem e Parser de Frequência do SPT
  *
- * Regras aplicadas para consolidação mensal e espelho diário de prestadores:
- *   - Jornada diária padrão CLT: 8h00 (480 min) por dia trabalhado.
- *   - Intervalo intrajornada (almoço — CLT art. 71): mínimo de 1h00 (60 min)
- *     para jornadas superiores a 6h00 (360 min).
- *   - Horas excedentes: tempo líquido trabalhado acima de 8h00 no dia.
- *   - Horas a menos: tempo faltante para completar 8h00 no dia trabalhado.
- *   - Compensação dentro do mês (CLT art. 59 §6º): excedentes do mês
- *     compensam horas a menos dentro do próprio mês; o saldo líquido do mês
- *     mostra o excedente líquido ou o débito remanescente.
+ * Modos suportados pelo relatório:
+ *   1. 'xt_digi' (TSE XT / Digi — padrão):
+ *      - Jornada ordinária de 8h00 (480 min) apenas nos dias úteis trabalhados (Seg–Sex).
+ *      - Sábados, Domingos e Feriados possuem jornada ordinária 00:00: 100% das horas
+ *        trabalhadas contam como HE 100% (nunca gerando "Horas a Menos" / Débito BH
+ *        quando o plantão de fim de semana é inferior a 8h).
+ *      - Tolerância CLT (art. 58, § 1º): variações de até 10 minutos no total do dia útil
+ *        (entre 07:50 e 08:10) contam como jornada normal cumprida (08:00), sem gerar
+ *        HE 50% nem Débito BH.
+ *      - Separação entre Banco de Horas de Dias Úteis (HE 50% até 2h/dia × Débito BH)
+ *        e Horas Extras 100% (Sábados, Domingos, Feriados e excedente > 2h em dia útil),
+ *        espelhando o Cartão Ponto da Digisystem.
+ *      - Intervalo intrajornada (almoço — CLT art. 71): mínimo de 1h00 (60 min)
+ *        para jornadas superiores a 6h00 (360 min).
+ *   2. 'spt_puro' (SPT Puro — Dados Brutos):
+ *      - Exibe exclusivamente as marcações e o Total bruto retornados pelo SPT,
+ *        sem deduções adicionais nem cálculo de jornada/excedente/banco.
  */
 
 window.JEPessoasSptCltCalc = (function () {
   'use strict';
 
-  const DAILY_TARGET_MIN = 480; // 8h00
+  const DAILY_TARGET_MIN = 480; // 8h00 (Seg–Sex)
+  const DAILY_TOLERANCE_MIN = 10; // ±10 min diários (CLT art. 58 §1º)
   const MIN_LUNCH_SHIFT_MIN = 360; // > 6h00 exige intervalo mínimo de 1h
   const MIN_LUNCH_MIN = 60; // 1h00 de almoço
-  const MAX_DAILY_OVERTIME_MIN = 120; // 2h00 extras/dia (CLT art. 59)
+  const MAX_DAILY_OVERTIME_MIN = 120; // 2h00 extras 50%/dia útil (CLT art. 59)
 
   const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  // Feriados nacionais fixos (MM-DD) reconhecidos automaticamente no calendário
+  const FIXED_HOLIDAYS_MM_DD = new Set([
+    '01-01', // Confraternização Universal
+    '04-21', // Tiradentes
+    '05-01', // Dia do Trabalhador
+    '08-11', // Criação dos Cursos Jurídicos (Feriado Forense — Lei 5.010/66)
+    '09-07', // Independência do Brasil
+    '10-12', // Nossa Senhora Aparecida
+    '11-01', // Dia de Todos os Santos (Feriado Forense — Lei 5.010/66)
+    '11-02', // Finados
+    '11-15', // Proclamação da República
+    '11-20', // Dia Nacional de Zumbi e da Consciência Negra
+    '12-08', // Dia da Justiça (Feriado Forense)
+    '12-25'  // Natal
+  ]);
 
   function parseTimeMin(str) {
     if (!str || typeof str !== 'string') return 0;
@@ -204,6 +229,8 @@ window.JEPessoasSptCltCalc = (function () {
     const dt = new Date(y, mo - 1, d);
     if (isNaN(dt.getTime())) return null;
     const dow = dt.getDay();
+    const mmdd = `${m[2]}-${m[1]}`;
+    const isHoliday = FIXED_HOLIDAYS_MM_DD.has(mmdd);
     return {
       dateBr: `${m[1]}/${m[2]}/${m[3]}`,
       dateIso: `${m[3]}-${m[2]}-${m[1]}`,
@@ -211,11 +238,12 @@ window.JEPessoasSptCltCalc = (function () {
       monthLabel: `${m[2]}/${m[3]}`,
       dayOfWeek: dow,
       dayLabel: WEEKDAY_SHORT[dow] || '',
-      isWeekend: dow === 0 || dow === 6
+      isWeekend: dow === 0 || dow === 6,
+      isHoliday
     };
   }
 
-  function analyzeDayClt(rawDay, prevRawDay = null) {
+  function analyzeDayClt(rawDay, prevRawDay = null, options = {}) {
     const info = parseDateInfo(rawDay.date);
     const punches = (rawDay.punches || []).map((p) => String(p || '').trim());
     const nonEmptyPunches = punches.filter(Boolean);
@@ -223,12 +251,16 @@ window.JEPessoasSptCltCalc = (function () {
     const sptTotalMin = parseTimeMin(rawDay.total);
     const justificativa = String(rawDay.justificativa || '').trim();
 
+    const toleranceMin = typeof options.toleranceMin === 'number'
+      ? options.toleranceMin
+      : DAILY_TOLERANCE_MIN;
+
     // Detecta continuação pós-meia-noite (ex.: saída 23:59 no dia anterior e
     // entrada 00:00 no dia atual com Total SPT = 00:00 porque já foi somado no dia anterior).
     const prevEndedMidnight = !!(prevRawDay && Array.isArray(prevRawDay.punches) && prevRawDay.punches.some((p) => String(p || '').trim() === '23:59'));
     const isPostMidnightContinuation = punchCount >= 2 && punches[0] === '00:00' && sptTotalMin === 0 && prevEndedMidnight;
 
-    // Soma pares válidos (E1..S1, E2..S2, E3..S3, E4..S4) e intervalos entre pares
+    // Soma pares válidos (E1..S1, E2..S2, E3..S3) e intervalos entre pares
     let rawWorkedMin = 0;
     let measuredLunchMin = 0;
     let validPairs = 0;
@@ -275,9 +307,7 @@ window.JEPessoasSptCltCalc = (function () {
       const isCrossMidnightOrigin = sptTotalMin > totalPresenceMin && punches.includes('23:59');
 
       if (validPairs === 1 && measuredLunchMin === 0) {
-        // Apenas 1 par de batidas (sem registro de saída/retorno de almoço)
         if (isCrossMidnightOrigin) {
-          // No cruzamento de meia-noite o SPT já desconta 1h de intervalo no Total
           cltWorkedMin = sptTotalMin;
           effectiveLunchMin = MIN_LUNCH_MIN;
           lunchMode = 'auto-1h';
@@ -301,7 +331,6 @@ window.JEPessoasSptCltCalc = (function () {
           cltWorkedMin = baseWorked;
         }
       } else if (validPairs >= 2) {
-        // Há batida de intervalo
         if ((rawWorkedMin > MIN_LUNCH_SHIFT_MIN || totalPresenceMin > MIN_LUNCH_SHIFT_MIN) && measuredLunchMin < MIN_LUNCH_MIN) {
           const missingLunch = MIN_LUNCH_MIN - measuredLunchMin;
           const maxAllowed = Math.max(0, rawWorkedMin - missingLunch);
@@ -332,25 +361,93 @@ window.JEPessoasSptCltCalc = (function () {
       });
     }
 
+    const isHoliday = !!(info && info.isHoliday) || /feriado/i.test(justificativa);
+    const isWeekend = !!(info && info.isWeekend);
+    const isSpecialDay = isWeekend || isHoliday;
     const isWorkedDay = cltWorkedMin > 0;
-    const targetMin = isWorkedDay ? DAILY_TARGET_MIN : 0;
-    const excedenteMin = isWorkedDay ? Math.max(0, cltWorkedMin - targetMin) : 0;
-    const aMenosMin = isWorkedDay ? Math.max(0, targetMin - cltWorkedMin) : 0;
-    const deltaMin = isWorkedDay ? (cltWorkedMin - targetMin) : 0;
 
-    if (excedenteMin > MAX_DAILY_OVERTIME_MIN) {
+    // Regra TSE XT / Digisystem:
+    // - Sábados (Compensado), Domingos (DSR) e Feriados têm jornada ordinária 00:00.
+    //   100% do tempo trabalhado nesses dias vai para HE 100% (he100Min) e nunca gera Débito BH.
+    // - Dias úteis (Seg–Sex) têm jornada ordinária 08:00 (480 min) e tolerância CLT de ±10 min (art. 58 §1º).
+    let targetMin = 0;
+    let normalWorkedMin = 0;
+    let he50Min = 0;
+    let he100Min = 0;
+    let excedenteMin = 0;
+    let aMenosMin = 0;
+    let debitoBhMin = 0;
+    let deltaBhMin = 0;
+    let deltaMin = 0;
+    let withinTolerance = false;
+
+    if (isWorkedDay) {
+      if (isSpecialDay) {
+        targetMin = 0;
+        normalWorkedMin = 0;
+        he50Min = 0;
+        he100Min = cltWorkedMin;
+        excedenteMin = cltWorkedMin;
+        aMenosMin = 0;
+        debitoBhMin = 0;
+        deltaBhMin = 0;
+        deltaMin = cltWorkedMin;
+      } else {
+        targetMin = DAILY_TARGET_MIN;
+        const rawDiff = cltWorkedMin - targetMin;
+        withinTolerance = Math.abs(rawDiff) <= toleranceMin;
+        if (withinTolerance) {
+          normalWorkedMin = DAILY_TARGET_MIN;
+          he50Min = 0;
+          he100Min = 0;
+          excedenteMin = 0;
+          aMenosMin = 0;
+          debitoBhMin = 0;
+          deltaBhMin = 0;
+          deltaMin = 0;
+          if (rawDiff !== 0) {
+            alerts.push({
+              code: 'tolerancia-clt',
+              label: `Tol. CLT (${formatMin(rawDiff, true)})`,
+              tip: `Variação de ${formatMin(rawDiff, true)} dentro da tolerância legal de ±10 min/dia (CLT art. 58 §1º). Computado como jornada normal de 08:00.`
+            });
+          }
+        } else if (rawDiff > 0) {
+          normalWorkedMin = DAILY_TARGET_MIN;
+          he50Min = Math.min(rawDiff, MAX_DAILY_OVERTIME_MIN);
+          he100Min = Math.max(0, rawDiff - MAX_DAILY_OVERTIME_MIN);
+          excedenteMin = rawDiff;
+          aMenosMin = 0;
+          debitoBhMin = 0;
+          deltaBhMin = he50Min;
+          deltaMin = rawDiff;
+        } else {
+          normalWorkedMin = cltWorkedMin;
+          he50Min = 0;
+          he100Min = 0;
+          excedenteMin = 0;
+          aMenosMin = Math.abs(rawDiff);
+          debitoBhMin = Math.abs(rawDiff);
+          deltaBhMin = rawDiff;
+          deltaMin = rawDiff;
+        }
+      }
+    }
+
+    if (!isSpecialDay && excedenteMin > MAX_DAILY_OVERTIME_MIN) {
       alerts.push({
         code: 'acima-2h-extra',
         label: `> 2h extras (${formatMin(excedenteMin)})`,
-        tip: 'Excedente diário superior ao limite de 2h extras da CLT (art. 59).'
+        tip: 'Excedente em dia útil superior a 2h (CLT art. 59): 02:00 em HE 50% e o restante em HE 100%.'
       });
     }
 
-    if (isWorkedDay && info && info.isWeekend) {
+    if (isWorkedDay && isSpecialDay) {
+      const tipoLabel = isHoliday ? 'Feriado (HE 100%)' : (info && info.dayOfWeek === 0 ? 'Domingo (HE 100%)' : 'Sábado (HE 100%)');
       alerts.push({
         code: 'fim-de-semana',
-        label: info.dayOfWeek === 0 ? 'Domingo' : 'Sábado',
-        tip: 'Trabalho registrado em final de semana.'
+        label: tipoLabel,
+        tip: 'Jornada ordinária 00:00: 100% das horas trabalhadas contam como Hora Extra 100%.'
       });
     }
 
@@ -361,7 +458,9 @@ window.JEPessoasSptCltCalc = (function () {
       monthLabel: info ? info.monthLabel : '',
       dayOfWeek: info ? info.dayOfWeek : -1,
       dayLabel: info ? info.dayLabel : '',
-      isWeekend: info ? info.isWeekend : false,
+      isWeekend,
+      isHoliday,
+      isSpecialDay,
       punches: punches.slice(0, 6),
       punchCount,
       justificativa,
@@ -374,10 +473,18 @@ window.JEPessoasSptCltCalc = (function () {
       cltWorkedMin,
       isWorkedDay,
       isPostMidnightContinuation,
+      withinTolerance,
       targetMin,
+      normalWorkedMin,
+      he50Min,
+      he100Min,
       excedenteMin,
       aMenosMin,
+      debitoBhMin,
+      deltaBhMin,
       deltaMin,
+      accumulatedBhMin: 0,
+      accumulatedHe100Min: 0,
       accumulatedBalanceMin: 0,
       alerts
     };
@@ -448,23 +555,32 @@ window.JEPessoasSptCltCalc = (function () {
   function summarizeMonthClt(days, meta = {}) {
     const list = Array.isArray(days) ? days : [];
     let workedDays = 0;
+    let workedWeekdays = 0;
+    let workedWeekendDays = 0;
     let weekdaysInPeriod = 0;
     let weekdaysWithoutRecord = 0;
+    let justifiedDays = 0;
     let sptTotalMin = 0;
     let cltWorkedMin = 0;
+    let horasNormaisMin = 0;
     let lunchAdjustmentMin = 0;
     let expectedJourneyMin = 0;
+    let he50BrutoMin = 0;
+    let he100BrutoMin = 0;
     let excedenteBrutoMin = 0;
-    let aMenosBrutoMin = 0;
+    let debitoBhBrutoMin = 0;
     let intervaloCurtoDays = 0;
     let almocoAutoDays = 0;
     let batidaImparDays = 0;
     let acima2hExtraDays = 0;
     let fdsDays = 0;
-    let runningBalance = 0;
+    let runningBh = 0;
+    let runningHe100 = 0;
+    let runningTotalBalance = 0;
 
     const enrichedDays = list.map((d) => {
-      if (!d.isWeekend) {
+      if (d.justificativa) justifiedDays += 1;
+      if (!d.isSpecialDay) {
         weekdaysInPeriod += 1;
         if (!d.isWorkedDay && !d.justificativa && !d.isPostMidnightContinuation) {
           weekdaysWithoutRecord += 1;
@@ -472,13 +588,25 @@ window.JEPessoasSptCltCalc = (function () {
       }
       if (d.isWorkedDay) {
         workedDays += 1;
+        if (d.isSpecialDay) {
+          workedWeekendDays += 1;
+        } else {
+          workedWeekdays += 1;
+        }
         sptTotalMin += d.sptTotalMin;
         cltWorkedMin += d.cltWorkedMin;
+        horasNormaisMin += d.normalWorkedMin || 0;
         lunchAdjustmentMin += d.lunchDeductionDiffMin || 0;
-        expectedJourneyMin += d.targetMin;
-        excedenteBrutoMin += d.excedenteMin;
-        aMenosBrutoMin += d.aMenosMin;
-        runningBalance += d.deltaMin;
+        expectedJourneyMin += d.targetMin || 0;
+        he50BrutoMin += d.he50Min || 0;
+        he100BrutoMin += d.he100Min || 0;
+        excedenteBrutoMin += d.excedenteMin || 0;
+        debitoBhBrutoMin += d.debitoBhMin || 0;
+        runningBh += d.deltaBhMin || 0;
+        runningHe100 += d.he100Min || 0;
+        runningTotalBalance += d.deltaMin || 0;
+      } else if (d.sptTotalMin > 0) {
+        sptTotalMin += d.sptTotalMin;
       }
       if (d.alerts && d.alerts.length) {
         if (d.alerts.some((a) => a.code === 'intervalo-curto')) intervaloCurtoDays += 1;
@@ -488,31 +616,54 @@ window.JEPessoasSptCltCalc = (function () {
         if (d.alerts.some((a) => a.code === 'fim-de-semana')) fdsDays += 1;
       }
       return Object.assign({}, d, {
-        accumulatedBalanceMin: d.isWorkedDay ? runningBalance : runningBalance
+        accumulatedBhMin: runningBh,
+        accumulatedHe100Min: runningHe100,
+        accumulatedBalanceMin: runningTotalBalance
       });
     });
 
-    const compensadoNoMesMin = Math.min(excedenteBrutoMin, aMenosBrutoMin);
-    const excedenteLiquidoMin = Math.max(0, excedenteBrutoMin - compensadoNoMesMin);
-    const aMenosLiquidoMin = Math.max(0, aMenosBrutoMin - compensadoNoMesMin);
-    const saldoMesMin = cltWorkedMin - expectedJourneyMin;
+    // Na regra Digisystem/CLT:
+    // - HE 50% (dias úteis) e Débito BH (dias úteis) compensam-se entre si no Banco de Horas (saldoBhMesMin).
+    // - HE 100% (sábados, domingos, feriados e >2h úteis) permanece integral em he100BrutoMin.
+    const compensadoBhMin = Math.min(he50BrutoMin, debitoBhBrutoMin);
+    const he50LiquidoMin = Math.max(0, he50BrutoMin - compensadoBhMin);
+    const debitoBhLiquidoMin = Math.max(0, debitoBhBrutoMin - compensadoBhMin);
+    const saldoBhMesMin = he50BrutoMin - debitoBhBrutoMin;
+
+    // Mantém campos compatíveis para visão geral (Saldo BH + HE 100%)
+    const compensadoNoMesMin = compensadoBhMin;
+    const excedenteLiquidoMin = he50LiquidoMin + he100BrutoMin;
+    const aMenosBrutoMin = debitoBhBrutoMin;
+    const aMenosLiquidoMin = debitoBhLiquidoMin;
+    const saldoMesMin = saldoBhMesMin + he100BrutoMin;
 
     return {
       ymKey: meta.ymKey || (enrichedDays[0] && enrichedDays[0].ymKey) || '',
       monthLabel: meta.monthLabel || (enrichedDays[0] && enrichedDays[0].monthLabel) || '',
       workedDays,
+      workedWeekdays,
+      workedWeekendDays,
       weekdaysInPeriod,
       weekdaysWithoutRecord,
+      justifiedDays,
       sptTotalMin,
       cltWorkedMin,
+      horasNormaisMin,
       lunchAdjustmentMin,
       expectedJourneyMin,
       fullMonthReferenceMin: weekdaysInPeriod * DAILY_TARGET_MIN,
+      he50BrutoMin,
+      he100BrutoMin,
       excedenteBrutoMin,
+      debitoBhBrutoMin,
       aMenosBrutoMin,
+      compensadoBhMin,
       compensadoNoMesMin,
+      he50LiquidoMin,
+      debitoBhLiquidoMin,
       excedenteLiquidoMin,
       aMenosLiquidoMin,
+      saldoBhMesMin,
       saldoMesMin,
       alerts: {
         intervaloCurtoDays,
@@ -530,17 +681,28 @@ window.JEPessoasSptCltCalc = (function () {
     const acc = {
       monthsCount: list.length,
       workedDays: 0,
+      workedWeekdays: 0,
+      workedWeekendDays: 0,
       weekdaysInPeriod: 0,
       weekdaysWithoutRecord: 0,
+      justifiedDays: 0,
       sptTotalMin: 0,
       cltWorkedMin: 0,
+      horasNormaisMin: 0,
       lunchAdjustmentMin: 0,
       expectedJourneyMin: 0,
+      he50BrutoMin: 0,
+      he100BrutoMin: 0,
       excedenteBrutoMin: 0,
+      debitoBhBrutoMin: 0,
       aMenosBrutoMin: 0,
+      compensadoBhMin: 0,
       compensadoNoMesMin: 0,
+      he50LiquidoMin: 0,
+      debitoBhLiquidoMin: 0,
       excedenteLiquidoMin: 0,
       aMenosLiquidoMin: 0,
+      saldoBhMesMin: 0,
       saldoMesMin: 0,
       alerts: {
         intervaloCurtoDays: 0,
@@ -552,17 +714,28 @@ window.JEPessoasSptCltCalc = (function () {
     };
     list.forEach((m) => {
       acc.workedDays += m.workedDays || 0;
+      acc.workedWeekdays += m.workedWeekdays || 0;
+      acc.workedWeekendDays += m.workedWeekendDays || 0;
       acc.weekdaysInPeriod += m.weekdaysInPeriod || 0;
       acc.weekdaysWithoutRecord += m.weekdaysWithoutRecord || 0;
+      acc.justifiedDays += m.justifiedDays || 0;
       acc.sptTotalMin += m.sptTotalMin || 0;
       acc.cltWorkedMin += m.cltWorkedMin || 0;
+      acc.horasNormaisMin += m.horasNormaisMin || 0;
       acc.lunchAdjustmentMin += m.lunchAdjustmentMin || 0;
       acc.expectedJourneyMin += m.expectedJourneyMin || 0;
+      acc.he50BrutoMin += m.he50BrutoMin || 0;
+      acc.he100BrutoMin += m.he100BrutoMin || 0;
       acc.excedenteBrutoMin += m.excedenteBrutoMin || 0;
+      acc.debitoBhBrutoMin += m.debitoBhBrutoMin || 0;
       acc.aMenosBrutoMin += m.aMenosBrutoMin || 0;
+      acc.compensadoBhMin += m.compensadoBhMin || 0;
       acc.compensadoNoMesMin += m.compensadoNoMesMin || 0;
+      acc.he50LiquidoMin += m.he50LiquidoMin || 0;
+      acc.debitoBhLiquidoMin += m.debitoBhLiquidoMin || 0;
       acc.excedenteLiquidoMin += m.excedenteLiquidoMin || 0;
       acc.aMenosLiquidoMin += m.aMenosLiquidoMin || 0;
+      acc.saldoBhMesMin += m.saldoBhMesMin || 0;
       acc.saldoMesMin += m.saldoMesMin || 0;
       if (m.alerts) {
         acc.alerts.intervaloCurtoDays += m.alerts.intervaloCurtoDays || 0;
@@ -586,6 +759,7 @@ window.JEPessoasSptCltCalc = (function () {
 
   return {
     DAILY_TARGET_MIN,
+    DAILY_TOLERANCE_MIN,
     MIN_LUNCH_SHIFT_MIN,
     MIN_LUNCH_MIN,
     MAX_DAILY_OVERTIME_MIN,
