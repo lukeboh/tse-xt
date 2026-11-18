@@ -1,5 +1,17 @@
 # Changelog — TSE XT
 
+## 1.2.17-Snapshot — 18/11/2026
+
+- **Bloco A — Regras de cálculo e fiscalização do SPT (`sptCltCalc.js`, `sptReportModal.js`, `sptModernizer.js`, `spt-gestao.css`)**:
+  - **A1**: Home Office presumido (`08:00`) **desligado por padrão** (com migração única de preferências salvas `hoDefaultMigratedV2`), coluna visível **`Dias úteis sem registro`** quando desligado (sem gerar débito automático) e, quando ligado, aplicação a todo dia útil sem batida e sem justificativa (sem exigir dia presencial) com destaque visual `.je-spt-row-homeoffice`.
+  - **A2**: Removida a heurística de alocação de segunda/sexta como Reposição de DSR e substituída pelo alerta objetivo **"Trabalho em domingo / >6 dias consecutivos sem folga identificada (CLT art. 67; OJ 410 TST)"**, que considera a sequência na virada entre meses consecutivos e não altera nenhum total.
+  - **A3**: Mantidas **`Saldo BH (Úteis) = HE 50% − Débito BH`** e **`HE 100% (FDS)`** como colunas independentes (fiéis ao cartão ponto da empresa) e renomeada a coluna combinada para **`Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)`**, explicando no anexo que mistura adicionais de 50% e 100%.
+  - **A4**: Removidos os feriados forenses (`11/08`, `01/11`, `08/12`) da lista padrão CLT; incluídos **Sexta-feira Santa** (calculada a partir da Páscoa) e **`30/11`** (DF); adicionado controle editável **`Feriados (+/-)`** no modal e listagem no Anexo dos feriados aplicados no período.
+  - **A5**: Adicionada opção configurável **"Descontar 1h de intervalo não registrado em Sáb/Dom/Feriado (>6h)"**, ligada por padrão (CLT art. 71 / SPT) e que, quando desligada, reproduz o cartão Digisystem.
+  - **A6**: `getLocalTodayIso` passa a usar a data local (`America/Sao_Paulo`) em vez de `toISOString()` (UTC).
+  - **A7**: O Anexo de Interpretação lista todas as opções ativas (modo, Home Office, desconto de intervalo em FDS/feriado, tolerância e feriados aplicados no período).
+- Verificação: **238 testes de comportamento passando**.
+
 ## 1.2.16-Snapshot — 18/11/2026
 
 - **Coluna `HE Líquida (após Débitos)` no Relatório do SPT (`sptReportModal.js`)**:

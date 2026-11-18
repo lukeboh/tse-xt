@@ -38,7 +38,9 @@ window.JEPessoasSptReport = (function () {
   let workerSearchQuery = '';
   let selectedSingleWorkerCode = '__ALL__'; // '__ALL__' | '__CUSTOM__' | codigo específico
   let calcMode = 'xt_digi'; // 'xt_digi' (padrão) | 'spt_puro'
-  let presumeHomeOffice = true; // padrão: considera dias úteis sem batida como Home Office (8h) + Reposição de DSR
+  let presumeHomeOffice = false; // padrão de fiscalização: desligado (não presume 8h sem batida)
+  let deductAutoLunchOnSpecialDays = true; // padrão CLT art. 71 / SPT: desconta 1h em Sáb/Dom/Fer >6h com 1 par
+  let customHolidaysText = ''; // ex.: "+11/08, -30/11, 2026-02-17:Carnaval"
   let detailMode = 'mensal'; // 'mensal' | 'diario'
   let showOnlyActiveDaysInDaily = false;
   let currentResult = null;
@@ -196,7 +198,7 @@ window.JEPessoasSptReport = (function () {
     return list;
   }
 
-  async function fetchWorkerMonthSlice(worker, slice, unitId, buscarAbaixo = true, applyHomeOffice = true) {
+  async function fetchWorkerMonthSlice(worker, slice, unitId, buscarAbaixo = true, options = {}) {
     const { csrf } = await ensureMetadataLoaded();
     const periodInfo = findPeriodForContractAndMonth(worker.contrato, slice.periodoDescricao);
     const body = new URLSearchParams({
@@ -207,7 +209,7 @@ window.JEPessoasSptReport = (function () {
       periodoDtInicio: slice.dtInicioBr,
       periodoDtFinal: slice.dtFinalBr,
       codContrato: worker.contrato || '',
-      codTSE: worker.cpf || '',
+      codTSE: worker.codTse || worker.cpf || '',
       cpf: worker.cpf || '',
       numContrato: worker.numContrato || '',
       cdFunc: worker.codigo || '',
@@ -237,11 +239,22 @@ window.JEPessoasSptReport = (function () {
     const parsed = calc().parseWorkerSheetDoc(doc, {
       dtInicioIso: slice.dtInicioIso,
       dtFinalIso: slice.dtFinalIso
+    }, {
+      deductAutoLunchOnSpecialDays: options.deductAutoLunchOnSpecialDays !== undefined
+        ? !!options.deductAutoLunchOnSpecialDays
+        : deductAutoLunchOnSpecialDays,
+      customHolidays: options.customHolidays !== undefined ? options.customHolidays : customHolidaysText
     });
     const summary = calc().summarizeMonthClt(parsed.days, {
       ymKey: slice.ymKey,
       monthLabel: slice.periodoDescricao,
-      presumeHomeOffice: !!applyHomeOffice
+      presumeHomeOffice: options.presumeHomeOffice !== undefined ? !!options.presumeHomeOffice : presumeHomeOffice,
+      deductAutoLunchOnSpecialDays: options.deductAutoLunchOnSpecialDays !== undefined
+        ? !!options.deductAutoLunchOnSpecialDays
+        : deductAutoLunchOnSpecialDays,
+      customHolidays: options.customHolidays !== undefined ? options.customHolidays : customHolidaysText,
+      initialStreak: options.initialStreak || 0,
+      prevDateIso: options.prevDateIso || ''
     });
     return {
       loggedOut: false,
@@ -290,6 +303,9 @@ window.JEPessoasSptReport = (function () {
       contrato: overlay.querySelector('#je-spt-rep-contrato')?.value || '',
       calcMode,
       presumeHomeOffice,
+      hoDefaultMigratedV2: true,
+      deductAutoLunchOnSpecialDays,
+      customHolidays: customHolidaysText,
       detailMode
     };
     try {
@@ -301,11 +317,28 @@ window.JEPessoasSptReport = (function () {
     if (!overlay) return;
     const hoCheck = overlay.querySelector('#je-spt-rep-homeoffice');
     const hoWrap = overlay.querySelector('#je-spt-rep-ho-wrap');
-    if (!hoCheck) return;
-    hoCheck.checked = presumeHomeOffice;
-    hoCheck.disabled = running || calcMode === 'spt_puro';
+    const spLunchCheck = overlay.querySelector('#je-spt-rep-special-lunch');
+    const spLunchWrap = overlay.querySelector('#je-spt-rep-special-lunch-wrap');
+    const holidaysInput = overlay.querySelector('#je-spt-rep-holidays');
+    const isRaw = calcMode === 'spt_puro';
+
+    if (hoCheck) {
+      hoCheck.checked = presumeHomeOffice;
+      hoCheck.disabled = running || isRaw;
+    }
     if (hoWrap) {
-      hoWrap.style.opacity = calcMode === 'spt_puro' ? '0.45' : '1';
+      hoWrap.style.opacity = isRaw ? '0.45' : '1';
+    }
+    if (spLunchCheck) {
+      spLunchCheck.checked = deductAutoLunchOnSpecialDays;
+      spLunchCheck.disabled = running || isRaw;
+    }
+    if (spLunchWrap) {
+      spLunchWrap.style.opacity = isRaw ? '0.45' : '1';
+    }
+    if (holidaysInput) {
+      holidaysInput.value = customHolidaysText;
+      holidaysInput.disabled = running || isRaw;
     }
   }
 
@@ -372,7 +405,7 @@ window.JEPessoasSptReport = (function () {
             <div class="je-spt-rep-field je-spt-rep-field-mode" title="Define se o relatório aplica as regras de cálculo CLT / Digisystem (padrão) ou exibe apenas os dados brutos da catraca do SPT">
               <span class="je-spt-rep-label-text" title="Modo de apuração do relatório">Modo</span>
               <div class="je-spt-segmented" role="radiogroup" aria-label="Modo de cálculo do relatório">
-                <label class="je-spt-seg-item is-active" id="je-spt-seg-mode-xt" title="Regras CLT / Digisystem (Padrão): jornada 8h Seg–Sex, tolerância ±10 min (art. 58 §1º), Sáb/Dom/Feriado com jornada 00:00 (100% HE 100%), separação entre Saldo BH (50% × Débito) e HE 100%, e desconto de débitos nas horas extras (HE Líquida)">
+                <label class="je-spt-seg-item is-active" id="je-spt-seg-mode-xt" title="Regras CLT / Digisystem (Padrão): jornada 8h Seg–Sex, tolerância ±10 min (art. 58 §1º), Sáb/Dom/Feriado com jornada 00:00 (100% HE 100%) e separação independente entre Saldo BH (50% − Débito BH) e HE 100%">
                   <input type="radio" name="je-spt-rep-mode" value="xt_digi" checked>
                   <span>TSE XT / Digi</span>
                 </label>
@@ -409,10 +442,22 @@ window.JEPessoasSptReport = (function () {
               <div class="je-recog-team-list" id="je-spt-rep-team-list"></div>
             </details>
 
-            <label class="je-spt-rep-check-inline je-spt-ho-toggle" id="je-spt-rep-ho-wrap" title="Nos dias úteis sem batida na catraca, considera 8h cumpridas em Home Office (sem gerar batidas fictícias) e aplica folga automática de Reposição de DSR quando o prestador trabalhou no domingo / mais de 6 dias seguidos (CLT art. 67)">
-              <input type="checkbox" id="je-spt-rep-homeoffice" checked>
-              <span>Presumir <strong>Home Office (8h)</strong> em dias úteis sem batida + <strong>Reposição de DSR</strong> (&gt; 6d seguidos)</span>
-            </label>
+            <div class="je-spt-rep-options-row">
+              <label class="je-spt-rep-check-inline je-spt-ho-toggle" id="je-spt-rep-ho-wrap" title="Desligado por padrão para fiscalização (mostra coluna 'Dias s/ Reg.' sem gerar débito automático). Quando ligado, presume 08:00 em todo dia útil sem batida e sem justificativa até a data atual, com destaque visual próprio">
+                <input type="checkbox" id="je-spt-rep-homeoffice">
+                <span>Presumir <strong>Home Office (8h)</strong> em dias úteis sem batida</span>
+              </label>
+
+              <label class="je-spt-rep-check-inline je-spt-ho-toggle" id="je-spt-rep-special-lunch-wrap" title="Ligado por padrão (CLT art. 71 / SPT): desconta 1h de intervalo em Sáb/Dom/Feriado com jornada > 6h e apenas 1 par de batidas. Desligado: reproduz o cartão ponto Digisystem (sem desconto de intervalo não batido em fim de semana)">
+                <input type="checkbox" id="je-spt-rep-special-lunch" checked>
+                <span>Descontar <strong>1h de intervalo</strong> não registrado em Sáb/Dom/Feriado (&gt;6h)</span>
+              </label>
+
+              <div class="je-spt-rep-holidays-box" title="Personalize a lista de feriados (padrão: feriados civis nacionais + Sexta-feira Santa + 30/11 DF; sem feriados forenses 11/08, 01/11 e 08/12). Use +DD/MM ou AAAA-MM-DD:Nome para adicionar e -DD/MM para remover">
+                <label for="je-spt-rep-holidays">Feriados (+/-):</label>
+                <input type="text" id="je-spt-rep-holidays" class="je-spt-input je-spt-holidays-input" placeholder="Ex.: +11/08, -30/11, 2026-02-17:Carnaval" title="Adicione (+DD/MM ou AAAA-MM-DD:Nome) ou remova (-DD/MM) feriados da lista padrão CLT/DF">
+              </div>
+            </div>
 
             <div class="je-audit-actions je-spt-rep-actions">
               <button type="button" class="je-audit-btn je-audit-btn-primary" id="je-spt-rep-run" title="Consulta o SPT para todos os prestadores selecionados e gera o relatório consolidado">
@@ -522,14 +567,33 @@ window.JEPessoasSptReport = (function () {
       markDirtySelection();
     });
 
+    async function recomputeAndRenderCurrentResult() {
+      if (!currentResult) return;
+      currentResult = calc().recomputeReportWithOptions(currentResult, {
+        presumeHomeOffice,
+        deductAutoLunchOnSpecialDays,
+        customHolidays: customHolidaysText
+      });
+      await saveStoredReport(currentResult);
+      renderResult(currentResult);
+    }
+
     overlay.querySelector('#je-spt-rep-homeoffice').addEventListener('change', async (e) => {
       presumeHomeOffice = !!e.target.checked;
       savePrefs();
-      if (currentResult) {
-        currentResult = calc().recomputeReportWithOptions(currentResult, { presumeHomeOffice });
-        await saveStoredReport(currentResult);
-        renderResult(currentResult);
-      }
+      await recomputeAndRenderCurrentResult();
+    });
+
+    overlay.querySelector('#je-spt-rep-special-lunch').addEventListener('change', async (e) => {
+      deductAutoLunchOnSpecialDays = !!e.target.checked;
+      savePrefs();
+      await recomputeAndRenderCurrentResult();
+    });
+
+    overlay.querySelector('#je-spt-rep-holidays').addEventListener('change', async (e) => {
+      customHolidaysText = String(e.target.value || '').trim();
+      savePrefs();
+      await recomputeAndRenderCurrentResult();
     });
 
     overlay.querySelectorAll('input[name="je-spt-rep-mode"]').forEach((radio) => {
@@ -774,6 +838,7 @@ window.JEPessoasSptReport = (function () {
         codigo: w.codigo,
         matricula: w.matricula,
         cpf: w.cpf,
+        codTse: w.codTse || w.cpf,
         contrato: w.contrato,
         numContrato: w.numContrato,
         nome: w.nome,
@@ -781,11 +846,20 @@ window.JEPessoasSptReport = (function () {
         months: []
       };
 
+      let runningStreak = 0;
+      let prevDateIso = '';
+
       for (const slice of slices) {
         if (aborted) break;
         setProgress(doneSteps, totalSteps, `${w.nome} · ${slice.periodoDescricao}`);
         try {
-          const res = await fetchWorkerMonthSlice(w, slice, unit.id, buscarAbaixo, presumeHomeOffice);
+          const res = await fetchWorkerMonthSlice(w, slice, unit.id, buscarAbaixo, {
+            presumeHomeOffice,
+            deductAutoLunchOnSpecialDays,
+            customHolidays: customHolidaysText,
+            initialStreak: runningStreak,
+            prevDateIso
+          });
           if (res.loggedOut) {
             loggedOut = true;
             break;
@@ -794,6 +868,8 @@ window.JEPessoasSptReport = (function () {
             wEntry.empresa = res.meta.contrato;
           }
           wEntry.months.push(res.summary);
+          runningStreak = res.summary.endingStreak || 0;
+          prevDateIso = res.summary.endingDateIso || '';
         } catch (err) {
           console.warn('[TSE XT] Erro ao consultar prestador no SPT:', w.nome, slice.periodoDescricao, err);
         }
@@ -806,7 +882,7 @@ window.JEPessoasSptReport = (function () {
     }
 
     const report = {
-      version: 3,
+      version: 4,
       generatedAt: new Date().toISOString(),
       issuer: loggedUserName(),
       unitId: unit.id,
@@ -814,6 +890,8 @@ window.JEPessoasSptReport = (function () {
       unitPath: unit.parentPath,
       buscarAbaixo,
       presumeHomeOffice,
+      deductAutoLunchOnSpecialDays,
+      customHolidays: customHolidaysText,
       fromIso,
       toIso,
       fromBr: calc().isoToBr(fromIso),
@@ -834,13 +912,16 @@ window.JEPessoasSptReport = (function () {
   }
 
   function renderBadgesHTML(alertsObj) {
-    if (!alertsObj) return '<span class="je-spt-badge-ok">Regular</span>';
+    if (!alertsObj) return '<span class="je-spt-badge-ok" title="Nenhuma ocorrência ou alerta trabalhista identificado no período">Regular</span>';
     const badges = [];
     if (alertsObj.homeOfficeDays > 0) {
-      badges.push(`<span class="je-occ-perda je-occ-perda-info" title="Dias úteis sem marcação na catraca contabilizados como Home Office (8h)">Home Office (${alertsObj.homeOfficeDays}d)</span>`);
+      badges.push(`<span class="je-occ-perda je-occ-perda-info" title="Dias úteis sem marcação na catraca contabilizados como Home Office presumido (8h)">HO presumido (${alertsObj.homeOfficeDays}d)</span>`);
     }
-    if (alertsObj.dsrCompensatedDays > 0) {
-      badges.push(`<span class="je-occ-perda je-occ-perda-neutral" title="Folga compensatória automática (CLT art. 67 / OJ 410 TST) após domingo trabalhado / mais de 6 dias seguidos">Reposição DSR (${alertsObj.dsrCompensatedDays}d)</span>`);
+    if (!presumeHomeOffice && alertsObj.weekdaysWithoutRecord > 0) {
+      badges.push(`<span class="je-occ-perda je-occ-perda-neutral" title="Dias úteis sem batida na catraca e sem justificativa lançada no SPT (não geram débito automático com Home Office desligado)">Sem registro (${alertsObj.weekdaysWithoutRecord}d)</span>`);
+    }
+    if (alertsObj.dsrAlertDays > 0) {
+      badges.push(`<span class="je-occ-perda je-occ-perda-warn" title="Trabalho em domingo / >6 dias consecutivos sem folga identificada (CLT art. 67; OJ 410 TST). Alerta de fiscalização: não altera os totais">Dom / &gt;6d s/ folga (${alertsObj.dsrAlertDays}d)</span>`);
     }
     if (alertsObj.intervaloCurtoDays > 0) {
       badges.push(`<span class="je-occ-perda je-occ-perda-warn" title="Dias com intervalo de almoço registrado inferior a 1h (ajustado para 1h conforme art. 71 da CLT)">Almoço &lt;1h (${alertsObj.intervaloCurtoDays}d)</span>`);
@@ -868,9 +949,9 @@ window.JEPessoasSptReport = (function () {
     (day.alerts || []).forEach((a) => {
       const tone = a.code === 'acima-2h-extra'
         ? 'danger'
-        : (a.code === 'intervalo-curto' || a.code === 'batida-impar'
+        : (a.code === 'intervalo-curto' || a.code === 'batida-impar' || a.code === 'dsr-alerta'
           ? 'warn'
-          : (a.code === 'reposicao-dsr' || a.code === 'feriado' ? 'neutral' : 'info'));
+          : (a.code === 'sem-registro' || a.code === 'feriado' ? 'neutral' : 'info'));
       parts.push(`<span class="je-occ-perda je-occ-perda-${tone}" title="${escapeHTML(a.tip)}">${escapeHTML(a.label)}</span>`);
     });
     return parts.join(' ') || '<span title="Sem ocorrências ou alertas neste dia">·</span>';
@@ -880,37 +961,77 @@ window.JEPessoasSptReport = (function () {
     const presU = m.workedWeekdays || 0;
     const ho = m.homeOfficeDays || 0;
     const fds = m.workedWeekendDays || 0;
-    const dsr = m.dsrCompensatedDays || 0;
     const parts = [`${presU}u`];
     if (ho > 0) parts.push(`${ho}ho`);
     parts.push(`${fds}f`);
-    if (dsr > 0) parts.push(`${dsr}dsr`);
     return `<strong>${m.workedDays}d</strong><br><small>${parts.join(' + ')}</small>`;
   }
 
   // ---------------------------------------------------------------------------
   // ANEXO DE INTERPRETAÇÃO, FÓRMULAS E REGRAS DE APURAÇÃO
   // ---------------------------------------------------------------------------
-  function renderInterpretationAnnexHTML(isPrint = false) {
+  function renderInterpretationAnnexHTML(report = currentResult, isPrint = false) {
     const annexClass = isPrint ? 'je-print-annex' : 'je-spt-annex';
+    const isRaw = calcMode === 'spt_puro';
+    const fromIso = (report && report.fromIso) || overlay?.querySelector('#je-spt-rep-from')?.value || '';
+    const toIso = (report && report.toIso) || overlay?.querySelector('#je-spt-rep-to')?.value || '';
+    const activeHolidays = calc().listAppliedHolidaysInRange(fromIso, toIso, customHolidaysText);
+    const holidaysSummaryHTML = activeHolidays.length > 0
+      ? activeHolidays.map((h) => `<code>${escapeHTML(h.dateBr)}</code> (${escapeHTML(h.name)})`).join(' · ')
+      : 'Nenhum feriado civil/distrital no período consultado';
+    const customHolidaysNote = customHolidaysText
+      ? ` <small>(Personalização aplicada: <code>${escapeHTML(customHolidaysText)}</code>)</small>`
+      : ' <small>(Padrão CLT + Sexta-feira Santa + 30/11 DF; sem feriados forenses 11/08, 01/11 e 08/12)</small>';
+
     return `
       <section class="${annexClass}" aria-label="Anexo de Interpretação do Relatório">
         <div class="je-spt-annex-header">
-          <h3 class="je-spt-annex-title">Anexo — Guia de Interpretação, Fórmulas e Regras de Apuração (TSE XT / Digi)</h3>
+          <h3 class="je-spt-annex-title">Anexo — Guia de Interpretação, Parâmetros Ativos, Fórmulas e Regras de Apuração</h3>
           <p class="je-spt-annex-lead">
-            Este guia explica o significado de cada coluna do relatório, como a jornada normal de <strong>8h00</strong> é contabilizada e como eventuais <strong>débitos de horas nos dias úteis</strong> são automaticamente abatidos das <strong>Horas Extras</strong> no fechamento mensal.
+            Este guia registra os parâmetros ativos nesta emissão, o significado de cada coluna do relatório e a distinção entre as regras do cartão ponto da empresa e a visão analítica de fiscalização do TSE XT.
           </p>
         </div>
 
-        <div class="je-spt-annex-highlight" title="Regra de compensação automática: horas faltantes nos dias úteis descontam primeiro das HE 50% e, se necessário, das HE 100%">
-          <strong>Como funciona o desconto de horas devidas (Débito BH) nas Horas Extras?</strong>
+        <div class="je-spt-annex-table-wrap">
+          <table class="je-spt-annex-table">
+            <thead>
+              <tr>
+                <th colspan="2">Parâmetros Ativos nesta Apuração</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Modo de cálculo</strong></td>
+                <td>${isRaw ? '<strong>SPT Puro (Dados Brutos)</strong> — exibe exclusivamente as batidas e a soma da coluna Total da catraca do SPT.' : '<strong>TSE XT / Digi</strong> — aplica jornada CLT de 8h/dia útil, tolerância legal e separação entre Banco de Horas (50%) e HE 100%.'}</td>
+              </tr>
+              <tr>
+                <td><strong>Home Office presumido (8h)</strong></td>
+                <td>${presumeHomeOffice ? '<strong>Ativado pelo usuário</strong> — todo dia útil sem batida e sem justificativa até a data local atual recebe 08:00 de jornada ordinária presumida (destacado visualmente).' : '<strong>Desligado (padrão de fiscalização)</strong> — dias úteis sem catraca e sem justificativa aparecem na coluna <em>Dias úteis sem registro</em>, sem gerar batida nem débito automático.'}</td>
+              </tr>
+              <tr>
+                <td><strong>Desconto de 1h de intervalo em Sáb/Dom/Feriado (&gt;6h, 1 par)</strong></td>
+                <td>${deductAutoLunchOnSpecialDays ? '<strong>Ativado (padrão CLT art. 71 / SPT)</strong> — plantões de fim de semana ou feriado superiores a 6h com apenas 1 par de batidas descontam 01:00 de intervalo intrajornada.' : '<strong>Desligado (reproduz cartão Digisystem)</strong> — plantões de Sáb/Dom/Feriado com apenas 1 par de batidas mantêm a duração bruta entre entrada e saída, sem descontar 1h de intervalo não batido.'}</td>
+              </tr>
+              <tr>
+                <td><strong>Tolerância nos dias úteis</strong></td>
+                <td><strong>±10 minutos/dia</strong> (CLT art. 58, § 1º — variações entre <code>07:50</code> e <code>08:10</code> contam como jornada normal de <code>08:00</code>, sem gerar HE 50% nem Débito BH).</td>
+              </tr>
+              <tr>
+                <td><strong>Feriados aplicados no período (${escapeHTML(calc().isoToBr(fromIso))} a ${escapeHTML(calc().isoToBr(toIso))})</strong></td>
+                <td>${holidaysSummaryHTML}${customHolidaysNote}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="je-spt-annex-highlight" title="Esclarecimento sobre a separação de adicionais no cartão da empresa vs. soma indicativa do TSE XT">
+          <strong>Independência entre Saldo BH (Úteis 50%) e HE 100% (FDS) vs. Visão TSE XT</strong>
           <p>
-            Sim, o cálculo considera integralmente o cumprimento da jornada normal de <strong>08:00/dia útil</strong>. Caso o prestador trabalhe menos de 08:00 em um dia útil (além da tolerância legal de 10 minutos), a diferença faltante é registrada na coluna <strong>Débito BH</strong> e abatida das Horas Extras em duas etapas automáticas:
+            No Cartão Ponto da empresa (Digisystem), o <strong>Saldo BH (Úteis) = HE 50% − Débito BH</strong> e as <strong>HE 100% (FDS)</strong> são mantidos em colunas <strong>independentes</strong>: a empresa não consome automaticamente as horas extras 100% com débitos de dias úteis (50%), pois possuem adicionais e naturezas distintas.
           </p>
-          <ol>
-            <li><strong>1ª Etapa — Abatimento nas HE 50% (Dias Úteis):</strong> Todo o <strong>Débito BH</strong> do mês é descontado primeiro das horas extras de dias úteis (<strong>HE 50%</strong>), resultando na coluna <code>Saldo BH (Úteis) = HE 50% − Débito BH</code>. Se o prestador deve mais horas nos dias úteis do que fez de HE 50%, o <strong>Saldo BH (Úteis)</strong> fica <strong>negativo</strong>.</li>
-            <li><strong>2ª Etapa — Abatimento no Total de Horas Extras (incluindo HE 100%):</strong> A última coluna numérica, <strong>HE Líquida (após Débitos)</strong>, aplica a fórmula <code>HE Líquida = Saldo BH (Úteis) + HE 100% (FDS)</code> (o que equivale a <code>(HE 50% + HE 100%) − Débito BH</code>). Assim, qualquer saldo negativo remanescente dos dias úteis é <strong>automaticamente descontado das HE 100%</strong> antes de apresentar o saldo final líquido do mês.</li>
-          </ol>
+          <p>
+            Para apoiar o fiscal que deseja verificar o balanço global de horas caso os débitos remanescentes de jornada normal sejam confrontados com o total de horas extras, a última coluna numérica — <strong>Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)</strong> — apresenta a soma aritmética simples (1:1) de <code>Saldo BH (Úteis) + HE 100%</code>. <strong>Atenção:</strong> essa coluna mistura horas de adicional 50% com horas de adicional 100% sem ponderação financeira e serve exclusivamente como indicador gerencial do TSE XT.
+          </p>
         </div>
 
         <div class="je-spt-annex-table-wrap">
@@ -924,30 +1045,34 @@ window.JEPessoasSptReport = (function () {
             </thead>
             <tbody>
               <tr>
-                <td><strong>Dias</strong><br><small><code>u + ho + f + dsr</code></small></td>
-                <td><code>u + ho + f</code><br><small>(<code>dsr</code> informativo)</small></td>
+                <td><strong>Dias</strong><br><small><code>u + ho + f</code></small></td>
+                <td><code>u + ho + f</code></td>
                 <td>
                   Total de dias trabalhados/contabilizados no mês, detalhado por sigla:
                   <strong><code>u</code></strong> = dias úteis presenciais (com batida na catraca);
-                  <strong><code>ho</code></strong> = dias úteis em <em>Home Office</em> presumido (jornada de 08:00 cumprida sem batida física);
-                  <strong><code>f</code></strong> = sábados, domingos ou feriados trabalhados;
-                  <strong><code>dsr</code></strong> = dias úteis convertidos em folga automática de <em>Reposição de DSR</em> após domingo trabalhado (&gt; 6 dias seguidos).
+                  <strong><code>ho</code></strong> = dias úteis em <em>Home Office presumido (8h)</em> (quando a opção está ligada);
+                  <strong><code>f</code></strong> = sábados, domingos ou feriados trabalhados.
                 </td>
+              </tr>
+              <tr>
+                <td><strong>Dias úteis sem registro</strong></td>
+                <td>Contagem de dias úteis sem catraca e sem justificativa</td>
+                <td>Exibe quantos dias úteis (Seg–Sex) não tiveram nenhuma batida na catraca nem justificativa lançada no SPT. Com o <em>Home Office presumido</em> desligado (padrão), esses dias ficam visíveis nesta coluna para fiscalização e não geram débito automático.</td>
               </tr>
               <tr>
                 <td><strong>Total SPT</strong></td>
                 <td>Soma bruta da catraca</td>
-                <td>Soma aritmética pura da coluna <em>Total</em> retornada pelo sistema SPT do TSE (apenas intervalos entre entradas e saídas físicas na catraca, sem regras da CLT).</td>
+                <td>Soma aritmética pura da coluna <em>Total</em> retornada pelo sistema SPT do TSE (apenas intervalos entre entradas e saídas físicas na catraca).</td>
               </tr>
               <tr>
                 <td><strong>Trab. CLT</strong><br><small>(ou <em>Líq. CLT</em>)</small></td>
                 <td><code>H. Normais + HE 50% + HE 100% − Débito BH</code></td>
-                <td>Total líquido de horas efetivamente trabalhadas segundo as regras da CLT e do contrato (soma das horas presenciais com dedução mínima de 1h de almoço em turnos &gt; 6h + horas de Home Office quando habilitado).</td>
+                <td>Total líquido de horas trabalhadas segundo as regras configuradas (horas presenciais com dedução mínima de 1h de almoço em turnos &gt; 6h + horas de Home Office quando habilitado).</td>
               </tr>
               <tr>
                 <td><strong>H. Normais</strong></td>
                 <td><code>Dias Úteis Ativos × 08:00</code><br><small>(ajustado pela tolerância)</small></td>
-                <td>Horas ordinárias cumpridas dentro da jornada contratual de <strong>08:00/dia</strong> de segunda a sexta-feira (soma dos dias úteis presenciais e em Home Office, respeitada a tolerância legal de ±10 min/dia).</td>
+                <td>Horas ordinárias cumpridas dentro da jornada contratual de <strong>08:00/dia</strong> de segunda a sexta-feira, respeitada a tolerância legal de ±10 min/dia.</td>
               </tr>
               <tr>
                 <td><strong>HE 50% (BH)</strong></td>
@@ -957,22 +1082,22 @@ window.JEPessoasSptReport = (function () {
               <tr>
                 <td><strong>Débito BH</strong></td>
                 <td>Falta para 08:00 em dia útil (&gt; 10 min)</td>
-                <td>Horas faltantes para completar a jornada ordinária de 08:00 nos dias úteis em que o colaborador trabalhou menos de 07:50. Corresponde a <em>Débito BH</em> do cartão ponto da empresa e é descontado das Horas Extras.</td>
+                <td>Horas faltantes para completar a jornada ordinária de 08:00 nos dias úteis com batida em que o colaborador trabalhou menos de 07:50. Corresponde a <em>Débito BH</em> do cartão ponto da empresa.</td>
               </tr>
               <tr>
                 <td><strong>Saldo BH (Úteis)</strong></td>
                 <td><code>HE 50% (BH) − Débito BH</code></td>
-                <td>Balanço líquido exclusivo dos dias úteis (Seg–Sex). Se positivo (<code>+</code>), o prestador acumulou crédito líquido de 50%; se negativo (<code>-</code>), ficou devendo horas nos dias úteis, que serão abatidas da coluna final.</td>
+                <td>Balanço líquido exclusivo dos dias úteis (Seg–Sex), idêntico ao fechamento de Banco de Horas 50% da empresa.</td>
               </tr>
               <tr>
                 <td><strong>HE 100% (FDS)</strong></td>
                 <td>100% de Sáb/Dom/Fer + excedente &gt; 2h útil</td>
-                <td>Horas extras com adicional de 100%: inclui <strong>100% das horas trabalhadas em Sábados, Domingos e Feriados</strong> (nos quais a jornada ordinária é <code>00:00</code>) mais eventual parcela que ultrapasse 2h extras em um mesmo dia útil.</td>
+                <td>Horas extras com adicional de 100% (mantidas separadas no cartão da empresa): inclui 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária <code>00:00</code>) mais eventual parcela acima de 2h extras em dia útil.</td>
               </tr>
               <tr>
-                <td><strong>HE Líquida (após Débitos)</strong></td>
-                <td><code>Saldo BH (Úteis) + HE 100%</code><br><small>= <code>(HE 50% + HE 100%) − Débito BH</code></small></td>
-                <td><strong>Resultado líquido final de Horas Extras do mês após descontar todos os débitos de jornada normal.</strong> Se o prestador teve débito nos dias úteis, esse valor já aparece descontado aqui. Se o resultado final for negativo (<code>-</code>), o prestador encerrou o mês devendo horas mesmo após consumir todas as HE 50% e HE 100%.</td>
+                <td><strong>Visão TSE XT: Saldo BH + HE 100%</strong><br><small>(não é regra da empresa)</small></td>
+                <td><code>Saldo BH (Úteis) + HE 100%</code></td>
+                <td>Indicador analítico exclusivo do TSE XT que soma em proporção 1:1 o Saldo BH de dias úteis (50%) e as HE 100% para evidenciar se eventuais débitos de jornada normal superam as horas extras realizadas. <strong>Não é regra da empresa</strong>, pois mistura adicionais de 50% e 100%.</td>
               </tr>
             </tbody>
           </table>
@@ -981,19 +1106,19 @@ window.JEPessoasSptReport = (function () {
         <div class="je-spt-annex-rules">
           <div class="je-spt-annex-rule-card">
             <strong>1. Tolerância Legal (±10 min/dia — CLT art. 58 §1º)</strong>
-            <p>Nos dias úteis (jornada de 08:00), variações de até 10 minutos para mais ou para menos (entre <code>07:50</code> e <code>08:10</code>) não geram Hora Extra nem Débito BH, sendo contabilizadas exatamente como jornada ordinária cumprida.</p>
+            <p>Nos dias úteis (jornada de 08:00), variações de até 10 minutos para mais ou para menos (entre <code>07:50</code> e <code>08:10</code>) não geram Hora Extra nem Débito BH, sendo contabilizadas como jornada ordinária cumprida.</p>
           </div>
           <div class="je-spt-annex-rule-card">
             <strong>2. Intervalo de Almoço (Mín. 1h — CLT art. 71)</strong>
-            <p>Em jornadas presenciais contínuas superiores a 6 horas, aplica-se o intervalo intrajornada mínimo de <code>01:00</code> para refeição e descanso (deduzido automaticamente em batida única de 1 par ou ajustado quando o intervalo na catraca for inferior a 1h).</p>
+            <p>Em jornadas contínuas superiores a 6 horas, aplica-se o intervalo mínimo de <code>01:00</code>. Nos Sábados, Domingos e Feriados com apenas 2 batidas (&gt;6h), a chave <em>Descontar 1h de intervalo</em> vem ligada por padrão (CLT/SPT) e pode ser desligada para reproduzir o cartão Digisystem.</p>
           </div>
           <div class="je-spt-annex-rule-card">
-            <strong>3. Sábados, Domingos e Feriados (Jornada 00:00)</strong>
-            <p>A jornada contratual de 40h semanais é distribuída de segunda a sexta-feira (5 × 08:00). Por isso, em Sábados, Domingos e Feriados Nacionais/Distritais a jornada ordinária esperada é <code>00:00</code>: 100% do tempo trabalhado nesses dias é apurado como <strong>HE 100%</strong> (e plantões menores que 8h no fim de semana nunca geram débito).</p>
+            <strong>3. Feriados Civis e Distritais (Sem Feriados Forenses por Padrão)</strong>
+            <p>A lista padrão contempla os feriados nacionais civis, a <strong>Sexta-feira Santa</strong> (calculada pela Páscoa) e <strong>30/11</strong> (DF). Feriados forenses (<code>11/08</code>, <code>01/11</code> e <code>08/12</code>) não se aplicam por padrão às empresas contratadas, mas a lista é totalmente editável no filtro <em>Feriados (+/-)</em>.</p>
           </div>
           <div class="je-spt-annex-rule-card">
-            <strong>4. Home Office (8h) e Reposição de DSR (CLT art. 67 / OJ 410 TST)</strong>
-            <p>Quando a opção <em>Home Office (8h)</em> está ativa, dias úteis sem batida na catraca são considerados em trabalho remoto com jornada ordinária concluída (<code>08:00</code>, sem criar batidas fictícias e sem gerar HE/Débito). Caso o colaborador trabalhe no domingo / ultrapasse 6 dias consecutivos de trabalho, o sistema aloca automaticamente 1 dia útil sem batida como <strong>Reposição de DSR</strong> (folga compensatória com jornada <code>00:00</code>).</p>
+            <strong>4. Alerta de Trabalho em Domingo / &gt;6 Dias Consecutivos (CLT art. 67; OJ 410 TST)</strong>
+            <p>O relatório não escolhe dias fictícios de folga compensatória: sempre que identifica trabalho em domingo ou mais de 6 dias consecutivos trabalhados (inclusive na virada entre meses consecutivos), emite o alerta <strong>Trabalho em domingo / &gt;6 dias consecutivos sem folga identificada</strong> sem alterar nenhum total.</p>
           </div>
         </div>
       </section>
@@ -1145,7 +1270,7 @@ window.JEPessoasSptReport = (function () {
     }
 
     const days = showOnlyActiveDaysInDaily
-      ? monthSummary.days.filter((d) => d.isWorkedDay || d.isDsrCompensated || d.punchCount > 0 || d.justificativa)
+      ? monthSummary.days.filter((d) => d.isWorkedDay || d.punchCount > 0 || d.justificativa)
       : monthSummary.days;
 
     if (!days.length) {
@@ -1159,20 +1284,26 @@ window.JEPessoasSptReport = (function () {
           ? `${fmt(d.effectiveLunchMin)} (auto)`
           : (d.lunchMode === 'adjusted-1h'
             ? `${fmt(d.measuredLunchMin)} → 01:00`
-            : (d.effectiveLunchMin > 0 ? fmt(d.effectiveLunchMin) : '—')))
+            : (d.lunchMode === 'special-no-deduct'
+              ? '00:00 (s/ desc.)'
+              : (d.effectiveLunchMin > 0 ? fmt(d.effectiveLunchMin) : '—'))))
         : '·';
       const lunchTip = d.isPresencialWorkedDay
         ? (d.lunchMode === 'auto-1h'
           ? 'Turnos contínuos > 6h com apenas 1 par de batidas: dedução automática de 01:00 de almoço (CLT art. 71)'
           : (d.lunchMode === 'adjusted-1h'
             ? `Intervalo registrado na catraca (${fmt(d.measuredLunchMin)}) inferior a 1h em jornada > 6h: ajustado para o mínimo legal de 01:00 (CLT art. 71)`
-            : (d.effectiveLunchMin > 0
-              ? `Intervalo de almoço medido entre Saída 1 e Entrada 2: ${fmt(d.effectiveLunchMin)}`
-              : 'Jornada presencial até 6h sem intervalo intrajornada de almoço')))
-        : (d.isHomeOfficeDay ? 'Dia em Home Office (jornada líquida de 08:00 já considera intervalo)' : 'Sem intervalo de almoço contabilizado');
+            : (d.lunchMode === 'special-no-deduct'
+              ? 'Opção de descontar 1h de intervalo em Sáb/Dom/Feriado desligada: mantido o tempo bruto entre entrada e saída (reproduz cartão Digisystem)'
+              : (d.effectiveLunchMin > 0
+                ? `Intervalo de almoço medido entre Saída 1 e Entrada 2: ${fmt(d.effectiveLunchMin)}`
+                : 'Jornada presencial até 6h sem intervalo intrajornada de almoço'))))
+        : (d.isHomeOfficeDay ? 'Dia em Home Office presumido (jornada líquida de 08:00)' : 'Sem intervalo de almoço contabilizado');
 
       const rowClass = [
         d.isSpecialDay ? 'je-spt-row-weekend' : '',
+        d.isHomeOfficeDay ? 'je-spt-row-homeoffice' : '',
+        d.isUnregisteredWeekday ? 'je-spt-row-unregistered' : '',
         d.isWorkedDay ? 'je-spt-row-worked' : 'je-spt-row-empty'
       ].filter(Boolean).join(' ');
 
@@ -1182,19 +1313,19 @@ window.JEPessoasSptReport = (function () {
 
       const targetText = d.isWorkedDay
         ? (d.isSpecialDay ? '00:00' : fmt(d.targetMin))
-        : (d.isDsrCompensated ? '00:00' : '·');
+        : '·';
 
       const targetTip = d.isSpecialDay
         ? `Jornada ordinária 00:00 (${d.isHoliday ? 'Feriado: ' + d.holidayName : 'Fim de semana'} — 100% das horas trabalhadas contam como HE 100%)`
-        : (d.isDsrCompensated
-          ? 'Jornada ordinária 00:00: folga compensatória de Reposição de DSR após trabalho em domingo / > 6 dias seguidos (CLT art. 67)'
-          : (d.isWorkedDay ? 'Jornada ordinária contratual de dia útil: 08:00 (tolerância de ±10 min — CLT art. 58 §1º)' : 'Dia sem jornada contabilizada'));
+        : (d.isWorkedDay
+          ? 'Jornada ordinária contratual de dia útil: 08:00 (tolerância de ±10 min — CLT art. 58 §1º)'
+          : 'Dia útil sem registro na catraca (não gera débito automático com Home Office desligado)');
 
       const cltTip = d.isHomeOfficeDay
-        ? 'Home Office presumido em dia útil sem batida na catraca: 08:00 de jornada ordinária concluída'
+        ? 'Home Office presumido em dia útil sem batida na catraca: 08:00 de jornada ordinária presumida por opção do usuário'
         : (d.isPresencialWorkedDay
           ? `Horas líquidas trabalhadas conforme CLT em ${d.date}: ${fmt(d.cltWorkedMin)} (Horas normais: ${fmt(d.normalWorkedMin || 0)})`
-          : 'Sem horas trabalhadas neste dia');
+          : 'Sem horas registradas na catraca neste dia');
 
       return `<tr class="${rowClass}">
         <td title="Data: ${escapeHTML(d.date)} (${escapeHTML(d.dayLabel)})${d.isHoliday ? ' · Feriado: ' + escapeHTML(d.holidayName) : ''}"><strong>${escapeHTML(d.date)}</strong></td>
@@ -1211,7 +1342,7 @@ window.JEPessoasSptReport = (function () {
         <td title="${escapeHTML(targetTip)}">${escapeHTML(targetText)}</td>
         <td class="${d.he50Min ? 'je-spt-pos' : ''}" title="${d.he50Min ? `Crédito de Banco de Horas / HE 50% no dia útil: +${fmt(d.he50Min)} (excedente além de 08:00 até o limite de 2h)` : 'Sem Hora Extra 50% neste dia'}">${d.he50Min ? '+' + fmt(d.he50Min) : '·'}</td>
         <td class="${d.he100Min ? 'je-spt-pos' : ''}" title="${d.he100Min ? `Hora Extra 100% em ${escapeHTML(d.date)}: +${fmt(d.he100Min)} (${d.isSpecialDay ? '100% das horas trabalhadas em Sáb/Dom/Feriado' : 'excedente acima de 2h extras no dia útil'})` : 'Sem Hora Extra 100% neste dia'}">${d.he100Min ? '+' + fmt(d.he100Min) : '·'}</td>
-        <td class="${d.debitoBhMin ? 'je-spt-neg' : ''}" title="${d.debitoBhMin ? `Débito de jornada normal no dia útil: -${fmt(d.debitoBhMin)} (horas faltantes para completar 08:00 além da tolerância de 10 min; descontado das Horas Extras)` : 'Sem débito de horas neste dia'}">${d.debitoBhMin ? '-' + fmt(d.debitoBhMin) : '·'}</td>
+        <td class="${d.debitoBhMin ? 'je-spt-neg' : ''}" title="${d.debitoBhMin ? `Débito de jornada normal no dia útil: -${fmt(d.debitoBhMin)} (horas faltantes para completar 08:00 além da tolerância de 10 min)` : 'Sem débito de horas neste dia'}">${d.debitoBhMin ? '-' + fmt(d.debitoBhMin) : '·'}</td>
         <td class="${accumBhClass}" title="${d.isWorkedDay ? `Saldo acumulado do Banco de Horas de dias úteis (HE 50% − Débito BH) até ${escapeHTML(d.date)}: ${fmt(d.accumulatedBhMin, true)}` : 'Dia sem movimentação no Banco de Horas de dias úteis'}">${d.isWorkedDay ? fmt(d.accumulatedBhMin, true) : '·'}</td>
         <td class="je-spt-col-left">${renderDayAlertsHTML(d)}</td>
       </tr>`;
@@ -1236,12 +1367,12 @@ window.JEPessoasSptReport = (function () {
             <th title="Intervalo intrajornada de almoço (mínimo de 1h para jornadas &gt; 6h — CLT art. 71)">Almoço</th>
             <th title="Total bruto exibido pela catraca do SPT">Total SPT</th>
             <th title="Horas líquidas trabalhadas segundo a CLT (presencial + Home Office quando habilitado)">Líq. CLT</th>
-            <th title="Jornada ordinária: 08:00 de Seg–Sex e 00:00 em Sábados, Domingos, Feriados e Reposição de DSR">Jornada</th>
+            <th title="Jornada ordinária: 08:00 de Seg–Sex trabalhado e 00:00 em Sábados, Domingos e Feriados">Jornada</th>
             <th title="Horas Extras / Crédito BH 50% (dias úteis até 2h, após tolerância de 10 min da CLT art. 58 §1º)">HE 50% (BH)</th>
             <th title="Horas Extras / Crédito 100% (100% das horas de Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil)">HE 100%</th>
-            <th title="Débito de Banco de Horas nos dias úteis (variação negativa superior a 10 min para completar 08:00 — descontado das HE)">Débito BH</th>
+            <th title="Débito de Banco de Horas nos dias úteis com batida (variação negativa superior a 10 min para completar 08:00)">Débito BH</th>
             <th title="Saldo acumulado do Banco de Horas de dias úteis (HE 50% − Débito BH)">Saldo BH Acum.</th>
-            <th class="je-spt-col-left" title="Justificativas do SPT, status de Home Office, Reposição de DSR e alertas trabalhistas">Justificativa / Ocorrências</th>
+            <th class="je-spt-col-left" title="Justificativas do SPT, dias sem registro, Home Office presumido e alertas trabalhistas (Dom / >6d seguidos)">Justificativa / Ocorrências</th>
           </tr>
         </thead>
         <tbody>
@@ -1249,15 +1380,15 @@ window.JEPessoasSptReport = (function () {
         </tbody>
         <tfoot>
           <tr class="je-recog-total">
-            <td colspan="9" class="je-spt-col-left" title="Resumo mensal de dias e horas normais cumpridas"><strong>Consolidado (${escapeHTML(m.monthLabel)}) · ${m.workedDays}d (${m.workedWeekdays || 0}u pres. + ${m.homeOfficeDays || 0}d HO + ${m.workedWeekendDays || 0}d FDS · ${m.dsrCompensatedDays || 0}d DSR) · H. Normais: ${fmt(m.horasNormaisMin || 0)}</strong></td>
+            <td colspan="9" class="je-spt-col-left" title="Resumo mensal de dias e horas normais cumpridas"><strong>Consolidado (${escapeHTML(m.monthLabel)}) · ${m.workedDays}d (${m.workedWeekdays || 0}u pres.${m.homeOfficeDays ? ` + ${m.homeOfficeDays}d HO presumido` : ''} + ${m.workedWeekendDays || 0}d FDS · ${m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.weekdaysWithoutRecord || 0)}d úteis s/ reg.) · H. Normais: ${fmt(m.horasNormaisMin || 0)}</strong></td>
             <td title="Soma bruta da catraca SPT no mês"><strong>${fmt(m.sptTotalMin)}</strong></td>
             <td title="Total líquido trabalhado conforme CLT no mês"><strong>${fmt(m.cltWorkedMin)}</strong></td>
-            <td title="Jornada ordinária esperada nos dias úteis do mês (${(m.workedWeekdays || 0) + (m.homeOfficeDays || 0)}d × 08:00)"><strong>${fmt(m.expectedJourneyMin)}</strong></td>
+            <td title="Jornada ordinária esperada nos dias úteis contabilizados do mês (${(m.workedWeekdays || 0) + (m.homeOfficeDays || 0)}d × 08:00)"><strong>${fmt(m.expectedJourneyMin)}</strong></td>
             <td class="je-spt-pos" title="Total de Horas Extras 50% (dias úteis) no mês"><strong>+${fmt(m.he50BrutoMin || 0)}</strong></td>
             <td class="je-spt-pos" title="Total de Horas Extras 100% (Sáb/Dom/Feriados + >2h útil) no mês"><strong>+${fmt(m.he100BrutoMin || 0)}</strong></td>
-            <td class="je-spt-neg" title="Total de Débitos de jornada normal nos dias úteis (descontado das Horas Extras)"><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></td>
+            <td class="je-spt-neg" title="Total de Débitos de jornada normal nos dias úteis"><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></td>
             <td class="${saldoBhClass}" title="Saldo final do Banco de Horas de dias úteis: HE 50% (+${fmt(m.he50BrutoMin || 0)}) − Débito BH (-${fmt(m.debitoBhBrutoMin || 0)}) = ${fmt(m.saldoBhMesMin || 0, true)}"><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
-            <td class="je-spt-col-left" title="Resumo de Horas Extras após descontar o Débito BH dos dias úteis">Saldo BH: <strong>${fmt(m.saldoBhMesMin || 0, true)}</strong> · HE 100%: <strong>+${fmt(m.he100BrutoMin || 0)}</strong> · HE Líquida: <strong class="${saldoTotalClass}">${fmt(m.saldoMesMin, true)}</strong></td>
+            <td class="je-spt-col-left" title="Colunas independentes (Saldo BH e HE 100%) e soma indicativa TSE XT">Saldo BH: <strong>${fmt(m.saldoBhMesMin || 0, true)}</strong> · HE 100%: <strong>+${fmt(m.he100BrutoMin || 0)}</strong> · Visão XT: <strong class="${saldoTotalClass}">${fmt(m.saldoMesMin, true)}</strong></td>
           </tr>
         </tfoot>
       </table>
@@ -1277,6 +1408,7 @@ window.JEPessoasSptReport = (function () {
         const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
         const saldoTotalClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
         const activeWeekdays = (m.workedWeekdays || 0) + (m.homeOfficeDays || 0);
+        const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
         rows.push(`
           <tr class="je-audit-row je-recog-server" data-expand-row="${rowId}" role="button" tabindex="0" aria-expanded="${isExpanded}">
             <td class="je-spt-col-left" title="Clique para expandir ou recolher o Espelho de Ponto Diário de ${escapeHTML(w.nome)}">
@@ -1285,22 +1417,23 @@ window.JEPessoasSptReport = (function () {
               <small class="je-spt-sub-meta">CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small>
             </td>
             <td title="Mês de competência: ${escapeHTML(m.monthLabel)}">${escapeHTML(m.monthLabel)}</td>
-            <td title="${m.workedDays} dias trabalhados/contabilizados: ${m.workedWeekdays || 0}d úteis presenciais (u) + ${m.homeOfficeDays || 0}d Home Office 8h (ho) + ${m.workedWeekendDays || 0}d Sáb/Dom/Feriado (f) · ${m.dsrCompensatedDays || 0}d de folga por Reposição de DSR (dsr)">${formatDaysCell(m)}</td>
+            <td title="${m.workedDays} dias trabalhados/contabilizados: ${m.workedWeekdays || 0}d úteis presenciais (u)${m.homeOfficeDays ? ` + ${m.homeOfficeDays}d Home Office presumido (ho)` : ''} + ${m.workedWeekendDays || 0}d Sáb/Dom/Feriado (f)">${formatDaysCell(m)}</td>
+            <td title="${unregDays} dia(s) útil(eis) sem batida na catraca e sem justificativa no SPT${m.presumeHomeOffice ? ' (0d porque foram convertidos em Home Office presumido: ' + (m.homeOfficeDays || 0) + 'd)' : ' (não geram débito automático)'}"><strong>${unregDays}d</strong>${m.homeOfficeDays ? `<br><small class="je-spt-ho-pill">${m.homeOfficeDays}d HO</small>` : ''}</td>
             <td title="Total bruto somado pela catraca do SPT (apenas batidas físicas): ${fmt(m.sptTotalMin)}">${fmt(m.sptTotalMin)}</td>
-            <td title="Total líquido trabalhado conforme CLT (H. Normais ${fmt(m.horasNormaisMin || 0)} + HE 50% ${fmt(m.he50BrutoMin || 0)} + HE 100% ${fmt(m.he100BrutoMin || 0)} − Débito BH ${fmt(m.debitoBhBrutoMin || 0)}): ${fmt(m.cltWorkedMin)}"><strong>${fmt(m.cltWorkedMin)}</strong></td>
+            <td title="Total líquido trabalhado conforme CLT (H. Normais ${fmt(m.horasNormaisMin || 0)} + HE 50% ${fmt(m.he50BrutoMin || 0)} + HE 100% ${fmt(m.he100BrutoMin || 0)}): ${fmt(m.cltWorkedMin)}"><strong>${fmt(m.cltWorkedMin)}</strong></td>
             <td title="Horas Normais cumpridas nos ${activeWeekdays} dias úteis ativos (jornada esperada de ${fmt(m.expectedJourneyMin)}, respeitada a tolerância de ±10 min/dia): ${fmt(m.horasNormaisMin || 0)}">${fmt(m.horasNormaisMin || 0)}</td>
             <td class="${m.he50BrutoMin ? 'je-spt-pos' : ''}" title="Horas Extras 50% (Créditos BH em dias úteis até 2h/dia): +${fmt(m.he50BrutoMin || 0)}">${dot(m.he50BrutoMin, true)}</td>
-            <td class="${m.debitoBhBrutoMin ? 'je-spt-neg' : ''}" title="Débito de horas normais nos dias úteis (horas faltantes para completar 08:00/dia além da tolerância de 10 min): -${fmt(m.debitoBhBrutoMin || 0)}. Este valor é descontado das Horas Extras.">${m.debitoBhBrutoMin ? '-' + fmt(m.debitoBhBrutoMin) : '·'}</td>
-            <td class="${saldoBhClass}" title="1ª Etapa de Compensação — Saldo do Banco de Horas nos dias úteis: HE 50% (+${fmt(m.he50BrutoMin || 0)}) − Débito BH (-${fmt(m.debitoBhBrutoMin || 0)}) = ${fmt(m.saldoBhMesMin || 0, true)} (Horas compensadas dentro dos dias úteis: ${fmt(m.compensadoBhMin || 0)})"><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
-            <td class="${m.he100BrutoMin ? 'je-spt-pos' : ''}" title="Horas Extras 100%: 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária 00:00) + excedente > 2h em dia útil: +${fmt(m.he100BrutoMin || 0)}"><strong>${dot(m.he100BrutoMin, true)}</strong></td>
-            <td class="${saldoTotalClass}" title="2ª Etapa de Compensação — HE Líquida após descontar o Débito BH dos dias úteis: Saldo BH Úteis (${fmt(m.saldoBhMesMin || 0, true)}) + HE 100% (+${fmt(m.he100BrutoMin || 0)}) = ${fmt(m.saldoMesMin, true)}"><strong>${fmt(m.saldoMesMin, true)}</strong></td>
+            <td class="${m.debitoBhBrutoMin ? 'je-spt-neg' : ''}" title="Débito de horas normais nos dias úteis com batida (horas faltantes para completar 08:00/dia além da tolerância de 10 min): -${fmt(m.debitoBhBrutoMin || 0)}">${m.debitoBhBrutoMin ? '-' + fmt(m.debitoBhBrutoMin) : '·'}</td>
+            <td class="${saldoBhClass}" title="Saldo do Banco de Horas nos dias úteis (independente de HE 100%, igual ao cartão da empresa): HE 50% (+${fmt(m.he50BrutoMin || 0)}) − Débito BH (-${fmt(m.debitoBhBrutoMin || 0)}) = ${fmt(m.saldoBhMesMin || 0, true)}"><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></td>
+            <td class="${m.he100BrutoMin ? 'je-spt-pos' : ''}" title="Horas Extras 100% (independente do Saldo BH no cartão da empresa): 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária 00:00) + excedente > 2h em dia útil: +${fmt(m.he100BrutoMin || 0)}"><strong>${dot(m.he100BrutoMin, true)}</strong></td>
+            <td class="${saldoTotalClass}" title="Visão analítica do TSE XT (não é regra da empresa — mistura adicionais de 50% e 100% em proporção 1:1): Saldo BH Úteis (${fmt(m.saldoBhMesMin || 0, true)}) + HE 100% (+${fmt(m.he100BrutoMin || 0)}) = ${fmt(m.saldoMesMin, true)}"><strong>${fmt(m.saldoMesMin, true)}</strong></td>
             <td class="je-spt-col-left" title="Resumo de ocorrências e alertas trabalhistas do mês">${renderBadgesHTML(m.alerts)}</td>
           </tr>
         `);
         if (isExpanded) {
           rows.push(`
             <tr class="je-recog-daysrow">
-              <td colspan="12">${renderDailyMirrorTableHTML(m)}</td>
+              <td colspan="13">${renderDailyMirrorTableHTML(m)}</td>
             </tr>
           `);
         }
@@ -1310,19 +1443,21 @@ window.JEPessoasSptReport = (function () {
     const u = report.unitTotals;
     const totalSaldoBhClass = u.saldoBhMesMin > 0 ? 'je-spt-pos' : (u.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
     const totalSaldoClass = u.saldoMesMin > 0 ? 'je-spt-pos' : (u.saldoMesMin < 0 ? 'je-spt-neg' : '');
+    const uUnreg = u.unregisteredWeekdays != null ? u.unregisteredWeekdays : (presumeHomeOffice ? 0 : (u.weekdaysWithoutRecord || 0));
     rows.push(`
       <tr class="je-recog-total">
         <td class="je-spt-col-left" title="Soma consolidada de todos os prestadores ativos da unidade no período"><strong>Total Consolidado da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores ativos)</strong></td>
         <td title="Período consolidado">—</td>
-        <td title="Total de dias da unidade: ${u.workedWeekdays || 0}u presenciais + ${u.homeOfficeDays || 0}ho Home Office + ${u.workedWeekendDays || 0}f FDS/feriado (${u.dsrCompensatedDays || 0}dsr Reposição de DSR)"><strong>${formatDaysCell(u)}</strong></td>
+        <td title="Total de dias da unidade: ${u.workedWeekdays || 0}u presenciais${u.homeOfficeDays ? ` + ${u.homeOfficeDays}ho Home Office presumido` : ''} + ${u.workedWeekendDays || 0}f FDS/feriado"><strong>${formatDaysCell(u)}</strong></td>
+        <td title="Total de dias úteis sem registro na catraca e sem justificativa na unidade"><strong>${uUnreg}d</strong>${u.homeOfficeDays ? `<br><small>${u.homeOfficeDays}d HO</small>` : ''}</td>
         <td title="Soma bruta da coluna Total do SPT na unidade: ${fmt(u.sptTotalMin)}"><strong>${fmt(u.sptTotalMin)}</strong></td>
         <td title="Soma do total líquido trabalhado conforme CLT na unidade: ${fmt(u.cltWorkedMin)}"><strong>${fmt(u.cltWorkedMin)}</strong></td>
         <td title="Soma das Horas Normais cumpridas nos dias úteis na unidade: ${fmt(u.horasNormaisMin || 0)}"><strong>${fmt(u.horasNormaisMin || 0)}</strong></td>
         <td class="je-spt-pos" title="Soma das Horas Extras 50% (dias úteis) da unidade: +${fmt(u.he50BrutoMin || 0)}"><strong>+${fmt(u.he50BrutoMin || 0)}</strong></td>
-        <td class="je-spt-neg" title="Soma dos Débitos BH (horas faltantes nos dias úteis) da unidade: -${fmt(u.debitoBhBrutoMin || 0)}"><strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong></td>
+        <td class="je-spt-neg" title="Soma dos Débitos BH (horas faltantes nos dias úteis com batida) da unidade: -${fmt(u.debitoBhBrutoMin || 0)}"><strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong></td>
         <td class="${totalSaldoBhClass}" title="Saldo BH consolidado dos dias úteis da unidade: HE 50% (+${fmt(u.he50BrutoMin || 0)}) − Débito BH (-${fmt(u.debitoBhBrutoMin || 0)}) = ${fmt(u.saldoBhMesMin || 0, true)}"><strong>${fmt(u.saldoBhMesMin || 0, true)}</strong></td>
         <td class="je-spt-pos" title="Soma das Horas Extras 100% (Sáb/Dom/Feriados) da unidade: +${fmt(u.he100BrutoMin || 0)}"><strong>+${fmt(u.he100BrutoMin || 0)}</strong></td>
-        <td class="${totalSaldoClass}" title="HE Líquida consolidada da unidade após descontar todos os Débitos BH: Saldo BH Úteis (${fmt(u.saldoBhMesMin || 0, true)}) + HE 100% (+${fmt(u.he100BrutoMin || 0)}) = ${fmt(u.saldoMesMin, true)}"><strong>${fmt(u.saldoMesMin, true)}</strong></td>
+        <td class="${totalSaldoClass}" title="Visão TSE XT (Saldo BH + HE 100%, não é regra da empresa): ${fmt(u.saldoMesMin, true)}"><strong>${fmt(u.saldoMesMin, true)}</strong></td>
         <td class="je-spt-col-left" title="Totais de ocorrências da unidade no período">${renderBadgesHTML(u.alerts)}</td>
       </tr>
     `);
@@ -1334,15 +1469,16 @@ window.JEPessoasSptReport = (function () {
             <tr>
               <th class="je-spt-col-left" title="Clique em qualquer prestador para abrir ou recolher o espelho de ponto diário">Prestador / Contrato</th>
               <th title="Mês/Ano de competência">Mês</th>
-              <th title="Dias contabilizados (u = úteis presenciais, ho = Home Office 8h, f = FDS/feriados, dsr = Reposição de DSR)">Dias</th>
+              <th title="Dias contabilizados (u = úteis presenciais, ho = Home Office presumido 8h quando ativo, f = FDS/feriados)">Dias</th>
+              <th title="Dias úteis sem registro na catraca e sem justificativa no SPT (não geram débito automático quando Home Office está desligado)">Dias úteis sem registro</th>
               <th title="Soma pura da coluna Total da catraca do SPT">Total SPT</th>
               <th title="Total líquido trabalhado conforme CLT (presencial + Home Office 8h quando ativo)">Trab. CLT</th>
-              <th title="Horas Normais cumpridas nos dias úteis (presencial + Home Office 8h, com tolerância de ±10 min)">H. Normais</th>
+              <th title="Horas Normais cumpridas nos dias úteis (com tolerância de ±10 min)">H. Normais</th>
               <th title="HE / Créditos BH 50% (excedente em dias úteis até 2h/dia, igual ao rodapé do Cartão Ponto Digisystem)">HE 50% (BH)</th>
-              <th title="Débito BH nos dias úteis (horas faltantes para 08:00 além da tolerância de 10 min; descontado das Horas Extras)">Débito BH</th>
-              <th title="1ª Etapa: Saldo de Banco de Horas nos dias úteis (HE 50% − Débito BH)">Saldo BH (Úteis)</th>
-              <th title="HE / Créditos BH 100% (100% das horas trabalhadas em Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil)">HE 100% (FDS)</th>
-              <th title="2ª Etapa: Horas Extras Líquidas após abater o Débito BH dos dias úteis — Fórmula: Saldo BH (Úteis) + HE 100% = (HE 50% + HE 100%) − Débito BH">HE Líquida (após Débitos)</th>
+              <th title="Débito BH nos dias úteis com batida (horas faltantes para 08:00 além da tolerância de 10 min)">Débito BH</th>
+              <th title="Saldo de Banco de Horas nos dias úteis (HE 50% − Débito BH — coluna independente no cartão da empresa)">Saldo BH (Úteis)</th>
+              <th title="HE / Créditos BH 100% (100% das horas trabalhadas em Sábados, Domingos e Feriados + excedente &gt; 2h em dia útil — coluna independente no cartão da empresa)">HE 100% (FDS)</th>
+              <th title="Visão analítica do TSE XT que soma 1:1 Saldo BH (50%) + HE 100% para alerta gerencial de abatimento de débitos (não é regra da empresa)">Visão TSE XT: Saldo BH + HE 100%<br><small>(não é regra da empresa)</small></th>
               <th class="je-spt-col-left" title="Alertas de conformidade CLT e ocorrências de ponto identificadas no mês">Ocorrências</th>
             </tr>
           </thead>
@@ -1351,7 +1487,7 @@ window.JEPessoasSptReport = (function () {
           </tbody>
         </table>
       </div>
-      <p class="je-audit-foot">Clique em qualquer linha da tabela para expandir o <strong>Espelho de Ponto Diário</strong> daquele prestador, ou alterne o parâmetro <strong>Detalhe</strong> acima para <em>Diário (Espelho)</em>. Consulte o <strong>Anexo de Interpretação</strong> abaixo para ver as fórmulas e exemplos de desconto de Débito BH nas Horas Extras.</p>
+      <p class="je-audit-foot">Clique em qualquer linha da tabela para expandir o <strong>Espelho de Ponto Diário</strong> daquele prestador, ou alterne o parâmetro <strong>Detalhe</strong> acima para <em>Diário (Espelho)</em>. Consulte o <strong>Anexo de Interpretação</strong> abaixo para conferir os parâmetros ativos, feriados e regras.</p>
     `;
   }
 
@@ -1362,6 +1498,7 @@ window.JEPessoasSptReport = (function () {
         const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
         const saldoTotalClass = m.saldoMesMin > 0 ? 'je-spt-pos' : (m.saldoMesMin < 0 ? 'je-spt-neg' : '');
         const presDays = m.presencialWorkedDays != null ? m.presencialWorkedDays : m.workedDays;
+        const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
         const kpisHTML = isRaw
           ? `
             <div class="je-spt-daily-kpis">
@@ -1373,13 +1510,14 @@ window.JEPessoasSptReport = (function () {
           `
           : `
             <div class="je-spt-daily-kpis">
-              <div class="je-spt-mini-kpi" title="Horas Normais cumpridas nos dias úteis (presencial + Home Office 8h, com tolerância de ±10 min)"><span>H. Normais</span><strong>${fmt(m.horasNormaisMin || 0)}</strong></div>
+              <div class="je-spt-mini-kpi" title="Dias úteis sem registro na catraca e sem justificativa">${m.presumeHomeOffice ? `<span>HO Presumido</span><strong>${m.homeOfficeDays || 0}d</strong>` : `<span>Dias s/ Reg.</span><strong>${unregDays}d</strong>`}</div>
+              <div class="je-spt-mini-kpi" title="Horas Normais cumpridas nos dias úteis (com tolerância de ±10 min)"><span>H. Normais</span><strong>${fmt(m.horasNormaisMin || 0)}</strong></div>
               <div class="je-spt-mini-kpi" title="Total líquido de horas trabalhadas segundo a CLT no mês"><span>Trab. CLT</span><strong>${fmt(m.cltWorkedMin)}</strong></div>
               <div class="je-spt-mini-kpi je-spt-pos" title="Horas Extras 50% acumuladas nos dias úteis (até 2h/dia)"><span>HE 50% (BH)</span><strong>+${fmt(m.he50BrutoMin || 0)}</strong></div>
-              <div class="je-spt-mini-kpi je-spt-neg" title="Horas faltantes para completar 08:00 nos dias úteis (descontadas das Horas Extras)"><span>Débito BH</span><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></div>
-              <div class="je-spt-mini-kpi ${saldoBhClass}" title="1ª Etapa: Saldo do Banco de Horas nos dias úteis (HE 50% − Débito BH)"><span>Saldo BH (Úteis)</span><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></div>
+              <div class="je-spt-mini-kpi je-spt-neg" title="Horas faltantes para completar 08:00 nos dias úteis com batida"><span>Débito BH</span><strong>-${fmt(m.debitoBhBrutoMin || 0)}</strong></div>
+              <div class="je-spt-mini-kpi ${saldoBhClass}" title="Saldo do Banco de Horas nos dias úteis (HE 50% − Débito BH)"><span>Saldo BH (Úteis)</span><strong>${fmt(m.saldoBhMesMin || 0, true)}</strong></div>
               <div class="je-spt-mini-kpi je-spt-pos" title="Horas Extras 100% (100% dos Sábados, Domingos e Feriados + excedente > 2h em dia útil)"><span>HE 100% (FDS)</span><strong>+${fmt(m.he100BrutoMin || 0)}</strong></div>
-              <div class="je-spt-mini-kpi ${saldoTotalClass}" title="2ª Etapa: HE Líquida após descontar o Débito BH dos dias úteis (Saldo BH Úteis + HE 100%)"><span>HE Líquida</span><strong>${fmt(m.saldoMesMin, true)}</strong></div>
+              <div class="je-spt-mini-kpi ${saldoTotalClass}" title="Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)"><span>Visão XT (BH+100%)</span><strong>${fmt(m.saldoMesMin, true)}</strong></div>
             </div>
           `;
         return `
@@ -1387,7 +1525,7 @@ window.JEPessoasSptReport = (function () {
             <div class="je-spt-daily-card-head">
               <div>
                 <h4 class="je-spt-daily-worker-title">${escapeHTML(w.nome)} <span class="je-spt-daily-month-pill" title="Mês de competência">${escapeHTML(m.monthLabel)}</span></h4>
-                <p class="je-spt-daily-worker-sub">CPF: <strong>${escapeHTML(formatCpf(w.cpf))}</strong> · Contrato: <strong>${escapeHTML(w.empresa || w.numContrato || '—')}</strong> · Dias: <strong title="${m.workedWeekdays || 0}d úteis presenciais + ${m.homeOfficeDays || 0}d Home Office + ${m.workedWeekendDays || 0}d FDS/feriado (${m.dsrCompensatedDays || 0}d Reposição de DSR)">${m.workedDays}</strong> (${m.workedWeekdays || 0}u pres. + ${m.homeOfficeDays || 0}d HO + ${m.workedWeekendDays || 0}d FDS · ${m.dsrCompensatedDays || 0}d DSR)</p>
+                <p class="je-spt-daily-worker-sub">CPF: <strong>${escapeHTML(formatCpf(w.cpf))}</strong> · Contrato: <strong>${escapeHTML(w.empresa || w.numContrato || '—')}</strong> · Dias: <strong title="${m.workedWeekdays || 0}d úteis presenciais${m.homeOfficeDays ? ` + ${m.homeOfficeDays}d Home Office presumido` : ''} + ${m.workedWeekendDays || 0}d FDS/feriado">${m.workedDays}</strong> (${m.workedWeekdays || 0}u pres.${m.homeOfficeDays ? ` + ${m.homeOfficeDays}d HO` : ''} + ${m.workedWeekendDays || 0}d FDS · ${unregDays}d úteis s/ reg.)</p>
               </div>
               ${kpisHTML}
             </div>
@@ -1400,9 +1538,9 @@ window.JEPessoasSptReport = (function () {
 
     return `
       <div class="je-spt-daily-Controls">
-        <label class="je-spt-rep-check-inline" title="Quando marcado, oculta os sábados, domingos e feriados sem batida para deixar o espelho mais compacto">
+        <label class="je-spt-rep-check-inline" title="Quando marcado, oculta os dias sem batida e sem Home Office para deixar o espelho mais compacto">
           <input type="checkbox" id="je-spt-daily-only-active"${showOnlyActiveDaysInDaily ? ' checked' : ''}>
-          <span>Ocultar dias em branco (mostrar apenas dias com batida, Home Office ou Reposição de DSR)</span>
+          <span>Ocultar dias em branco (mostrar apenas dias trabalhados ou com justificativa)</span>
         </label>
       </div>
       <div class="je-spt-daily-list">
@@ -1422,7 +1560,7 @@ window.JEPessoasSptReport = (function () {
       setSafeHTML(body, `
         <div class="je-audit-empty">
           <p>Selecione a <strong>Unidade</strong>, o <strong>Período</strong>, o <strong>Contrato</strong> (opcional), os <strong>Prestadores</strong> e o <strong>Modo</strong> (<em>TSE XT / Digi</em> ou <em>SPT Puro</em>) e clique em <strong>Gerar relatório</strong>.</p>
-          <p>No modo padrão <strong>TSE XT / Digi</strong>, o relatório aplica as regras da CLT e do Cartão Ponto da empresa: jornada de 8h de segunda a sexta (tolerância de ±10 min do art. 58 §1º), mínimo de 1h de almoço (art. 71), presunção opcional de <strong>Home Office (8h)</strong> nos dias úteis sem batida com <strong>Reposição de DSR</strong> após &gt; 6 dias seguidos (art. 67), sábados/domingos/feriados com jornada 00:00 (100% em <strong>HE 100%</strong>) e abatimento automático de <strong>Débito BH</strong> nas Horas Extras (<strong>HE Líquida após Débitos</strong>).</p>
+          <p>No modo padrão de fiscalização <strong>TSE XT / Digi</strong>, o relatório aplica as regras da CLT: jornada de 8h de segunda a sexta (tolerância de ±10 min do art. 58 §1º), mínimo de 1h de almoço (art. 71), exibição transparente dos <strong>Dias úteis sem registro</strong> (ou presunção opcional de <strong>Home Office 8h</strong> quando ativada pelo gestor), alerta de <strong>Trabalho em domingo / &gt;6 dias consecutivos sem folga identificada</strong> (art. 67 / OJ 410 TST) e colunas independentes para <strong>Saldo BH (Úteis)</strong> e <strong>HE 100% (FDS)</strong>.</p>
         </div>
       `);
       return;
@@ -1479,20 +1617,25 @@ window.JEPessoasSptReport = (function () {
         </p>
 
         ${detailMode === 'diario' ? renderDailyViewHTML(report) : renderMonthlyTableHTML(report)}
-        ${renderInterpretationAnnexHTML(false)}
+        ${renderInterpretationAnnexHTML(report, false)}
       `);
     } else {
       const saldoBhSign = fmt(u.saldoBhMesMin || 0, true);
       const saldoTotalSign = fmt(u.saldoMesMin || 0, true);
+      const uUnreg = u.unregisteredWeekdays != null ? u.unregisteredWeekdays : (presumeHomeOffice ? 0 : (u.weekdaysWithoutRecord || 0));
       const hoBadge = presumeHomeOffice
-        ? ` · Home Office presumido: <strong>${u.homeOfficeDays || 0}d</strong> · Reposição DSR: <strong>${u.dsrCompensatedDays || 0}d</strong>`
-        : '';
+        ? ` · <strong>Home Office presumido (8h): ${u.homeOfficeDays || 0}d</strong>`
+        : ` · <strong>Dias úteis sem registro: ${uUnreg}d</strong>`;
+      const spLunchBadge = deductAutoLunchOnSpecialDays
+        ? ' · Intervalo 1h em Sáb/Dom/Fer (&gt;6h): <strong>Descontado (CLT/SPT)</strong>'
+        : ' · Intervalo 1h em Sáb/Dom/Fer (&gt;6h): <strong>Sem desconto (Digisystem)</strong>';
+
       setSafeHTML(body, `
         ${alertBanner}
         <div class="je-audit-hero">
           <div class="je-audit-hero-num" title="Total líquido de horas trabalhadas na unidade segundo as regras da CLT">${fmt(u.cltWorkedMin)}</div>
           <div class="je-audit-hero-cap">
-            <strong>Modo TSE XT / Digi</strong> · Horas Normais (Seg–Sex): <strong>${fmt(u.horasNormaisMin || 0)}</strong> · Saldo BH (50% − Déb.): <strong>${saldoBhSign}</strong> · HE 100% (FDS): <strong>+${fmt(u.he100BrutoMin || 0)}</strong> · HE Líquida (após Débitos): <strong>${saldoTotalSign}</strong>${hoBadge}
+            <strong>Modo TSE XT / Digi</strong> · Horas Normais (Seg–Sex): <strong>${fmt(u.horasNormaisMin || 0)}</strong> · Saldo BH (50% − Déb.): <strong>${saldoBhSign}</strong> · HE 100% (FDS): <strong>+${fmt(u.he100BrutoMin || 0)}</strong>${hoBadge}${spLunchBadge}
           </div>
           <div class="je-audit-hero-sub">
             Unidade: <strong>${escapeHTML(report.unitName)}</strong> · Período: <strong>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</strong> · Contrato: <strong>${escapeHTML(report.contratoLabel)}</strong> · ${u.activeWorkersCount} de ${u.workersCount} prestador(es) com marcações${when ? ' · emitido em ' + escapeHTML(when) : ''}
@@ -1504,34 +1647,34 @@ window.JEPessoasSptReport = (function () {
             <div class="je-audit-card-val">${fmt(u.cltWorkedMin)}</div>
             <div class="je-audit-card-title">Trabalhado CLT</div>
           </div>
-          <div class="je-audit-card" title="Horas Normais cumpridas nos dias úteis (${u.workedWeekdays || 0}d presenciais + ${u.homeOfficeDays || 0}d Home Office · ${u.dsrCompensatedDays || 0}d Reposição DSR)">
+          <div class="je-audit-card" title="Horas Normais cumpridas nos dias úteis (${u.workedWeekdays || 0}d presenciais${presumeHomeOffice ? ` + ${u.homeOfficeDays || 0}d Home Office presumido` : ''})">
             <div class="je-audit-card-val">${fmt(u.horasNormaisMin || 0)}</div>
             <div class="je-audit-card-title">Horas Normais</div>
           </div>
-          <div class="je-audit-card" title="Horas Extras / Créditos BH 50% (excedentes em dias úteis até 2h/dia, após tolerância de 10 min da CLT art. 58 §1º)">
-            <div class="je-audit-card-val je-spt-pos">+${fmt(u.he50BrutoMin || 0)}</div>
-            <div class="je-audit-card-title">HE / Créd. BH 50%</div>
+          <div class="je-audit-card" title="${presumeHomeOffice ? 'Total de dias úteis sem batida contabilizados como Home Office presumido (8h)' : 'Total de dias úteis sem batida na catraca e sem justificativa (não geram débito automático)'}">
+            <div class="je-audit-card-val">${presumeHomeOffice ? `${u.homeOfficeDays || 0}d` : `${uUnreg}d`}</div>
+            <div class="je-audit-card-title">${presumeHomeOffice ? 'Dias HO Presumidos' : 'Dias Úteis s/ Reg.'}</div>
           </div>
-          <div class="je-audit-card" title="1ª Etapa: Saldo líquido do Banco de Horas de dias úteis no mês (HE 50% +${fmt(u.he50BrutoMin || 0)} − Débito BH -${fmt(u.debitoBhBrutoMin || 0)})">
+          <div class="je-audit-card" title="Saldo líquido do Banco de Horas de dias úteis no mês (HE 50% +${fmt(u.he50BrutoMin || 0)} − Débito BH -${fmt(u.debitoBhBrutoMin || 0)} — coluna independente no cartão da empresa)">
             <div class="je-audit-card-val ${(u.saldoBhMesMin || 0) >= 0 ? 'je-spt-pos' : 'je-spt-neg'}">${saldoBhSign}</div>
             <div class="je-audit-card-title">Saldo BH (Úteis)</div>
           </div>
-          <div class="je-audit-card" title="Horas Extras / Créditos BH 100%: 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária 00:00) + excedente &gt; 2h em dia útil">
+          <div class="je-audit-card" title="Horas Extras / Créditos BH 100% (coluna independente no cartão da empresa): 100% das horas trabalhadas em Sábados, Domingos e Feriados (jornada ordinária 00:00) + excedente &gt; 2h em dia útil">
             <div class="je-audit-card-val je-spt-pos">+${fmt(u.he100BrutoMin || 0)}</div>
             <div class="je-audit-card-title">HE / Créd. 100% (FDS)</div>
           </div>
-          <div class="je-audit-card" title="2ª Etapa: Horas Extras Líquidas após abater o Débito BH dos dias úteis — Fórmula: Saldo BH Úteis (${saldoBhSign}) + HE 100% (+${fmt(u.he100BrutoMin || 0)}) = ${saldoTotalSign}">
+          <div class="je-audit-card" title="Visão analítica do TSE XT (não é regra da empresa — mistura adicionais de 50% e 100% em proporção 1:1): Saldo BH Úteis (${saldoBhSign}) + HE 100% (+${fmt(u.he100BrutoMin || 0)}) = ${saldoTotalSign}">
             <div class="je-audit-card-val ${(u.saldoMesMin || 0) >= 0 ? 'je-spt-pos' : 'je-spt-neg'}">${saldoTotalSign}</div>
-            <div class="je-audit-card-title">HE Líquida (após Déb.)</div>
+            <div class="je-audit-card-title">Visão XT: BH + HE 100%</div>
           </div>
         </div>
 
         <p class="je-audit-foot je-recog-equation">
-          <strong>Regras TSE XT / Digi aplicadas:</strong> Jornada de <strong>8h00 (Seg–Sex)</strong> com tolerância de <strong>±10 min/dia</strong> (CLT art. 58 §1º) e mín. de <strong>1h00 de almoço</strong> (&gt; 6h, art. 71)${presumeHomeOffice ? ' · <strong>Home Office (8h)</strong> presumido em dias úteis sem batida na catraca (sem gerar batida fictícia), com folga automática de <strong>Reposição de DSR</strong> após domingo trabalhado / &gt; 6 dias seguidos (CLT art. 67)' : ''} · <strong>Sáb/Dom/Feriados</strong> com jornada <strong>00:00</strong> (100% em <strong>HE 100%</strong>) · <strong>1ª Etapa — Saldo BH (Úteis):</strong> HE 50% (<strong>+${fmt(u.he50BrutoMin || 0)}</strong>) − Débito BH (<strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong>) = <strong>${saldoBhSign}</strong> · <strong>2ª Etapa — HE Líquida (após Débitos):</strong> Saldo BH (<strong>${saldoBhSign}</strong>) + HE 100% (<strong>+${fmt(u.he100BrutoMin || 0)}</strong>) = <strong>${saldoTotalSign}</strong>.
+          <strong>Regras ativas:</strong> Jornada de <strong>8h00 (Seg–Sex)</strong> com tolerância de <strong>±10 min/dia</strong> (CLT art. 58 §1º) e mín. de <strong>1h00 de almoço</strong> (&gt; 6h, art. 71) · <strong>Home Office (8h):</strong> <strong>${presumeHomeOffice ? `Ligado (${u.homeOfficeDays || 0}d presumidos)` : `Desligado (${uUnreg}d úteis sem registro)`}</strong> · <strong>Intervalo 1h em Sáb/Dom/Fer (&gt;6h, 1 par):</strong> <strong>${deductAutoLunchOnSpecialDays ? 'Ligado (CLT/SPT)' : 'Desligado (reproduz cartão Digisystem)'}</strong> · <strong>Saldo BH (Úteis):</strong> HE 50% (<strong>+${fmt(u.he50BrutoMin || 0)}</strong>) − Débito BH (<strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong>) = <strong>${saldoBhSign}</strong> · <strong>HE 100% (FDS):</strong> <strong>+${fmt(u.he100BrutoMin || 0)}</strong> · <strong>Visão TSE XT (Saldo BH + HE 100%, não é regra da empresa):</strong> <strong>${saldoTotalSign}</strong>.
         </p>
 
         ${detailMode === 'diario' ? renderDailyViewHTML(report) : renderMonthlyTableHTML(report)}
-        ${renderInterpretationAnnexHTML(false)}
+        ${renderInterpretationAnnexHTML(report, false)}
       `);
     }
 
@@ -1608,12 +1751,13 @@ window.JEPessoasSptReport = (function () {
           'Entrada1', 'Saida1', 'Entrada2', 'Saida2', 'Entrada3', 'Saida3',
           'IntervaloAlmoco', 'TotalSPT', 'LiquidoCLT', 'JornadaEsperada',
           'HorasNormais', 'HE50_BH', 'HE100_FDS', 'Debito_BH', 'SaldoBH_Acumulado',
+          'HomeOfficePresumido', 'DiaUtilSemRegistro', 'AlertaDSR',
           'Justificativa', 'Ocorrencias'
         ]);
         currentResult.workers.forEach((w) => {
           w.months.forEach((m) => {
             m.days.forEach((d) => {
-              if (showOnlyActiveDaysInDaily && !d.isWorkedDay && !d.isDsrCompensated && !d.punchCount && !d.justificativa) return;
+              if (showOnlyActiveDaysInDaily && !d.isWorkedDay && !d.punchCount && !d.justificativa) return;
               const p = d.punches || [];
               rows.push([
                 'TSE XT / Digi',
@@ -1639,6 +1783,9 @@ window.JEPessoasSptReport = (function () {
                 fmt(d.he100Min || 0),
                 fmt(d.debitoBhMin || 0),
                 d.isWorkedDay ? fmt(d.accumulatedBhMin || 0, true) : '00:00',
+                d.isHomeOfficeDay ? 'Sim' : 'Nao',
+                d.isUnregisteredWeekday ? 'Sim' : 'Nao',
+                d.hasDsrStreakAlert ? 'Sim' : 'Nao',
                 d.justificativa || '',
                 (d.alerts || []).map((a) => a.label).join(' | ')
               ]);
@@ -1674,14 +1821,15 @@ window.JEPessoasSptReport = (function () {
     } else {
       rows.push([
         'Modo', 'Unidade', 'Prestador', 'CPF', 'Contrato', 'Mes',
-        'DiasContabilizados', 'DiasUteisPresenciais', 'DiasHomeOffice8h', 'DiasReposicaoDSR', 'DiasFdsTrabalhados',
+        'DiasContabilizados', 'DiasUteisPresenciais', 'DiasHomeOfficePresumido', 'DiasUteisSemRegistro', 'DiasFdsTrabalhados',
         'JornadaEsperadaUteis', 'TotalSPT', 'TrabalhadoLiquidoCLT',
         'HorasNormais', 'HE_Credito_BH_50', 'Debito_BH', 'Compensado_BH',
-        'Saldo_BH_Uteis', 'HE_Credito_BH_100', 'HE_Liquida_Apos_Debitos',
-        'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar'
+        'Saldo_BH_Uteis', 'HE_Credito_BH_100', 'Visao_TSE_XT_Saldo_BH_Mais_HE_100',
+        'DiasAlertaDSR_Dom_Mais6d', 'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar'
       ]);
       currentResult.workers.forEach((w) => {
         w.months.forEach((m) => {
+          const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
           rows.push([
             'TSE XT / Digi',
             currentResult.unitName,
@@ -1692,7 +1840,7 @@ window.JEPessoasSptReport = (function () {
             String(m.workedDays),
             String(m.workedWeekdays || 0),
             String(m.homeOfficeDays || 0),
-            String(m.dsrCompensatedDays || 0),
+            String(unregDays),
             String(m.workedWeekendDays || 0),
             fmt(m.expectedJourneyMin),
             fmt(m.sptTotalMin),
@@ -1704,6 +1852,7 @@ window.JEPessoasSptReport = (function () {
             fmt(m.saldoBhMesMin || 0, true),
             fmt(m.he100BrutoMin || 0),
             fmt(m.saldoMesMin, true),
+            String(m.alerts.dsrAlertDays || 0),
             String(m.alerts.intervaloCurtoDays),
             String(m.alerts.almocoAutoDays),
             String(m.alerts.acima2hExtraDays),
@@ -1837,7 +1986,7 @@ window.JEPessoasSptReport = (function () {
         </table>
 
         ${dailySection}
-        ${renderInterpretationAnnexHTML(true)}
+        ${renderInterpretationAnnexHTML(report, true)}
         <footer class="je-print-footer">TSE XT · Relatório de frequência (Modo SPT Puro — Dados Brutos).</footer>
       `;
     }
@@ -1846,11 +1995,13 @@ window.JEPessoasSptReport = (function () {
     const monthlyRows = [];
     report.workers.forEach((w) => {
       w.months.forEach((m) => {
+        const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
         monthlyRows.push(`
           <tr>
             <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small></td>
             <td>${escapeHTML(m.monthLabel)}</td>
             <td>${formatDaysCell(m)}</td>
+            <td>${unregDays}d${m.homeOfficeDays ? `<br><small>${m.homeOfficeDays}d HO</small>` : ''}</td>
             <td>${fmt(m.sptTotalMin)}</td>
             <td><strong>${fmt(m.cltWorkedMin)}</strong></td>
             <td>${fmt(m.horasNormaisMin || 0)}</td>
@@ -1864,11 +2015,13 @@ window.JEPessoasSptReport = (function () {
       });
     });
 
+    const uUnreg = u.unregisteredWeekdays != null ? u.unregisteredWeekdays : (presumeHomeOffice ? 0 : (u.weekdaysWithoutRecord || 0));
     monthlyRows.push(`
       <tr class="total">
         <td class="l">Total Consolidado da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores)</td>
         <td>—</td>
         <td>${formatDaysCell(u)}</td>
+        <td>${uUnreg}d${u.homeOfficeDays ? `<br><small>${u.homeOfficeDays}d HO</small>` : ''}</td>
         <td>${fmt(u.sptTotalMin)}</td>
         <td>${fmt(u.cltWorkedMin)}</td>
         <td>${fmt(u.horasNormaisMin || 0)}</td>
@@ -1885,7 +2038,7 @@ window.JEPessoasSptReport = (function () {
       const workerTables = report.workers.map((w) => {
         return w.months.map((m) => {
           const days = showOnlyActiveDaysInDaily
-            ? m.days.filter((d) => d.isWorkedDay || d.isDsrCompensated || d.punchCount > 0 || d.justificativa)
+            ? m.days.filter((d) => d.isWorkedDay || d.punchCount > 0 || d.justificativa)
             : m.days;
           if (!days.length) return '';
           const dRows = days.map((d) => {
@@ -1893,8 +2046,9 @@ window.JEPessoasSptReport = (function () {
             const alertsTxt = [d.justificativa].concat((d.alerts || []).map((a) => a.label)).filter(Boolean).join(' · ');
             const targetTxt = d.isWorkedDay
               ? (d.isSpecialDay ? '00:00' : fmt(d.targetMin))
-              : (d.isDsrCompensated ? '00:00' : '—');
-            return `<tr>
+              : '—';
+            const rowCls = d.isHomeOfficeDay ? ' class="je-print-row-ho"' : '';
+            return `<tr${rowCls}>
               <td>${escapeHTML(d.date)} (${escapeHTML(d.dayLabel)})</td>
               <td>${escapeHTML(p[0] || '—')}</td>
               <td>${escapeHTML(p[1] || '—')}</td>
@@ -1930,42 +2084,44 @@ window.JEPessoasSptReport = (function () {
 
     return `
       <header class="je-print-header">
-        <p class="je-print-eyebrow">TSE XT · SPT <span>Modo: TSE XT / Digi (Regras CLT / Digisystem)</span></p>
+        <p class="je-print-eyebrow">TSE XT · SPT <span>Modo: TSE XT / Digi (Fiscalização CLT / Digisystem)</span></p>
         <h1>Relatório Consolidado de Horas por Unidade (${detailMode === 'diario' ? 'Detalhe Diário e Mensal' : 'Consolidado Mensal'})</h1>
         <dl class="je-print-meta">
           <div><dt>Unidade</dt><dd>${escapeHTML(report.unitName)}</dd></div>
           <div><dt>Período</dt><dd>${escapeHTML(report.fromBr)} a ${escapeHTML(report.toBr)}</dd></div>
           <div><dt>Contrato</dt><dd>${escapeHTML(report.contratoLabel)}</dd></div>
-          <div><dt>Modo</dt><dd>TSE XT / Digi${presumeHomeOffice ? ' (c/ Home Office 8h + Reposição DSR)' : ''}</dd></div>
+          <div><dt>Home Office (8h)</dt><dd>${presumeHomeOffice ? `Ligado (${u.homeOfficeDays || 0}d presumidos)` : `Desligado (${uUnreg}d úteis s/ reg.)`}</dd></div>
+          <div><dt>Intervalo FDS (&gt;6h)</dt><dd>${deductAutoLunchOnSpecialDays ? 'Desconta 1h (CLT/SPT)' : 'Sem desconto (Digisystem)'}</dd></div>
           <div><dt>Emissão</dt><dd>${escapeHTML(when)}</dd></div>
         </dl>
         ${report.issuer ? `<p class="meta">Emitido por ${escapeHTML(report.issuer)}</p>` : ''}
-        <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Regras TSE XT / Digi: jornada 8h Seg–Sex (tolerância ±10 min art. 58 §1º), almoço mín. 1h (art. 71)${presumeHomeOffice ? ', presunção de Home Office (8h) em dias úteis sem batida com Reposição de DSR após > 6d seguidos (art. 67)' : ''}, Sáb/Dom/Feriados com jornada 00:00 (100% em HE 100%) e abatimento automático de Débito BH nas Horas Extras (HE Líquida após Débitos).</p>
+        <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Regras ativas: jornada 8h Seg–Sex (tolerância ±10 min art. 58 §1º), almoço mín. 1h (art. 71), Home Office presumido: ${presumeHomeOffice ? 'Ligado' : 'Desligado (padrão de fiscalização)'}, desconto de 1h de intervalo não batido em Sáb/Dom/Fer (&gt;6h): ${deductAutoLunchOnSpecialDays ? 'Ligado (CLT/SPT)' : 'Desligado (Digisystem)'}, e colunas independentes para Saldo BH (Úteis) e HE 100%.</p>
       </header>
 
       <div class="je-print-metrics">
         <div><span>Trabalhado CLT</span><strong>${fmt(u.cltWorkedMin)}</strong></div>
         <div><span>Horas Normais</span><strong>${fmt(u.horasNormaisMin || 0)}</strong></div>
+        <div><span>${presumeHomeOffice ? 'Dias HO Presumidos' : 'Dias Úteis s/ Reg.'}</span><strong>${presumeHomeOffice ? `${u.homeOfficeDays || 0}d` : `${uUnreg}d`}</strong></div>
         <div><span>HE / Créd. BH 50%</span><strong>+${fmt(u.he50BrutoMin || 0)}</strong></div>
         <div><span>Débito BH</span><strong>-${fmt(u.debitoBhBrutoMin || 0)}</strong></div>
         <div><span>Saldo BH (Úteis)</span><strong>${fmt(u.saldoBhMesMin || 0, true)}</strong></div>
-        <div><span>HE 100% (FDS)</span><strong>+${fmt(u.he100BrutoMin || 0)}</strong></div>
-        <div class="je-print-metric-focus"><span>HE Líquida (após Déb.)</span><strong>${fmt(u.saldoMesMin || 0, true)}</strong></div>
+        <div class="je-print-metric-focus"><span>HE 100% (FDS)</span><strong>+${fmt(u.he100BrutoMin || 0)}</strong></div>
+        <div><span>Visão XT: BH+100%</span><strong>${fmt(u.saldoMesMin || 0, true)}</strong></div>
       </div>
 
       <h2>1. Consolidação Mensal por Prestador (TSE XT / Digi)</h2>
       <table class="je-print-table">
         <thead>
           <tr>
-            <th>Prestador / Contrato</th><th>Mês</th><th>Dias</th><th>Total SPT</th><th>Trab. CLT</th><th>H. Normais</th>
-            <th>HE 50% (BH)</th><th>Débito BH</th><th>Saldo BH (Úteis)</th><th>HE 100% (FDS)</th><th>HE Líquida (após Débitos)</th>
+            <th>Prestador / Contrato</th><th>Mês</th><th>Dias</th><th>Dias úteis sem registro</th><th>Total SPT</th><th>Trab. CLT</th><th>H. Normais</th>
+            <th>HE 50% (BH)</th><th>Débito BH</th><th>Saldo BH (Úteis)</th><th>HE 100% (FDS)</th><th>Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)</th>
           </tr>
         </thead>
         <tbody>${monthlyRows.join('')}</tbody>
       </table>
 
       ${dailySection}
-      ${renderInterpretationAnnexHTML(true)}
+      ${renderInterpretationAnnexHTML(report, true)}
       <footer class="je-print-footer">TSE XT · Relatório de apoio à gestão contratual e fiscalização de frequência (SPT/TSE · Modo TSE XT / Digi).</footer>
     `;
   }
@@ -2067,12 +2223,23 @@ window.JEPessoasSptReport = (function () {
     overlay.querySelector('#je-spt-seg-mode-xt').classList.toggle('is-active', calcMode === 'xt_digi');
     overlay.querySelector('#je-spt-seg-mode-raw').classList.toggle('is-active', calcMode === 'spt_puro');
 
-    if (prefs && typeof prefs.presumeHomeOffice === 'boolean') {
-      presumeHomeOffice = prefs.presumeHomeOffice;
+    // Migração única (A1): preferências antigas salvas antes de hoDefaultMigratedV2 tinham presumeHomeOffice = true por padrão;
+    // migra uma única vez para false (padrão de fiscalização).
+    if (prefs && prefs.hoDefaultMigratedV2) {
+      presumeHomeOffice = !!prefs.presumeHomeOffice;
     } else {
-      presumeHomeOffice = true;
+      presumeHomeOffice = false;
     }
+    if (prefs && typeof prefs.deductAutoLunchOnSpecialDays === 'boolean') {
+      deductAutoLunchOnSpecialDays = prefs.deductAutoLunchOnSpecialDays;
+    } else {
+      deductAutoLunchOnSpecialDays = true;
+    }
+    customHolidaysText = (prefs && typeof prefs.customHolidays === 'string') ? prefs.customHolidays : '';
     syncHomeOfficeCheckboxState();
+    if (!prefs || !prefs.hoDefaultMigratedV2) {
+      savePrefs();
+    }
 
     if (prefs && (prefs.detailMode === 'diario' || prefs.detailMode === 'mensal')) {
       detailMode = prefs.detailMode;
@@ -2086,7 +2253,11 @@ window.JEPessoasSptReport = (function () {
     await refreshWorkersList();
 
     if (stored && stored.unitId === unitWidget.getValue()) {
-      currentResult = calc().recomputeReportWithOptions(stored, { presumeHomeOffice });
+      currentResult = calc().recomputeReportWithOptions(stored, {
+        presumeHomeOffice,
+        deductAutoLunchOnSpecialDays,
+        customHolidays: customHolidaysText
+      });
       renderResult(currentResult);
     } else {
       renderResult(null);
@@ -2095,6 +2266,7 @@ window.JEPessoasSptReport = (function () {
 
   return {
     open,
-    close
+    close,
+    isRunning: () => running
   };
 })();

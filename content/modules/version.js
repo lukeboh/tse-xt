@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.16-Snapshot';
+  const CURRENT_VERSION = '1.2.17-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.17-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco A): Home Office desligado por padrão, alerta de DSR/>6d, feriados CLT/DF editáveis e intervalo de FDS configurável',
+      features: [
+        'Home Office presumido (8h) desligado por padrão para fiscalização (com migração única de preferências antigas) e nova coluna visível "Dias úteis sem registro" (sem gerar débito automático). Quando ligado, aplica-se a qualquer dia útil sem batida e sem justificativa, com destaque visual no espelho.',
+        'Substituída a heurística de Reposição de DSR pelo alerta "Trabalho em domingo / >6 dias consecutivos sem folga identificada (CLT art. 67; OJ 410 TST)" que considera a virada entre meses consecutivos e não altera nenhum total.',
+        'Mantidas "Saldo BH (Úteis)" e "HE 100% (FDS)" como colunas independentes e renomeada a coluna combinada para "Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)".',
+        'Feriados padrão ajustados para CLT/DF (excluídos feriados forenses 11/08, 01/11 e 08/12; incluídos Sexta-feira Santa pela Páscoa e 30/11 DF), com campo editável de feriados (+/-), controle de desconto de 1h em Sáb/Dom/Feriado (>6h), data local America/Sao_Paulo e Anexo listando todas as opções ativas.'
+      ]
+    },
     {
       version: '1.2.16-Snapshot',
       date: '2026-11-18',

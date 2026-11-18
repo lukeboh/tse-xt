@@ -422,7 +422,7 @@ window.JEPessoasSptModernizer = (function () {
     if (!parsed.days.length) return;
     const summary = c.summarizeMonthClt(parsed.days, {
       monthLabel: parsed.meta.periodo,
-      presumeHomeOffice: true
+      presumeHomeOffice: false
     });
     const fmt = (m, s = false) => c.formatMin(m, s);
 

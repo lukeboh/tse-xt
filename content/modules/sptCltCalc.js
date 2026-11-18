@@ -3,24 +3,26 @@
  *
  * Modos suportados pelo relatório:
  *   1. 'xt_digi' (TSE XT / Digi — padrão):
- *      - Jornada ordinária de 8h00 (480 min) nos dias úteis (Seg–Sex).
+ *      - Jornada ordinária de 8h00 (480 min) nos dias úteis trabalhados (Seg–Sex).
  *      - Sábados, Domingos e Feriados possuem jornada ordinária 00:00: 100% das horas
  *        trabalhadas contam como HE 100% (nunca gerando "Horas a Menos" / Débito BH
  *        quando o plantão de fim de semana é inferior a 8h).
  *      - Tolerância CLT (art. 58, § 1º): variações de até 10 minutos no total do dia útil
  *        (entre 07:50 e 08:10) contam como jornada normal cumprida (08:00), sem gerar
  *        HE 50% nem Débito BH.
- *      - Opção "Presumir Home Office (8h) e Reposição de DSR":
- *        em dias úteis sem batida na catraca (para colaboradores ativos no mês), presume-se
- *        jornada ordinária de 08:00 concluída em Home Office (sem gerar batidas fictícias),
- *        exceto quando o colaborador trabalhou no domingo / mais de 6 dias seguidos (CLT art. 67
- *        e OJ 410 TST), hipótese em que 1 dia útil sem batida na semana é alocado como
- *        "Reposição de DSR" (folga compensatória 00:00).
- *      - Separação entre Banco de Horas de Dias Úteis (HE 50% até 2h/dia × Débito BH)
- *        e Horas Extras 100% (Sábados, Domingos, Feriados e excedente > 2h em dia útil),
- *        espelhando o Cartão Ponto da Digisystem.
- *      - Intervalo intrajornada (almoço — CLT art. 71): mínimo de 1h00 (60 min)
- *        para jornadas superiores a 6h00 (360 min).
+ *      - Opção "Presumir Home Office (8h)" (DESLIGADA por padrão para fiscalização):
+ *        quando desligada, dias úteis sem batida e sem justificativa são contabilizados na
+ *        coluna visível "Dias úteis sem registro" (sem gerar débito automático). Quando
+ *        ligada pelo gestor, todo dia útil sem batida e sem justificativa (até a data atual)
+ *        recebe 08:00 de jornada ordinária presumida, com destaque visual próprio.
+ *      - Alerta de DSR / > 6 dias consecutivos (CLT art. 67; OJ 410 TST):
+ *        identifica trabalho em domingo sem folga compensatória ou sequências superiores
+ *        a 6 dias consecutivos trabalhados (inclusive na virada entre meses consecutivos),
+ *        emitindo alerta de fiscalização sem alterar nenhum total de horas.
+ *      - Intervalo intrajornada (almoço — CLT art. 71): mínimo de 1h00 (60 min) para
+ *        jornadas superiores a 6h00 (360 min). Em Sábados, Domingos e Feriados com apenas
+ *        1 par de batidas (> 6h), o desconto automático de 1h é configurável (ligado por
+ *        padrão conforme CLT art. 71 / SPT; desligado reproduz o cartão Digisystem).
  *   2. 'spt_puro' (SPT Puro — Dados Brutos):
  *      - Exibe exclusivamente as marcações e o Total bruto retornados pelo SPT,
  *        sem deduções adicionais nem cálculo de jornada/excedente/banco.
@@ -37,21 +39,207 @@ window.JEPessoasSptCltCalc = (function () {
 
   const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  // Feriados nacionais fixos (MM-DD) reconhecidos automaticamente no calendário
-  const FIXED_HOLIDAYS_MM_DD = new Set([
-    '01-01', // Confraternização Universal
-    '04-21', // Tiradentes
-    '05-01', // Dia do Trabalhador
-    '08-11', // Criação dos Cursos Jurídicos (Feriado Forense — Lei 5.010/66)
-    '09-07', // Independência do Brasil
-    '10-12', // Nossa Senhora Aparecida
-    '11-01', // Dia de Todos os Santos (Feriado Forense — Lei 5.010/66)
-    '11-02', // Finados
-    '11-15', // Proclamação da República
-    '11-20', // Dia Nacional de Zumbi e da Consciência Negra
-    '12-08', // Dia da Justiça (Feriado Forense)
-    '12-25'  // Natal
-  ]);
+  // Feriados nacionais civis (Leis 662/1949, 6.802/1980 e 14.759/2023) + feriado distrital do DF (Lei 963/1995).
+  // Nota: Feriados exclusivamente forenses (11/08, 01/11 e 08/12 — Lei 5.010/1966) NÃO integram a lista
+  // padrão CLT para empresas contratadas, podendo ser adicionados manualmente pelo gestor se previstos em CCT.
+  const DEFAULT_FIXED_HOLIDAYS = {
+    '01-01': 'Confraternização Universal',
+    '04-21': 'Tiradentes',
+    '05-01': 'Dia do Trabalhador',
+    '09-07': 'Independência do Brasil',
+    '10-12': 'Nossa Senhora Aparecida',
+    '11-02': 'Finados',
+    '11-15': 'Proclamação da República',
+    '11-20': 'Dia Nacional de Zumbi e da Consciência Negra',
+    '11-30': 'Dia do Evangélico (DF)',
+    '12-25': 'Natal'
+  };
+
+  function getLocalTodayIso(now = new Date()) {
+    const ref = now instanceof Date && !isNaN(now.getTime()) ? now : new Date();
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(ref);
+      const y = parts.find((p) => p.type === 'year')?.value;
+      const m = parts.find((p) => p.type === 'month')?.value;
+      const d = parts.find((p) => p.type === 'day')?.value;
+      if (y && m && d) return `${y}-${m}-${d}`;
+    } catch (_) {}
+    const y = ref.getFullYear();
+    const m = String(ref.getMonth() + 1).padStart(2, '0');
+    const d = String(ref.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // Algoritmo de Meeus/Jones/Butcher para o Domingo de Páscoa e a Sexta-feira Santa (Paixão de Cristo)
+  function computeEasterSunday(year) {
+    const y = Number(year);
+    if (!Number.isInteger(y) || y < 1900 || y > 2199) return null;
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(y, month - 1, day);
+  }
+
+  function computeGoodFridayMmDd(year) {
+    const easter = computeEasterSunday(year);
+    if (!easter) return null;
+    const gf = new Date(easter.getFullYear(), easter.getMonth(), easter.getDate() - 2);
+    const mm = String(gf.getMonth() + 1).padStart(2, '0');
+    const dd = String(gf.getDate()).padStart(2, '0');
+    return `${mm}-${dd}`;
+  }
+
+  /**
+   * Interpreta uma expressão ou objeto de customização de feriados.
+   * Aceita:
+   *  - string separada por vírgula/ponto-e-vírgula (ex.: "+11/08, -30/11, 20/02/2026")
+   *  - objeto { add: ['11/08', '2026-02-17'], remove: ['30/11'] }
+   */
+  function parseCustomHolidaysConfig(customHolidays) {
+    const addMmDd = new Map();
+    const addIso = new Map();
+    const removeMmDd = new Set();
+    const removeIso = new Set();
+
+    function processToken(rawToken, forceRemove = false) {
+      let token = String(rawToken || '').trim();
+      if (!token) return;
+      let isRemove = forceRemove;
+      if (token.startsWith('-')) {
+        isRemove = true;
+        token = token.slice(1).trim();
+      } else if (token.startsWith('+')) {
+        token = token.slice(1).trim();
+      }
+      let customLabel = 'Feriado configurado';
+      const labelSplit = token.split(':');
+      if (labelSplit.length > 1) {
+        token = labelSplit[0].trim();
+        customLabel = labelSplit.slice(1).join(':').trim() || customLabel;
+      }
+
+      let m = /^(\d{2})\/(\d{2})$/.exec(token);
+      if (m) {
+        const mmdd = `${m[2]}-${m[1]}`;
+        if (isRemove) removeMmDd.add(mmdd);
+        else addMmDd.set(mmdd, customLabel);
+        return;
+      }
+      m = /^(\d{2})-(\d{2})$/.exec(token);
+      if (m) {
+        const mmdd = `${m[1]}-${m[2]}`;
+        if (isRemove) removeMmDd.add(mmdd);
+        else addMmDd.set(mmdd, customLabel);
+        return;
+      }
+      m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(token);
+      if (m) {
+        const iso = `${m[3]}-${m[2]}-${m[1]}`;
+        if (isRemove) removeIso.add(iso);
+        else addIso.set(iso, customLabel);
+        return;
+      }
+      m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
+      if (m) {
+        const iso = `${m[1]}-${m[2]}-${m[3]}`;
+        if (isRemove) removeIso.add(iso);
+        else addIso.set(iso, customLabel);
+      }
+    }
+
+    if (typeof customHolidays === 'string') {
+      customHolidays.split(/[,;\n]+/).forEach((t) => processToken(t, false));
+    } else if (Array.isArray(customHolidays)) {
+      customHolidays.forEach((t) => processToken(t, false));
+    } else if (customHolidays && typeof customHolidays === 'object') {
+      if (Array.isArray(customHolidays.add)) {
+        customHolidays.add.forEach((t) => processToken(t, false));
+      }
+      if (Array.isArray(customHolidays.remove)) {
+        customHolidays.remove.forEach((t) => processToken(t, true));
+      }
+      if (typeof customHolidays.text === 'string') {
+        customHolidays.text.split(/[,;\n]+/).forEach((t) => processToken(t, false));
+      }
+    }
+
+    return { addMmDd, addIso, removeMmDd, removeIso };
+  }
+
+  function resolveHolidayMapForYear(year, customHolidays = null) {
+    const y = Number(year);
+    const parsed = parseCustomHolidaysConfig(customHolidays);
+    const map = new Map(); // dateIso -> name
+
+    Object.keys(DEFAULT_FIXED_HOLIDAYS).forEach((mmdd) => {
+      if (parsed.removeMmDd.has(mmdd)) return;
+      const iso = `${y}-${mmdd}`;
+      if (parsed.removeIso.has(iso)) return;
+      map.set(iso, DEFAULT_FIXED_HOLIDAYS[mmdd]);
+    });
+
+    const gfMmDd = computeGoodFridayMmDd(y);
+    if (gfMmDd && !parsed.removeMmDd.has(gfMmDd)) {
+      const gfIso = `${y}-${gfMmDd}`;
+      if (!parsed.removeIso.has(gfIso)) {
+        map.set(gfIso, 'Sexta-feira Santa (Paixão de Cristo)');
+      }
+    }
+
+    parsed.addMmDd.forEach((label, mmdd) => {
+      const iso = `${y}-${mmdd}`;
+      if (!parsed.removeIso.has(iso)) {
+        map.set(iso, label);
+      }
+    });
+
+    parsed.addIso.forEach((label, iso) => {
+      if (iso.startsWith(`${y}-`) && !parsed.removeIso.has(iso)) {
+        map.set(iso, label);
+      }
+    });
+
+    return map;
+  }
+
+  function listAppliedHolidaysInRange(fromIso, toIso, customHolidays = null) {
+    const startIso = /^(\d{4})-(\d{2})-(\d{2})$/.test(fromIso) ? fromIso : brToIso(fromIso);
+    const endIso = /^(\d{4})-(\d{2})-(\d{2})$/.test(toIso) ? toIso : brToIso(toIso);
+    if (!startIso || !endIso || startIso > endIso) return [];
+    const sY = parseInt(startIso.slice(0, 4), 10);
+    const eY = parseInt(endIso.slice(0, 4), 10);
+    const list = [];
+    for (let y = sY; y <= eY; y += 1) {
+      const map = resolveHolidayMapForYear(y, customHolidays);
+      map.forEach((name, iso) => {
+        if (iso >= startIso && iso <= endIso) {
+          list.push({
+            dateIso: iso,
+            dateBr: isoToBr(iso),
+            name
+          });
+        }
+      });
+    }
+    list.sort((a, b) => a.dateIso.localeCompare(b.dateIso));
+    return list;
+  }
 
   function parseTimeMin(str) {
     if (!str || typeof str !== 'string') return 0;
@@ -199,6 +387,62 @@ window.JEPessoasSptCltCalc = (function () {
     return units.filter((u) => tokens.every((t) => u.searchBlob.includes(t)));
   }
 
+  /**
+   * Extrai a lista de períodos contratuais (window.lPeriodos) diretamente do HTML/DOM da página,
+   * funcionando mesmo no mundo isolado (isolated world) do content script (MV3).
+   */
+  function parsePeriodosFromDoc(doc = document) {
+    if (!doc) return [];
+    const scripts = doc.querySelectorAll ? doc.querySelectorAll('script') : [];
+    for (const s of Array.from(scripts)) {
+      const text = s.textContent || '';
+      if (!text.includes('lPeriodos')) continue;
+      const m = /window\.lPeriodos\s*=\s*(\[\s*\[[\s\S]*?\]\s*\])\s*;/.exec(text);
+      if (m && m[1]) {
+        try {
+          const parsed = JSON.parse(m[1]);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (_) {}
+      }
+    }
+    // Fallback para options de <select name="cbPeriodos"> quando presentes com atributos ou texto
+    const sel = doc.querySelector ? doc.querySelector('#cbPeriodos, select[name="cbPeriodos"]') : null;
+    if (sel && sel.options && sel.options.length > 0) {
+      const fallback = [];
+      Array.from(sel.options).forEach((opt) => {
+        const val = String(opt.value || '').trim();
+        if (!val || val === '-1') return;
+        const txt = String(opt.textContent || '').trim();
+        const ymMatch = /(\d{2}\/\d{4})/.exec(txt);
+        if (ymMatch) {
+          const ym = ymMatch[1];
+          const [mm, yyyy] = ym.split('/').map(Number);
+          const lastDay = new Date(yyyy, mm, 0).getDate();
+          const contratoVal = doc.querySelector?.('#cbContratos, select[name="cbContratos"]')?.value || '';
+          const idx = parseInt(val, 10);
+          const tuple = [
+            contratoVal && contratoVal !== '-1' ? contratoVal : '',
+            ym,
+            `01/${ym}`,
+            `${String(lastDay).padStart(2, '0')}/${ym}`,
+            '0',
+            txt
+          ];
+          if (!isNaN(idx) && idx >= 0) {
+            fallback[idx] = tuple;
+          } else {
+            fallback.push(tuple);
+          }
+        }
+      });
+      if (fallback.length > 0) return fallback;
+    }
+    if (typeof window !== 'undefined' && Array.isArray(window.lPeriodos)) {
+      return window.lPeriodos;
+    }
+    return [];
+  }
+
   function parseWorkersFromConsultationDoc(doc) {
     if (!doc || !doc.querySelectorAll) return [];
     const seen = new Set();
@@ -211,12 +455,15 @@ window.JEPessoasSptCltCalc = (function () {
       const contrato = String(a.getAttribute('data-contrato') || '').trim();
       const matricula = String(a.getAttribute('data-matricula') || '').trim();
       const cpf = String(a.getAttribute('data-cpf') || a.textContent || '').replace(/\D/g, '');
+      const codTseAttr = String(a.getAttribute('data-cod-tse') || '').trim();
+      const codTse = codTseAttr || cpf;
       const numContrato = String(a.getAttribute('data-num-contrato') || '').trim();
       const nome = String(a.getAttribute('data-nome-escaped') || '').replace(/\s+/g, ' ').trim();
       list.push({
         codigo,
         matricula,
         cpf,
+        codTse,
         contrato,
         numContrato,
         nome
@@ -226,7 +473,7 @@ window.JEPessoasSptCltCalc = (function () {
     return list;
   }
 
-  function parseDateInfo(dateBr) {
+  function parseDateInfo(dateBr, customHolidays = null) {
     const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(dateBr || '').trim());
     if (!m) return null;
     const d = parseInt(m[1], 10);
@@ -235,33 +482,48 @@ window.JEPessoasSptCltCalc = (function () {
     const dt = new Date(y, mo - 1, d);
     if (isNaN(dt.getTime())) return null;
     const dow = dt.getDay();
-    const mmdd = `${m[2]}-${m[1]}`;
-    const isHoliday = FIXED_HOLIDAYS_MM_DD.has(mmdd);
+    const dateIso = `${m[3]}-${m[2]}-${m[1]}`;
+    const yearMap = resolveHolidayMapForYear(y, customHolidays);
+    const holidayName = yearMap.get(dateIso) || '';
+    const isHoliday = !!holidayName;
     return {
       dateBr: `${m[1]}/${m[2]}/${m[3]}`,
-      dateIso: `${m[3]}-${m[2]}-${m[1]}`,
+      dateIso,
       ymKey: `${m[3]}-${m[2]}`,
       monthLabel: `${m[2]}/${m[3]}`,
       dayOfWeek: dow,
       dayLabel: WEEKDAY_SHORT[dow] || '',
       isWeekend: dow === 0 || dow === 6,
-      isHoliday
+      isHoliday,
+      holidayName
     };
   }
 
   function analyzeDayClt(rawDay, prevRawDay = null, options = {}) {
-    const info = parseDateInfo(rawDay.date);
-    const punches = (rawDay.punches || []).map((p) => String(p || '').trim());
-    const nonEmptyPunches = punches.filter(Boolean);
-    const punchCount = nonEmptyPunches.length;
-    const sptTotalMin = parseTimeMin(rawDay.total);
-    const justificativa = String(rawDay.justificativa || '').trim();
-
+    const customHolidays = options.customHolidays != null ? options.customHolidays : null;
+    const deductAutoLunchOnSpecialDays = options.deductAutoLunchOnSpecialDays !== undefined
+      ? !!options.deductAutoLunchOnSpecialDays
+      : true;
     const toleranceMin = typeof options.toleranceMin === 'number'
       ? options.toleranceMin
       : DAILY_TOLERANCE_MIN;
 
-    // Detecta continuação pós-meia-noite (ex.: saída 23:59 no dia anterior e
+    const info = parseDateInfo(rawDay.date, customHolidays);
+    const punches = (rawDay.punches || []).map((p) => String(p || '').trim());
+    const nonEmptyPunches = punches.filter(Boolean);
+    const punchCount = nonEmptyPunches.length;
+    const sptTotalStr = String(rawDay.total != null ? rawDay.total : (rawDay.sptTotalText || '')).trim();
+    const sptTotalMin = typeof rawDay.sptTotalMin === 'number' && !sptTotalStr
+      ? rawDay.sptTotalMin
+      : parseTimeMin(sptTotalStr);
+    const justificativa = String(rawDay.justificativa || '').trim();
+
+    const isHoliday = !!(info && info.isHoliday) || /feriado/i.test(justificativa);
+    const holidayName = (info && info.holidayName) || (/feriado/i.test(justificativa) ? justificativa : '');
+    const isWeekend = !!(info && info.isWeekend);
+    const isSpecialDay = isWeekend || isHoliday;
+
+    // Detecta continuação pós-meia-noite (saída 23:59 no dia anterior e
     // entrada 00:00 no dia atual com Total SPT = 00:00 porque já foi somado no dia anterior).
     const prevEndedMidnight = !!(prevRawDay && Array.isArray(prevRawDay.punches) && prevRawDay.punches.some((p) => String(p || '').trim() === '23:59'));
     const isPostMidnightContinuation = punchCount >= 2 && punches[0] === '00:00' && sptTotalMin === 0 && prevEndedMidnight;
@@ -296,7 +558,7 @@ window.JEPessoasSptCltCalc = (function () {
 
     let cltWorkedMin = 0;
     let effectiveLunchMin = measuredLunchMin;
-    let lunchMode = 'none'; // 'none' | 'measured' | 'auto-1h' | 'adjusted-1h'
+    let lunchMode = 'none'; // 'none' | 'measured' | 'auto-1h' | 'adjusted-1h' | 'special-no-deduct'
     let lunchDeductionDiffMin = 0;
     const alerts = [];
 
@@ -313,7 +575,16 @@ window.JEPessoasSptCltCalc = (function () {
       const isCrossMidnightOrigin = sptTotalMin > totalPresenceMin && punches.includes('23:59');
 
       if (validPairs === 1 && measuredLunchMin === 0) {
-        if (isCrossMidnightOrigin) {
+        const shouldDeductAutoLunch = !isSpecialDay || deductAutoLunchOnSpecialDays;
+        if (!shouldDeductAutoLunch) {
+          // Quando o desconto de intervalo em Sáb/Dom/Feriado está desligado (reproduz cartão Digisystem):
+          // considera o tempo bruto entre entrada e saída (ou o maior entre rawWorkedMin e sptTotalMin quando não há virada de meia-noite).
+          cltWorkedMin = isCrossMidnightOrigin
+            ? (sptTotalMin + MIN_LUNCH_MIN)
+            : (rawWorkedMin > 0 ? rawWorkedMin : baseWorked);
+          effectiveLunchMin = 0;
+          lunchMode = 'special-no-deduct';
+        } else if (isCrossMidnightOrigin) {
           cltWorkedMin = sptTotalMin;
           effectiveLunchMin = MIN_LUNCH_MIN;
           lunchMode = 'auto-1h';
@@ -367,15 +638,8 @@ window.JEPessoasSptCltCalc = (function () {
       });
     }
 
-    const isHoliday = !!(info && info.isHoliday) || /feriado/i.test(justificativa);
-    const isWeekend = !!(info && info.isWeekend);
-    const isSpecialDay = isWeekend || isHoliday;
     const isWorkedDay = cltWorkedMin > 0;
 
-    // Regra TSE XT / Digisystem:
-    // - Sábados (Compensado), Domingos (DSR) e Feriados têm jornada ordinária 00:00.
-    //   100% do tempo trabalhado nesses dias vai para HE 100% (he100Min) e nunca gera Débito BH.
-    // - Dias úteis (Seg–Sex) têm jornada ordinária 08:00 (480 min) e tolerância CLT de ±10 min (art. 58 §1º).
     let targetMin = 0;
     let normalWorkedMin = 0;
     let he50Min = 0;
@@ -415,7 +679,7 @@ window.JEPessoasSptCltCalc = (function () {
             alerts.push({
               code: 'tolerancia-clt',
               label: `Tol. CLT (${formatMin(rawDiff, true)})`,
-              tip: `Variação de ${formatMin(rawDiff, true)} dentro da tolerância legal de ±10 min/dia (CLT art. 58 §1º). Computado como jornada normal de 08:00.`
+              tip: `Variação de ${formatMin(rawDiff, true)} dentro da tolerância legal de ±${toleranceMin} min/dia (CLT art. 58 §1º). Computado como jornada normal de 08:00.`
             });
           }
         } else if (rawDiff > 0) {
@@ -449,7 +713,9 @@ window.JEPessoasSptCltCalc = (function () {
     }
 
     if (isWorkedDay && isSpecialDay) {
-      const tipoLabel = isHoliday ? 'Feriado (HE 100%)' : (info && info.dayOfWeek === 0 ? 'Domingo (HE 100%)' : 'Sábado (HE 100%)');
+      const tipoLabel = isHoliday
+        ? `Feriado: ${holidayName || 'HE 100%'}`
+        : (info && info.dayOfWeek === 0 ? 'Domingo (HE 100%)' : 'Sábado (HE 100%)');
       alerts.push({
         code: 'fim-de-semana',
         label: tipoLabel,
@@ -458,6 +724,12 @@ window.JEPessoasSptCltCalc = (function () {
     }
 
     return {
+      rawInput: {
+        date: info ? info.dateBr : String(rawDay.date || ''),
+        punches: punches.slice(0, 6),
+        justificativa,
+        total: sptTotalStr || formatMin(sptTotalMin)
+      },
       date: info ? info.dateBr : String(rawDay.date || ''),
       dateIso: info ? info.dateIso : '',
       ymKey: info ? info.ymKey : '',
@@ -466,6 +738,7 @@ window.JEPessoasSptCltCalc = (function () {
       dayLabel: info ? info.dayLabel : '',
       isWeekend,
       isHoliday,
+      holidayName,
       isSpecialDay,
       punches: punches.slice(0, 6),
       punchCount,
@@ -481,7 +754,9 @@ window.JEPessoasSptCltCalc = (function () {
       isWorkedDay,
       isPresencialWorkedDay: isWorkedDay,
       isHomeOfficeDay: false,
+      isUnregisteredWeekday: false,
       isDsrCompensated: false,
+      hasDsrStreakAlert: false,
       isPostMidnightContinuation,
       withinTolerance,
       targetMin,
@@ -503,7 +778,7 @@ window.JEPessoasSptCltCalc = (function () {
     };
   }
 
-  function parseWorkerSheetDoc(doc, filterRange = null) {
+  function parseWorkerSheetDoc(doc, filterRange = null, options = {}) {
     if (!doc || !doc.querySelectorAll) {
       return { meta: {}, days: [] };
     }
@@ -556,7 +831,7 @@ window.JEPessoasSptCltCalc = (function () {
     const analyzed = [];
     for (let i = 0; i < rawRows.length; i += 1) {
       const prev = i > 0 ? rawRows[i - 1] : null;
-      const day = analyzeDayClt(rawRows[i], prev);
+      const day = analyzeDayClt(rawRows[i], prev, options);
       if (startIso && day.dateIso && day.dateIso < startIso) continue;
       if (endIso && day.dateIso && day.dateIso > endIso) continue;
       analyzed.push(day);
@@ -565,25 +840,64 @@ window.JEPessoasSptCltCalc = (function () {
     return { meta, days: analyzed };
   }
 
+  /**
+   * Verifica se duas datas ISO (AAAA-MM-DD) são dias imediatamente consecutivos no calendário.
+   */
+  function areConsecutiveIsoDates(prevIso, currIso) {
+    if (!prevIso || !currIso) return false;
+    const [pY, pM, pD] = prevIso.split('-').map(Number);
+    const [cY, cM, cD] = currIso.split('-').map(Number);
+    const dtPrev = Date.UTC(pY, pM - 1, pD);
+    const dtCurr = Date.UTC(cY, cM - 1, cD);
+    return (dtCurr - dtPrev) === 86400000;
+  }
+
+  /**
+   * Aplica (ou remove) a presunção de Home Office (8h) e avalia alertas objetivos de DSR:
+   *  - Trabalho em domingo ou sequência > 6 dias consecutivos sem folga identificada
+   *    (CLT art. 67; OJ 410 TST). O alerta NÃO altera nenhum total de horas.
+   *  - Aceita `initialStreak` e `prevDateIso` para considerar a virada entre meses consecutivos.
+   */
   function resolveHomeOfficeAndDsr(daysList, options = {}) {
     const presumeHomeOffice = !!options.presumeHomeOffice;
-    const todayIso = options.todayIso || new Date().toISOString().slice(0, 10);
+    const todayIso = options.todayIso || getLocalTodayIso();
+    const shouldReanalyze = options.customHolidays !== undefined || options.deductAutoLunchOnSpecialDays !== undefined || options.toleranceMin !== undefined;
 
-    // Restaura cada dia ao estado presencial puro antes de aplicar/remover Home Office e DSR
-    const resetList = daysList.map((d) => {
+    const rawSource = Array.isArray(daysList) ? daysList : [];
+    const baseDays = shouldReanalyze
+      ? rawSource.map((d, idx) => {
+          const raw = d.rawInput || {
+            date: d.date,
+            punches: d.punches || [],
+            justificativa: d.justificativa || '',
+            total: formatMin(d.sptTotalMin || 0)
+          };
+          const prevRaw = idx > 0
+            ? (rawSource[idx - 1].rawInput || {
+                date: rawSource[idx - 1].date,
+                punches: rawSource[idx - 1].punches || [],
+                justificativa: rawSource[idx - 1].justificativa || '',
+                total: formatMin(rawSource[idx - 1].sptTotalMin || 0)
+              })
+            : null;
+          return analyzeDayClt(raw, prevRaw, options);
+        })
+      : rawSource;
+
+    const resetList = baseDays.map((d) => {
       const isPresencial = typeof d.isPresencialWorkedDay === 'boolean' ? d.isPresencialWorkedDay : !!d.isWorkedDay;
       const presClt = typeof d.presencialCltWorkedMin === 'number' ? d.presencialCltWorkedMin : d.cltWorkedMin;
       const presTarget = typeof d.presencialTargetMin === 'number' ? d.presencialTargetMin : d.targetMin;
       const presNorm = typeof d.presencialNormalWorkedMin === 'number' ? d.presencialNormalWorkedMin : (d.normalWorkedMin || 0);
       const baseAlerts = Array.isArray(d.baseAlerts)
         ? d.baseAlerts.slice()
-        : (d.alerts || []).filter((a) => a.code !== 'home-office' && a.code !== 'reposicao-dsr' && a.code !== 'feriado');
+        : (d.alerts || []).filter((a) => !['home-office', 'reposicao-dsr', 'dsr-alerta', 'sem-registro', 'feriado'].includes(a.code));
 
       if (d.isHoliday && !isPresencial && !baseAlerts.some((a) => a.code === 'feriado')) {
         baseAlerts.push({
           code: 'feriado',
-          label: 'Feriado',
-          tip: 'Feriado nacional/forense (jornada ordinária 00:00).'
+          label: d.holidayName ? `Feriado (${d.holidayName})` : 'Feriado',
+          tip: 'Feriado civil/distrital (jornada ordinária 00:00).'
         });
       }
 
@@ -594,7 +908,9 @@ window.JEPessoasSptCltCalc = (function () {
         presencialNormalWorkedMin: presNorm,
         isWorkedDay: isPresencial,
         isHomeOfficeDay: false,
+        isUnregisteredWeekday: false,
         isDsrCompensated: false,
+        hasDsrStreakAlert: false,
         cltWorkedMin: presClt,
         targetMin: presTarget,
         normalWorkedMin: presNorm,
@@ -602,16 +918,6 @@ window.JEPessoasSptCltCalc = (function () {
         alerts: baseAlerts
       });
     });
-
-    if (!presumeHomeOffice) {
-      return resetList;
-    }
-
-    // Só presume Home Office para colaboradores ativos no mês (ao menos 1 dia presencial na catraca)
-    const hasAnyPresencialWork = resetList.some((d) => d.isPresencialWorkedDay);
-    if (!hasAnyPresencialWork) {
-      return resetList;
-    }
 
     const isEligibleUnpunchedWeekday = (d) => (
       !d.isSpecialDay &&
@@ -621,128 +927,126 @@ window.JEPessoasSptCltCalc = (function () {
       (!d.dateIso || d.dateIso <= todayIso)
     );
 
-    const dsrIndices = new Set();
-
-    // 1. Para cada domingo trabalhado (perda do DSR semanal / > 6 dias seguidos — CLT art. 67 e OJ 410 TST),
-    // aloca 1 dia útil sem batida na semana como "Reposição de DSR" (folga compensatória 00:00).
-    for (let sIdx = 0; sIdx < resetList.length; sIdx += 1) {
-      const sun = resetList[sIdx];
-      if (sun.dayOfWeek !== 0 || !sun.isPresencialWorkedDay) continue;
-
-      const weekAhead = [];
-      for (let k = sIdx + 1; k <= Math.min(resetList.length - 1, sIdx + 5); k += 1) {
-        if (isEligibleUnpunchedWeekday(resetList[k]) && !dsrIndices.has(k)) {
-          weekAhead.push(k);
-        }
-      }
-
-      if (weekAhead.length > 0) {
-        const monIdx = sIdx + 1;
-        const monIsCandidate = weekAhead.includes(monIdx) && !resetList[monIdx].isPostMidnightContinuation;
-        let hasPresencialLaterInWeek = false;
-        for (let k = sIdx + 2; k <= Math.min(resetList.length - 1, sIdx + 5); k += 1) {
-          if (resetList[k].isPresencialWorkedDay) {
-            hasPresencialLaterInWeek = true;
-            break;
-          }
-        }
-        // Se a segunda-feira está livre na catraca e o prestador voltou presencialmente na terça/quarta (ex.: Renato 05/10),
-        // a folga compensatória foi na segunda-feira; caso contrário, aloca na sexta-feira (último dia útil livre da semana, ex.: 09/10 e 30/10).
-        const chosenIdx = (monIsCandidate && hasPresencialLaterInWeek)
-          ? monIdx
-          : weekAhead[weekAhead.length - 1];
-        dsrIndices.add(chosenIdx);
-      } else {
-        // Fallback: se o domingo for no fim do mês sem dias úteis livres depois, busca na semana anterior
-        for (let k = sIdx - 1; k >= Math.max(0, sIdx - 5); k -= 1) {
-          if (isEligibleUnpunchedWeekday(resetList[k]) && !dsrIndices.has(k)) {
-            dsrIndices.add(k);
-            break;
-          }
-        }
-      }
-    }
-
-    // 2. Salvaguarda adicional CLT art. 67 / OJ 410 TST: se ainda restar alguma sequência > 6 dias seguidos
-    // sem nenhuma folga/DSR programada na própria semana, converte o último dia útil sem batida da sequência em Reposição de DSR.
-    let streak = 0;
-    let unpunchedInStreak = [];
-    for (let i = 0; i < resetList.length; i += 1) {
-      const d = resetList[i];
-      const willBeWorked = d.isPresencialWorkedDay || (isEligibleUnpunchedWeekday(d) && !dsrIndices.has(i));
-      if (willBeWorked) {
-        streak += 1;
-        if (isEligibleUnpunchedWeekday(d) && !dsrIndices.has(i)) {
-          unpunchedInStreak.push(i);
-        }
-        // Verifica se já há um DSR programado até o final desta mesma semana (próximos 5 dias)
-        let hasUpcomingDsrInWeek = false;
-        for (let k = i + 1; k <= Math.min(resetList.length - 1, i + 5); k += 1) {
-          if (dsrIndices.has(k) || (!resetList[k].isPresencialWorkedDay && resetList[k].dayOfWeek === 0)) {
-            hasUpcomingDsrInWeek = true;
-            break;
-          }
-        }
-        if (streak > 6 && !hasUpcomingDsrInWeek && unpunchedInStreak.length > 0) {
-          const dsrIdx = unpunchedInStreak.pop();
-          dsrIndices.add(dsrIdx);
-          streak = i - dsrIdx;
-        }
-      } else {
-        streak = 0;
-        unpunchedInStreak = [];
-      }
-    }
-
-    // 3. Aplica Reposição de DSR ou Home Office (8h) aos dias úteis elegíveis sem batida
-    return resetList.map((d, idx) => {
+    // 1. Aplica Home Office (8h) quando ligado, ou marca dia útil sem registro quando desligado
+    const step1 = resetList.map((d) => {
       if (!isEligibleUnpunchedWeekday(d)) return d;
       const nextAlerts = d.alerts.slice();
-      if (dsrIndices.has(idx)) {
+      if (presumeHomeOffice) {
         nextAlerts.push({
-          code: 'reposicao-dsr',
-          label: 'Reposição de DSR',
-          tip: 'Folga compensatória automática (CLT art. 67 / OJ 410 TST) após trabalho no domingo / mais de 6 dias seguidos.'
+          code: 'home-office',
+          label: 'Home Office presumido (8h)',
+          tip: 'Dia útil sem batida e sem justificativa: jornada ordinária de 08:00 presumida por opção do usuário.'
         });
         return Object.assign({}, d, {
-          isWorkedDay: false,
-          isHomeOfficeDay: false,
-          isDsrCompensated: true,
-          cltWorkedMin: 0,
-          targetMin: 0,
-          normalWorkedMin: 0,
+          isWorkedDay: true,
+          isHomeOfficeDay: true,
+          isUnregisteredWeekday: false,
+          cltWorkedMin: DAILY_TARGET_MIN,
+          targetMin: DAILY_TARGET_MIN,
+          normalWorkedMin: DAILY_TARGET_MIN,
           alerts: nextAlerts
         });
       }
 
       nextAlerts.push({
-        code: 'home-office',
-        label: 'Home Office (8h)',
-        tip: 'Dia útil sem batida na catraca do SPT: jornada ordinária de 08:00 presumida em home office.'
+        code: 'sem-registro',
+        label: 'Dia útil s/ registro',
+        tip: 'Dia útil sem marcação de catraca e sem justificativa no SPT (não gera débito automático com Home Office desligado).'
       });
       return Object.assign({}, d, {
-        isWorkedDay: true,
-        isHomeOfficeDay: true,
-        isDsrCompensated: false,
-        cltWorkedMin: DAILY_TARGET_MIN,
-        targetMin: DAILY_TARGET_MIN,
-        normalWorkedMin: DAILY_TARGET_MIN,
+        isWorkedDay: false,
+        isHomeOfficeDay: false,
+        isUnregisteredWeekday: true,
+        cltWorkedMin: 0,
+        targetMin: 0,
+        normalWorkedMin: 0,
         alerts: nextAlerts
       });
     });
+
+    // 2. Avalia sequência de dias trabalhados consecutivos (> 6 dias) e trabalho em domingo sem folga identificada,
+    //    considerando a continuidade com o mês anterior quando `initialStreak` e `prevDateIso` são fornecidos.
+    let streak = typeof options.initialStreak === 'number' && options.initialStreak > 0 ? options.initialStreak : 0;
+    let lastIso = options.prevDateIso || '';
+
+    const finalDays = step1.map((d, idx) => {
+      if (d.dateIso && lastIso && !areConsecutiveIsoDates(lastIso, d.dateIso)) {
+        streak = 0;
+      }
+      if (d.dateIso) {
+        lastIso = d.dateIso;
+      }
+
+      if (d.isWorkedDay) {
+        streak += 1;
+      } else {
+        streak = 0;
+      }
+
+      const workedOnSunday = d.dayOfWeek === 0 && d.isWorkedDay;
+      // Verifica se houve domingo trabalhado sem folga identificada na semana (6 dias consecutivos anteriores ou posteriores)
+      let sundayWithoutFolga = false;
+      if (workedOnSunday) {
+        // Verifica quantos dias sem trabalho existem nos próximos 6 dias (ou nos 6 dias anteriores se no fim da lista)
+        const windowIndices = [];
+        for (let k = idx + 1; k <= Math.min(step1.length - 1, idx + 6); k += 1) {
+          if (!step1[k].dateIso || step1[k].dateIso <= todayIso) {
+            windowIndices.push(k);
+          }
+        }
+        const hasFolgaAhead = windowIndices.some((k) => !step1[k].isWorkedDay);
+        if (windowIndices.length >= 6 && !hasFolgaAhead) {
+          sundayWithoutFolga = true;
+        } else if (windowIndices.length < 6 && streak > 6) {
+          sundayWithoutFolga = true;
+        }
+      }
+
+      if (streak > 6 || workedOnSunday) {
+        const nextAlerts = d.alerts.slice();
+        const reason = streak > 6
+          ? `${streak}º dia consecutivo trabalhado sem folga identificada`
+          : (sundayWithoutFolga
+            ? 'Trabalho em domingo sem folga compensatória identificada na semana'
+            : 'Trabalho em domingo — verificar concessão de folga compensatória de DSR na semana');
+        nextAlerts.push({
+          code: 'dsr-alerta',
+          label: streak > 6 ? `>6d seguidos (${streak}d)` : 'Dom. trabalhado (DSR)',
+          tip: `Trabalho em domingo / >6 dias consecutivos sem folga identificada (CLT art. 67; OJ 410 TST) — ${reason}. Não altera os totais.`
+        });
+        return Object.assign({}, d, {
+          hasDsrStreakAlert: true,
+          consecutiveWorkDays: streak,
+          alerts: nextAlerts
+        });
+      }
+
+      return Object.assign({}, d, {
+        consecutiveWorkDays: streak
+      });
+    });
+
+    finalDays._endingStreak = streak;
+    finalDays._endingDateIso = lastIso;
+    return finalDays;
   }
 
   function summarizeMonthClt(days, meta = {}) {
     const resolvedDays = resolveHomeOfficeAndDsr(Array.isArray(days) ? days : [], {
       presumeHomeOffice: !!meta.presumeHomeOffice,
-      todayIso: meta.todayIso
+      deductAutoLunchOnSpecialDays: meta.deductAutoLunchOnSpecialDays !== undefined ? !!meta.deductAutoLunchOnSpecialDays : true,
+      customHolidays: meta.customHolidays,
+      toleranceMin: meta.toleranceMin,
+      todayIso: meta.todayIso,
+      initialStreak: meta.initialStreak || 0,
+      prevDateIso: meta.prevDateIso || ''
     });
 
     let workedDays = 0;
     let presencialWorkedDays = 0;
     let workedWeekdays = 0;
     let homeOfficeDays = 0;
-    let dsrCompensatedDays = 0;
+    let dsrAlertDays = 0;
     let workedWeekendDays = 0;
     let weekdaysInPeriod = 0;
     let weekdaysWithoutRecord = 0;
@@ -765,16 +1069,18 @@ window.JEPessoasSptCltCalc = (function () {
     let runningHe100 = 0;
     let runningTotalBalance = 0;
 
+    const todayIso = meta.todayIso || getLocalTodayIso();
+
     const enrichedDays = resolvedDays.map((d) => {
       if (d.justificativa) justifiedDays += 1;
       if (!d.isSpecialDay) {
         weekdaysInPeriod += 1;
-        if (!d.isPresencialWorkedDay && !d.justificativa && !d.isPostMidnightContinuation) {
+        if (!d.isPresencialWorkedDay && (d.punchCount === 0 || d.isPostMidnightContinuation) && !d.justificativa && (!d.dateIso || d.dateIso <= todayIso)) {
           weekdaysWithoutRecord += 1;
         }
       }
-      if (d.isDsrCompensated) {
-        dsrCompensatedDays += 1;
+      if (d.hasDsrStreakAlert) {
+        dsrAlertDays += 1;
       }
       if (d.isWorkedDay) {
         workedDays += 1;
@@ -831,14 +1137,17 @@ window.JEPessoasSptCltCalc = (function () {
       ymKey: meta.ymKey || (enrichedDays[0] && enrichedDays[0].ymKey) || '',
       monthLabel: meta.monthLabel || (enrichedDays[0] && enrichedDays[0].monthLabel) || '',
       presumeHomeOffice: !!meta.presumeHomeOffice,
+      deductAutoLunchOnSpecialDays: meta.deductAutoLunchOnSpecialDays !== undefined ? !!meta.deductAutoLunchOnSpecialDays : true,
       workedDays,
       presencialWorkedDays,
       workedWeekdays,
       homeOfficeDays,
-      dsrCompensatedDays,
+      dsrCompensatedDays: 0,
+      dsrAlertDays,
       workedWeekendDays,
       weekdaysInPeriod,
       weekdaysWithoutRecord,
+      unregisteredWeekdays: meta.presumeHomeOffice ? 0 : weekdaysWithoutRecord,
       justifiedDays,
       sptTotalMin,
       cltWorkedMin,
@@ -859,6 +1168,8 @@ window.JEPessoasSptCltCalc = (function () {
       aMenosLiquidoMin,
       saldoBhMesMin,
       saldoMesMin,
+      endingStreak: resolvedDays._endingStreak || 0,
+      endingDateIso: resolvedDays._endingDateIso || '',
       alerts: {
         intervaloCurtoDays,
         almocoAutoDays,
@@ -866,7 +1177,9 @@ window.JEPessoasSptCltCalc = (function () {
         acima2hExtraDays,
         fdsDays,
         homeOfficeDays,
-        dsrCompensatedDays
+        dsrCompensatedDays: 0,
+        dsrAlertDays,
+        weekdaysWithoutRecord
       },
       days: enrichedDays
     };
@@ -881,9 +1194,11 @@ window.JEPessoasSptCltCalc = (function () {
       workedWeekdays: 0,
       homeOfficeDays: 0,
       dsrCompensatedDays: 0,
+      dsrAlertDays: 0,
       workedWeekendDays: 0,
       weekdaysInPeriod: 0,
       weekdaysWithoutRecord: 0,
+      unregisteredWeekdays: 0,
       justifiedDays: 0,
       sptTotalMin: 0,
       cltWorkedMin: 0,
@@ -910,7 +1225,9 @@ window.JEPessoasSptCltCalc = (function () {
         acima2hExtraDays: 0,
         fdsDays: 0,
         homeOfficeDays: 0,
-        dsrCompensatedDays: 0
+        dsrCompensatedDays: 0,
+        dsrAlertDays: 0,
+        weekdaysWithoutRecord: 0
       }
     };
     list.forEach((m) => {
@@ -918,10 +1235,11 @@ window.JEPessoasSptCltCalc = (function () {
       acc.presencialWorkedDays += m.presencialWorkedDays != null ? m.presencialWorkedDays : (m.workedDays || 0);
       acc.workedWeekdays += m.workedWeekdays || 0;
       acc.homeOfficeDays += m.homeOfficeDays || 0;
-      acc.dsrCompensatedDays += m.dsrCompensatedDays || 0;
+      acc.dsrAlertDays += m.dsrAlertDays || 0;
       acc.workedWeekendDays += m.workedWeekendDays || 0;
       acc.weekdaysInPeriod += m.weekdaysInPeriod || 0;
       acc.weekdaysWithoutRecord += m.weekdaysWithoutRecord || 0;
+      acc.unregisteredWeekdays += m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
       acc.justifiedDays += m.justifiedDays || 0;
       acc.sptTotalMin += m.sptTotalMin || 0;
       acc.cltWorkedMin += m.cltWorkedMin || 0;
@@ -948,7 +1266,8 @@ window.JEPessoasSptCltCalc = (function () {
         acc.alerts.acima2hExtraDays += m.alerts.acima2hExtraDays || 0;
         acc.alerts.fdsDays += m.alerts.fdsDays || 0;
         acc.alerts.homeOfficeDays += m.alerts.homeOfficeDays || 0;
-        acc.alerts.dsrCompensatedDays += m.alerts.dsrCompensatedDays || 0;
+        acc.alerts.dsrAlertDays += m.alerts.dsrAlertDays || 0;
+        acc.alerts.weekdaysWithoutRecord += m.alerts.weekdaysWithoutRecord || 0;
       }
     });
     return acc;
@@ -963,23 +1282,47 @@ window.JEPessoasSptCltCalc = (function () {
     return unit;
   }
 
+  /**
+   * Recomputa todos os meses de cada prestador encadeando a sequência de dias trabalhados
+   * na virada entre meses consecutivos (`initialStreak` / `prevDateIso`).
+   */
   function recomputeReportWithOptions(report, options = {}) {
     if (!report || !Array.isArray(report.workers)) return report;
-    const presumeHomeOffice = !!options.presumeHomeOffice;
+    const presumeHomeOffice = options.presumeHomeOffice !== undefined ? !!options.presumeHomeOffice : !!report.presumeHomeOffice;
+    const deductAutoLunchOnSpecialDays = options.deductAutoLunchOnSpecialDays !== undefined
+      ? !!options.deductAutoLunchOnSpecialDays
+      : (report.deductAutoLunchOnSpecialDays !== undefined ? !!report.deductAutoLunchOnSpecialDays : true);
+    const customHolidays = options.customHolidays !== undefined ? options.customHolidays : (report.customHolidays || '');
+
     const nextWorkers = report.workers.map((w) => {
-      const nextMonths = (w.months || []).map((m) => summarizeMonthClt(m.days || [], {
-        ymKey: m.ymKey,
-        monthLabel: m.monthLabel,
-        presumeHomeOffice,
-        todayIso: options.todayIso
-      }));
+      let runningStreak = 0;
+      let lastDateIso = '';
+      const sortedMonths = (w.months || []).slice().sort((a, b) => String(a.ymKey || '').localeCompare(String(b.ymKey || '')));
+      const nextMonths = sortedMonths.map((m) => {
+        if (m.fetchError) return m;
+        const summary = summarizeMonthClt(m.days || [], {
+          ymKey: m.ymKey,
+          monthLabel: m.monthLabel,
+          presumeHomeOffice,
+          deductAutoLunchOnSpecialDays,
+          customHolidays,
+          todayIso: options.todayIso,
+          initialStreak: runningStreak,
+          prevDateIso: lastDateIso
+        });
+        runningStreak = summary.endingStreak || 0;
+        lastDateIso = summary.endingDateIso || '';
+        return summary;
+      });
       return Object.assign({}, w, {
         months: nextMonths,
-        totals: summarizeWorkerMonths(nextMonths)
+        totals: summarizeWorkerMonths(nextMonths.filter((m) => !m.fetchError))
       });
     });
     return Object.assign({}, report, {
       presumeHomeOffice,
+      deductAutoLunchOnSpecialDays,
+      customHolidays,
       workers: nextWorkers,
       unitTotals: summarizeUnitReport(nextWorkers)
     });
@@ -991,6 +1334,13 @@ window.JEPessoasSptCltCalc = (function () {
     MIN_LUNCH_SHIFT_MIN,
     MIN_LUNCH_MIN,
     MAX_DAILY_OVERTIME_MIN,
+    DEFAULT_FIXED_HOLIDAYS,
+    getLocalTodayIso,
+    computeEasterSunday,
+    computeGoodFridayMmDd,
+    parseCustomHolidaysConfig,
+    resolveHolidayMapForYear,
+    listAppliedHolidaysInRange,
     parseTimeMin,
     formatMin,
     normalizeText,
@@ -1000,6 +1350,7 @@ window.JEPessoasSptCltCalc = (function () {
     splitDateRangeByMonth,
     parseUnitsFromSelect,
     filterUnits,
+    parsePeriodosFromDoc,
     parseWorkersFromConsultationDoc,
     parseDateInfo,
     analyzeDayClt,

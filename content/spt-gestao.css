@@ -871,11 +871,62 @@ body.je-xt-enabled .je-spt-select:focus {
   color: #94a3b8;
 }
 
+.je-spt-daily-table tr.je-spt-row-homeoffice td {
+  background: rgba(59, 130, 246, 0.07) !important;
+  color: #1e3a8a !important;
+}
+
+.je-spt-daily-table tr.je-spt-row-homeoffice td:first-child {
+  border-left: 3px dashed #3b82f6 !important;
+}
+
+.je-spt-daily-table tr.je-spt-row-unregistered td {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.je-spt-ho-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+}
+
+.je-spt-rep-options-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .je-spt-ho-toggle {
   background: rgba(0, 119, 255, 0.06);
   border: 1px solid rgba(0, 119, 255, 0.16);
   border-radius: var(--je-radius-sm);
   padding: 6px 12px !important;
+}
+
+.je-spt-rep-holidays-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(10, 37, 64, 0.12);
+  border-radius: var(--je-radius-sm);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.je-spt-holidays-input {
+  width: 240px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 2px 8px !important;
+  font-size: 11.5px !important;
 }
 
 /* ==========================================================================
