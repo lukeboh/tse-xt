@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.21-Snapshot — 18/11/2026
+
+- **Bloco E — Falhas silenciosas e robustez no SPT (`sptReportModal.js`, `background.js`, `content.js`)**:
+  - **E1**: `fetchWorkersByUnitAndContract` retorna `{ workers, failures, sessionExpired, queriedMonths }` sem mascarar falhas como lista vazia; `refreshWorkersList` diferencia **"Nenhum prestador encontrado"** (consulta OK, lista vazia), **"Falha ao consultar o SPT (MM/AAAA): \<motivo\> — tentar novamente"** (com botão de repetir), **"Sessão do SPT expirada — faça login novamente"** e lista parcial quando alguns meses falham e outros não.
+  - **E2**: No `onInstalled` (`background.js`), abas do SPT só são recarregadas automaticamente no motivo `'install'`; em `'update'` (ou quando houver relatório em andamento em qualquer portal), exibe aviso discreto na aba (**"TSE XT atualizado — recarregue quando terminar"**) sem interromper o trabalho do usuário.
+  - **E3**: `background.js` aceita `'reloadActiveTab'` apenas de remetentes da própria extensão (`sender.id === chrome.runtime.id`) e somente quando a aba do remetente pertencer a um portal suportado.
+- Verificação: **250 testes de comportamento passando**.
+
 ## 1.2.20-Snapshot — 18/11/2026
 
 - **Bloco D — Separação de scripts por portal, acessibilidade/performance da combobox e validação inline (`manifest.json`, `sptUnitCombobox.js`, `sptReportModal.js`)**:

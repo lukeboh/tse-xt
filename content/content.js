@@ -604,6 +604,31 @@
             : (window.JEPessoasSptReport && window.JEPessoasSptReport.isRunning && window.JEPessoasSptReport.isRunning())
         );
         if (sendResponse) sendResponse({ running: busy });
+      } else if (message && message.action === 'extensionUpdatedBanner') {
+        if (document.body && !document.getElementById('je-xt-update-toast')) {
+          const toast = document.createElement('div');
+          toast.id = 'je-xt-update-toast';
+          toast.setAttribute('role', 'status');
+          toast.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:2147483640;display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#0a2540;color:#ffffff;font-family:system-ui,sans-serif;font-size:12.5px;font-weight:600;box-shadow:0 8px 24px rgba(10,37,64,0.28);';
+          const textSpan = document.createElement('span');
+          textSpan.textContent = 'TSE XT atualizado — recarregue quando terminar';
+          const reloadBtn = document.createElement('button');
+          reloadBtn.type = 'button';
+          reloadBtn.textContent = 'Recarregar agora';
+          reloadBtn.style.cssText = 'padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);background:#0077ff;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;';
+          reloadBtn.addEventListener('click', () => window.location.reload());
+          const closeBtn = document.createElement('button');
+          closeBtn.type = 'button';
+          closeBtn.textContent = '×';
+          closeBtn.setAttribute('aria-label', 'Fechar aviso');
+          closeBtn.style.cssText = 'padding:0 4px;border:none;background:transparent;color:#cbd5e1;font-size:16px;cursor:pointer;';
+          closeBtn.addEventListener('click', () => toast.remove());
+          toast.appendChild(textSpan);
+          toast.appendChild(reloadBtn);
+          toast.appendChild(closeBtn);
+          document.body.appendChild(toast);
+        }
+        if (sendResponse) sendResponse({ shown: true });
       }
     });
   } catch (e) {}

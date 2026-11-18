@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.20-Snapshot';
+  const CURRENT_VERSION = '1.2.21-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.21-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco E): tratamento de erros na lista de prestadores, proteção de atualização e validação de sender',
+      features: [
+        'Lista de prestadores do SPT diferencia consulta vazia ("Nenhum prestador encontrado"), erro HTTP/rede com botão "Tentar novamente", sessão expirada e lista parcial entre meses.',
+        'onInstalled (background.js) não recarrega abas do SPT em atualizações (exibe aviso discreto na aba) e nunca recarrega aba com relatório em geração.',
+        'Handler reloadActiveTab valida sender.id === chrome.runtime.id e exige que a aba do remetente pertença a um portal suportado.'
+      ]
+    },
     {
       version: '1.2.20-Snapshot',
       date: '2026-11-18',

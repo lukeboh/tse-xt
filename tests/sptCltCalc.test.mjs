@@ -691,6 +691,15 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
           const v = sel.slice(14, -2);
           return this.options.find((o) => o.value === v) || null;
         }
+        if (sel === '[data-spt-retry-workers]') {
+          if (this.innerHTML && this.innerHTML.includes('data-spt-retry-workers')) {
+            if (!this._retryBtn) {
+              this._retryBtn = makeEl('button');
+            }
+            return this._retryBtn;
+          }
+          return null;
+        }
         return elements.get(sel) || null;
       },
       querySelectorAll(sel) {
@@ -723,7 +732,8 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
   preCreatedIds.forEach((id) => {
     const el = makeEl();
     el.id = id;
-    if (id === 'je-spt-rep-subunits' || id === 'je-spt-rep-special-lunch') el.checked = true;
+    if ( id === 'je-spt-rep-subunits' || id === 'je-spt-rep-special-lunch') el.checked = true;
+    if (id === 'je-spt-rep-progress' || id === 'je-spt-rep-validation') el.hidden = true;
     elements.set('#' + id, el);
   });
 
@@ -1311,6 +1321,210 @@ test('D3 — sptReportModal exibe mensagens de validação inline dentro do moda
   assert.equal(valBox.hidden, false);
   assert.match(valBox.textContent, /Selecione ao menos um prestador/);
 });
+
+// ---------------------------------------------------------------------------
+// BLOCO E — Falhas silenciosas e robustez (E1 a E3)
+// ---------------------------------------------------------------------------
+
+test('E1 — refreshWorkersList diferencia lista vazia (OK), falha HTTP/rede com botão tentar novamente, sessão expirada e lista parcial entre meses', async () => {
+  // Cenário 1: Consulta OK, mas sem prestadores na unidade/contrato
+  const harnessEmpty = createSptReportModalHarness(async (url) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    return { ok: true, status: 200, text: async () => '<table id="maintable"><tbody></tbody></table>' };
+  }, {
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-10-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+  await harnessEmpty.api.open();
+  assert.match(
+    harnessEmpty.elements.get('#je-spt-rep-worker-select').options[0].textContent,
+    /Nenhum prestador encontrado/
+  );
+  assert.match(
+    harnessEmpty.elements.get('#je-spt-rep-team-summary').innerHTML,
+    /Nenhum prestador encontrado/
+  );
+  assert.equal(harnessEmpty.elements.get('#je-spt-rep-validation').hidden, true);
+
+  // Cenário 2: Falha HTTP (503) e depois recuperação ao clicar no botão "Tentar novamente"
+  let shouldFailHttp = true;
+  const harnessHttpErr = createSptReportModalHarness(async (url) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    if (shouldFailHttp) {
+      return { ok: false, status: 503, text: async () => 'Service Unavailable' };
+    }
+    return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+  }, {
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-10-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+  await harnessHttpErr.api.open();
+  assert.match(
+    harnessHttpErr.elements.get('#je-spt-rep-worker-select').options[0].textContent,
+    /Falha ao consultar o SPT \(10\/2026\): HTTP 503 — tentar novamente/
+  );
+  assert.match(
+    harnessHttpErr.elements.get('#je-spt-rep-team-summary').innerHTML,
+    /Falha ao consultar o SPT \(10\/2026\): HTTP 503 — tentar novamente/
+  );
+  const listEl = harnessHttpErr.elements.get('#je-spt-rep-team-list');
+  assert.ok(listEl._retryBtn, 'Deve renderizar botão Tentar novamente na lista');
+
+  // Clica no botão "Tentar novamente" após a rede voltar
+  shouldFailHttp = false;
+  listEl._retryBtn.click();
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+  assert.equal(harnessHttpErr.elements.get('#je-spt-rep-worker-select').options.length, 3); // __ALL__ + 2 prestadores
+
+  // Cenário 3: Sessão do SPT expirada (página de login retornada)
+  const harnessSession = createSptReportModalHarness(async (url) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    return {
+      ok: true,
+      status: 200,
+      url: 'https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/login',
+      text: async () => '<form action="/spt-consultafrequencia/process-login"><input type="password" name="password"></form>'
+    };
+  }, {
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-10-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+  await harnessSession.api.open();
+  assert.equal(
+    harnessSession.elements.get('#je-spt-rep-worker-select').options[0].textContent,
+    'Sessão do SPT expirada — faça login novamente'
+  );
+  assert.match(
+    harnessSession.elements.get('#je-spt-rep-team-summary').innerHTML,
+    /Sessão do SPT expirada — faça login novamente/
+  );
+
+  // Cenário 4: Período de 2 meses (09/2026 e 10/2026) em que 09/2026 funciona e 10/2026 falha -> lista parcial + aviso de qual mês falhou
+  const harnessPartial = createSptReportModalHarness(async (url, opts = {}) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    const params = new URLSearchParams(opts.body || '');
+    const dt = params.get('edtdataponto');
+    if (dt === '2026-09-30') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    return { ok: false, status: 502, text: async () => 'Bad Gateway' };
+  }, {
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-09-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+  await harnessPartial.api.open();
+  assert.equal(harnessPartial.elements.get('#je-spt-rep-worker-select').options.length, 3);
+  assert.match(
+    harnessPartial.elements.get('#je-spt-rep-worker-select').options[0].textContent,
+    /lista parcial \(10\/2026 falhou\)/
+  );
+  assert.match(
+    harnessPartial.elements.get('#je-spt-rep-team-summary').innerHTML,
+    /lista parcial \(falha em 10\/2026: HTTP 502\)/
+  );
+});
+
+test('E2 e E3 — background.js: onInstalled não recarrega SPT em update nem aba com relatório em andamento; reloadActiveTab valida sender.id e portal suportado', () => {
+  let installedListener = null;
+  let messageListener = null;
+  const reloadedTabs = [];
+  const sentMessages = [];
+  let reportRunningByTab = {};
+  let activeTabsQueryResult = [];
+
+  const openTabs = [
+    { id: 10, url: 'https://meuespaco.tse.jus.br/portalservidor2/Home' },
+    { id: 20, url: 'https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao' }
+  ];
+
+  const chrome = {
+    runtime: {
+      id: 'tse-xt-own-ext-id',
+      getManifest: () => ({ version: '1.2.21' }),
+      reload: () => {},
+      onInstalled: { addListener: (fn) => { installedListener = fn; } },
+      onMessage: { addListener: (fn) => { messageListener = fn; } }
+    },
+    tabs: {
+      query: (q, cb) => {
+        if (q && q.active) {
+          cb(activeTabsQueryResult);
+          return;
+        }
+        cb(openTabs);
+      },
+      reload: (tabId) => { reloadedTabs.push(tabId); },
+      sendMessage: (tabId, msg, cb) => {
+        sentMessages.push({ tabId, msg });
+        if (msg.action === 'isReportRunning') {
+          cb?.({ running: !!reportRunningByTab[tabId] });
+          return;
+        }
+        cb?.({ ok: true });
+      }
+    }
+  };
+
+  const bgSrc = readFileSync(new URL('../background.js', import.meta.url), 'utf8');
+  vm.runInNewContext(bgSrc, { chrome, console, URL });
+
+  // 1) E2 — reason = 'update' sem relatório rodando: recarrega Meu Espaço (10), mas NÃO recarrega SPT (20) — envia aviso extensionUpdatedBanner
+  installedListener({ reason: 'update' });
+  assert.deepEqual(reloadedTabs, [10]);
+  assert.ok(sentMessages.some((m) => m.tabId === 20 && m.msg.action === 'extensionUpdatedBanner'));
+
+  // 2) E2 — reason = 'install' sem relatório rodando: recarrega Meu Espaço (10) e SPT (20)
+  reloadedTabs.length = 0;
+  sentMessages.length = 0;
+  installedListener({ reason: 'install' });
+  assert.deepEqual(reloadedTabs, [10, 20]);
+
+  // 3) E2 — com relatório em andamento em ambas as abas, nem mesmo 'install' recarrega; envia aviso para ambas
+  reloadedTabs.length = 0;
+  sentMessages.length = 0;
+  reportRunningByTab = { 10: true, 20: true };
+  installedListener({ reason: 'install' });
+  assert.deepEqual(reloadedTabs, []);
+  assert.ok(sentMessages.some((m) => m.tabId === 10 && m.msg.action === 'extensionUpdatedBanner'));
+  assert.ok(sentMessages.some((m) => m.tabId === 20 && m.msg.action === 'extensionUpdatedBanner'));
+
+  // 4) E3 — reloadActiveTab rejeita sender de outra extensão (sender.id !== chrome.runtime.id)
+  reloadedTabs.length = 0;
+  let respOtherExt = null;
+  messageListener(
+    { action: 'reloadActiveTab' },
+    { id: 'malicious-ext-id', tab: { id: 20, url: 'https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao' } },
+    (r) => { respOtherExt = r; }
+  );
+  assert.equal(respOtherExt.status, 'forbidden_sender');
+  assert.deepEqual(reloadedTabs, []);
+
+  // 5) E3 — reloadActiveTab rejeita aba fora dos portais suportados (ex.: outro sistema ou página arbitrária)
+  let respUnsupported = null;
+  messageListener(
+    { action: 'reloadActiveTab' },
+    { id: 'tse-xt-own-ext-id', tab: { id: 99, url: 'https://intranet.tse.jus.br/outro-sistema/' } },
+    (r) => { respUnsupported = r; }
+  );
+  assert.equal(respUnsupported.status, 'unsupported_portal');
+  assert.deepEqual(reloadedTabs, []);
+
+  // 6) E3 — reloadActiveTab aceita sender da própria extensão em portal suportado
+  let respValid = null;
+  messageListener(
+    { action: 'reloadActiveTab' },
+    { id: 'tse-xt-own-ext-id', tab: { id: 20, url: 'https://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/gestao' } },
+    (r) => { respValid = r; }
+  );
+  assert.equal(respValid.status, 'reloaded');
+  assert.deepEqual(reloadedTabs, [20]);
+});
+
 
 
 

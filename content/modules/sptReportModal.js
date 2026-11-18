@@ -36,6 +36,7 @@ window.JEPessoasSptReport = (function () {
   let aborted = false;
   let loadingWorkers = false;
   let workersList = []; // [{ codigo, matricula, cpf, contrato, numContrato, nome, checked }]
+  let workersFetchStatus = { state: 'ok', failures: [], sessionExpired: false, queriedMonths: 0 };
   let workerSearchQuery = '';
   let selectedSingleWorkerCode = '__ALL__'; // '__ALL__' | '__CUSTOM__' | codigo específico
   let calcMode = 'xt_digi'; // 'xt_digi' (padrão) | 'spt_puro'
@@ -128,9 +129,31 @@ window.JEPessoasSptReport = (function () {
     if (forceRefresh || !units.length || !csrf || !periodos.length) {
       try {
         const resp = await fetch(GESTAO_HOME_URL, { credentials: 'include' });
-        if (resp && resp.ok !== false) {
-          const html = await resp.text();
+        if (resp) {
+          const html = typeof resp.text === 'function' ? await resp.text() : '';
           const doc = new DOMParser().parseFromString(html, 'text/html');
+          if (isSptLoginOrExpiredDoc(resp, html, doc)) {
+            metadataCache = {
+              units: Array.isArray(units) ? units : [],
+              contracts: Array.isArray(contracts) ? contracts : [],
+              periodos: Array.isArray(periodos) ? periodos : [],
+              csrf: '',
+              sessionExpired: true,
+              loadError: 'Sessão do SPT expirada'
+            };
+            return metadataCache;
+          }
+          if (resp.ok === false) {
+            metadataCache = {
+              units: Array.isArray(units) ? units : [],
+              contracts: Array.isArray(contracts) ? contracts : [],
+              periodos: Array.isArray(periodos) ? periodos : [],
+              csrf: csrf || '',
+              sessionExpired: false,
+              loadError: `HTTP ${resp.status || 'erro'}`
+            };
+            return metadataCache;
+          }
           if (cb) {
             cb.cacheUnitsAndContractsFromDOM(doc);
             const fetchedUnits = cb.getAvailableUnits(doc);
@@ -152,14 +175,28 @@ window.JEPessoasSptReport = (function () {
           const fetchedCsrf = getCsrfToken(doc);
           if (fetchedCsrf) csrf = fetchedCsrf;
         }
-      } catch (_) {}
+      } catch (err) {
+        if (!csrf) {
+          metadataCache = {
+            units: Array.isArray(units) ? units : [],
+            contracts: Array.isArray(contracts) ? contracts : [],
+            periodos: Array.isArray(periodos) ? periodos : [],
+            csrf: '',
+            sessionExpired: false,
+            loadError: (err && err.message) ? err.message : 'erro de rede'
+          };
+          return metadataCache;
+        }
+      }
     }
 
     metadataCache = {
       units: Array.isArray(units) ? units : [],
       contracts: Array.isArray(contracts) ? contracts : [],
       periodos: Array.isArray(periodos) ? periodos : [],
-      csrf: csrf || ''
+      csrf: csrf || '',
+      sessionExpired: false,
+      loadError: ''
     };
     return metadataCache;
   }
@@ -187,15 +224,37 @@ window.JEPessoasSptReport = (function () {
 
   async function fetchWorkersByUnitAndContract(unitId, contrato, fromIso, toIso, buscarAbaixo = true) {
     const c = calc();
-    let meta = await ensureMetadataLoaded();
-    if (!unitId || !meta.csrf) return [];
-
     const slices = c.splitDateRangeByMonth(fromIso, toIso);
-    if (!slices.length) return [];
+    if (!unitId || !slices.length) {
+      return { workers: [], failures: [], sessionExpired: false, queriedMonths: 0 };
+    }
+
+    let meta = await ensureMetadataLoaded();
+    if (!meta.csrf) {
+      if (meta.sessionExpired) {
+        return {
+          workers: [],
+          failures: [{ kind: 'session', mes: slices[0].periodoDescricao, reason: 'Sessão do SPT expirada' }],
+          sessionExpired: true,
+          queriedMonths: slices.length
+        };
+      }
+      meta = await ensureMetadataLoaded({ forceRefresh: true });
+      if (!meta.csrf) {
+        const kind = meta.sessionExpired ? 'session' : 'http';
+        const reason = meta.loadError || (meta.sessionExpired ? 'Sessão do SPT expirada' : 'token CSRF indisponível');
+        return {
+          workers: [],
+          failures: [{ kind, mes: slices[0].periodoDescricao, reason }],
+          sessionExpired: !!meta.sessionExpired,
+          queriedMonths: slices.length
+        };
+      }
+    }
 
     const contractParam = contrato && contrato !== '-1' ? String(contrato) : '-1';
 
-    async function queryWithDate(dateIso, pInfo, allowRetry = true) {
+    async function queryWithDate(dateIso, pInfo, ymBr, allowRetry = true) {
       const tuple = (pInfo && pInfo.tuple) || ['', '', '', ''];
       const body = new URLSearchParams({
         _csrf: meta.csrf,
@@ -220,50 +279,120 @@ window.JEPessoasSptReport = (function () {
       if (buscarAbaixo) {
         body.set('cbxBuscarUnidAbaixo', 'BuscarUnidAbaixo');
       }
-      const resp = await fetch(PONTO_GESTAO_URL, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString()
-      });
-      const html = await resp.text();
+      let resp;
+      try {
+        resp = await fetch(PONTO_GESTAO_URL, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+      } catch (err) {
+        return {
+          ok: false,
+          error: {
+            kind: 'http',
+            mes: ymBr,
+            reason: (err && err.message) ? err.message : 'erro de rede'
+          }
+        };
+      }
+      const html = typeof resp.text === 'function' ? await resp.text() : '';
       if (allowRetry && isCsrfErrorResponse(resp, html)) {
         meta = await ensureMetadataLoaded({ forceRefresh: true });
         if (meta.csrf) {
-          return queryWithDate(dateIso, pInfo, false);
+          return queryWithDate(dateIso, pInfo, ymBr, false);
         }
       }
-      if (resp && resp.ok === false) return [];
       const doc = new DOMParser().parseFromString(html, 'text/html');
-      if (isSptLoginOrExpiredDoc(resp, html, doc)) return [];
+      if (isSptLoginOrExpiredDoc(resp, html, doc)) {
+        return {
+          ok: false,
+          error: {
+            kind: 'session',
+            mes: ymBr,
+            reason: 'Sessão do SPT expirada'
+          }
+        };
+      }
+      if (resp && resp.ok === false) {
+        return {
+          ok: false,
+          error: {
+            kind: 'http',
+            mes: ymBr,
+            reason: `HTTP ${resp.status || 'erro'}`
+          }
+        };
+      }
+      const hasConsultationStructure = !!(
+        doc && doc.querySelector && (
+          doc.querySelector('#maintable')
+          || doc.querySelector('#formulario')
+          || doc.querySelector('#cbUnidades')
+          || doc.querySelector('.card')
+        )
+      );
+      if (!hasConsultationStructure) {
+        return {
+          ok: false,
+          error: {
+            kind: 'parse',
+            mes: ymBr,
+            reason: 'resposta inesperada do SPT'
+          }
+        };
+      }
       const inlinePeriodos = c.parsePeriodosFromDoc ? c.parsePeriodosFromDoc(doc) : [];
       if (inlinePeriodos.length > 0 && (!meta.periodos || !meta.periodos.length)) {
         meta.periodos = inlinePeriodos;
       }
-      return c.parseWorkersFromConsultationDoc(doc);
+      return {
+        ok: true,
+        workers: c.parseWorkersFromConsultationDoc(doc)
+      };
     }
 
     const byCode = new Map();
+    const failures = [];
+    let sessionExpired = false;
+
     for (const slice of slices) {
       const refDateIso = slice.dtFinalIso;
       const ymBr = slice.periodoDescricao;
       if (!refDateIso || !ymBr) continue;
       const periodInfo = findPeriodForContractAndMonth(contractParam, ymBr, meta.periodos);
-      let sliceWorkers = await queryWithDate(refDateIso, periodInfo);
-      if (sliceWorkers.length === 0 && periodInfo.tuple && periodInfo.tuple[3]) {
+      let qRes = await queryWithDate(refDateIso, periodInfo, ymBr);
+      if (qRes.ok && qRes.workers.length === 0 && periodInfo.tuple && periodInfo.tuple[3]) {
         const fallbackIso = c.brToIso(periodInfo.tuple[3]);
         if (fallbackIso && fallbackIso !== refDateIso) {
-          sliceWorkers = await queryWithDate(fallbackIso, periodInfo);
+          const fbRes = await queryWithDate(fallbackIso, periodInfo, ymBr);
+          if (fbRes.ok) {
+            qRes = fbRes;
+          }
         }
       }
-      sliceWorkers.forEach((w) => {
+      if (!qRes.ok) {
+        failures.push(qRes.error);
+        if (qRes.error.kind === 'session') {
+          sessionExpired = true;
+          break;
+        }
+        continue;
+      }
+      qRes.workers.forEach((w) => {
         if (!byCode.has(w.codigo)) {
           byCode.set(w.codigo, w);
         }
       });
     }
 
-    return Array.from(byCode.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return {
+      workers: Array.from(byCode.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      failures,
+      sessionExpired,
+      queriedMonths: slices.length
+    };
   }
 
   function createFailedMonthSummary(slice, errorReason) {
@@ -850,6 +979,16 @@ window.JEPessoasSptReport = (function () {
     }
   }
 
+  function formatWorkersFetchFailureLabel(failure) {
+    if (!failure) return 'Falha ao consultar o SPT — tentar novamente';
+    if (failure.kind === 'session') {
+      return 'Sessão do SPT expirada — faça login novamente';
+    }
+    const mes = failure.mes || 'período';
+    const motivo = failure.reason || 'erro na consulta';
+    return `Falha ao consultar o SPT (${mes}): ${motivo} — tentar novamente`;
+  }
+
   function populateWorkerDropdown() {
     const sel = overlay.querySelector('#je-spt-rep-worker-select');
     if (!sel) return;
@@ -867,7 +1006,13 @@ window.JEPessoasSptReport = (function () {
     if (!workersList.length) {
       const opt = document.createElement('option');
       opt.value = '';
-      opt.textContent = 'Nenhum prestador encontrado para esta unidade/contrato';
+      if (workersFetchStatus.sessionExpired) {
+        opt.textContent = 'Sessão do SPT expirada — faça login novamente';
+      } else if (workersFetchStatus.failures && workersFetchStatus.failures.length > 0) {
+        opt.textContent = formatWorkersFetchFailureLabel(workersFetchStatus.failures[0]);
+      } else {
+        opt.textContent = 'Nenhum prestador encontrado para esta unidade/contrato';
+      }
       sel.appendChild(opt);
       sel.disabled = true;
       return;
@@ -876,7 +1021,10 @@ window.JEPessoasSptReport = (function () {
     sel.disabled = running;
     const optAll = document.createElement('option');
     optAll.value = '__ALL__';
-    optAll.textContent = `Todos os prestadores (${workersList.length})`;
+    const partialSuffix = (workersFetchStatus.failures && workersFetchStatus.failures.length > 0)
+      ? ` — lista parcial (${workersFetchStatus.failures.map((f) => f.mes).join(', ')} falhou)`
+      : '';
+    optAll.textContent = `Todos os prestadores (${workersList.length})${partialSuffix}`;
     sel.appendChild(optAll);
 
     workersList.forEach((w) => {
@@ -889,6 +1037,18 @@ window.JEPessoasSptReport = (function () {
     syncSingleWorkerDropdownFromCheckboxes();
   }
 
+  function bindRetryButton(containerEl) {
+    if (!containerEl || !containerEl.querySelector) return;
+    const retryBtn = containerEl.querySelector('[data-spt-retry-workers]');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        refreshWorkersList();
+      });
+    }
+  }
+
   function paintWorkersSummary() {
     const summaryEl = overlay.querySelector('#je-spt-rep-team-summary');
     const runBtn = overlay.querySelector('#je-spt-rep-run');
@@ -899,11 +1059,37 @@ window.JEPessoasSptReport = (function () {
       return;
     }
     const checkedCount = workersList.filter((w) => w.checked).length;
+    const failures = (workersFetchStatus && workersFetchStatus.failures) || [];
+
+    if (!workersList.length) {
+      if (workersFetchStatus && workersFetchStatus.sessionExpired) {
+        setSafeHTML(
+          summaryEl,
+          'Prestadores: <strong class="je-spt-neg">Sessão do SPT expirada — faça login novamente</strong>'
+        );
+      } else if (failures.length > 0) {
+        const first = failures[0];
+        setSafeHTML(
+          summaryEl,
+          `Prestadores: <strong class="je-spt-neg">Falha ao consultar o SPT (${escapeHTML(first.mes || 'período')}): ${escapeHTML(first.reason || 'erro')} — tentar novamente</strong>`
+        );
+      } else {
+        setSafeHTML(
+          summaryEl,
+          'Prestadores: <strong>Nenhum prestador encontrado</strong> (<strong>0</strong> nesta unidade/contrato)'
+        );
+      }
+      if (runBtn) runBtn.disabled = true;
+      return;
+    }
+
+    const partialWarning = failures.length > 0
+      ? ` · <span class="je-spt-neg">Aviso: lista parcial (falha em ${escapeHTML(failures.map((f) => `${f.mes}: ${f.reason}`).join('; '))})</span>`
+      : '';
+
     setSafeHTML(
       summaryEl,
-      workersList.length
-        ? `Prestadores: <strong>${checkedCount}</strong> de <strong>${workersList.length}</strong> selecionado(s) · clique para filtrar ou marcar individualmente`
-        : 'Prestadores: <strong>0</strong> encontrados nesta unidade/contrato'
+      `Prestadores: <strong>${checkedCount}</strong> de <strong>${workersList.length}</strong> selecionado(s)${partialWarning} · clique para filtrar ou marcar individualmente`
     );
     if (runBtn) runBtn.disabled = running || checkedCount === 0;
   }
@@ -911,11 +1097,40 @@ window.JEPessoasSptReport = (function () {
   function paintWorkersList() {
     const listEl = overlay.querySelector('#je-spt-rep-team-list');
     if (!listEl) return;
+    const failures = (workersFetchStatus && workersFetchStatus.failures) || [];
+
+    if (!workersList.length) {
+      if (workersFetchStatus && workersFetchStatus.sessionExpired) {
+        setSafeHTML(
+          listEl,
+          '<div class="je-spt-worker-empty je-spt-worker-error"><strong>Sessão do SPT expirada — faça login novamente.</strong></div>'
+        );
+      } else if (failures.length > 0) {
+        const msg = failures.map((f) => `Falha ao consultar o SPT (${escapeHTML(f.mes || 'período')}): ${escapeHTML(f.reason || 'erro')}`).join('<br>');
+        setSafeHTML(
+          listEl,
+          `<div class="je-spt-worker-empty je-spt-worker-error"><span>${msg}</span> <button type="button" class="je-audit-btn" id="je-spt-rep-retry-workers" data-spt-retry-workers="1">Tentar novamente</button></div>`
+        );
+        bindRetryButton(listEl);
+      } else {
+        setSafeHTML(
+          listEl,
+          '<div class="je-spt-worker-empty">Nenhum prestador encontrado para esta unidade/contrato no período informado.</div>'
+        );
+      }
+      paintWorkersSummary();
+      return;
+    }
+
     const q = calc().normalizeText(workerSearchQuery);
     const visible = workersList.filter((w) => {
       if (!q) return true;
       return calc().normalizeText(`${w.nome} ${w.cpf} ${w.numContrato}`).includes(q);
     });
+
+    const partialBanner = failures.length > 0
+      ? `<div class="je-spt-worker-partial-warn">Lista parcial: falha ao consultar o SPT em ${failures.map((f) => `<strong>${escapeHTML(f.mes)}</strong> (${escapeHTML(f.reason)})`).join(', ')}. <button type="button" class="je-audit-btn" id="je-spt-rep-retry-workers" data-spt-retry-workers="1">Tentar novamente</button></div>`
+      : '';
 
     const html = visible.map((w) => `
       <label class="je-recog-team-item je-spt-worker-item" title="${escapeHTML(w.nome)} · CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato)}">
@@ -925,7 +1140,8 @@ window.JEPessoasSptReport = (function () {
       </label>
     `).join('');
 
-    setSafeHTML(listEl, html || '<div class="je-spt-worker-empty">Nenhum prestador corresponde ao filtro digitado.</div>');
+    setSafeHTML(listEl, partialBanner + (html || '<div class="je-spt-worker-empty">Nenhum prestador corresponde ao filtro digitado.</div>'));
+    bindRetryButton(listEl);
     paintWorkersSummary();
   }
 
@@ -939,6 +1155,7 @@ window.JEPessoasSptReport = (function () {
 
     if (!unitId) {
       workersList = [];
+      workersFetchStatus = { state: 'ok', failures: [], sessionExpired: false, queriedMonths: 0 };
       populateWorkerDropdown();
       paintWorkersList();
       return;
@@ -949,12 +1166,46 @@ window.JEPessoasSptReport = (function () {
     paintWorkersSummary();
 
     try {
-      const fetched = await fetchWorkersByUnitAndContract(unitId, contrato, fromIso, toIso, buscarAbaixo);
-      workersList = fetched.map((w) => Object.assign({}, w, { checked: true }));
+      const res = await fetchWorkersByUnitAndContract(unitId, contrato, fromIso, toIso, buscarAbaixo);
+      const fetchedWorkers = Array.isArray(res) ? res : (res && Array.isArray(res.workers) ? res.workers : []);
+      const failures = (!Array.isArray(res) && res && Array.isArray(res.failures)) ? res.failures : [];
+      const sessionExpired = Boolean(!Array.isArray(res) && res && res.sessionExpired);
+      const queriedMonths = (!Array.isArray(res) && res && typeof res.queriedMonths === 'number') ? res.queriedMonths : 1;
+
+      workersList = fetchedWorkers.map((w) => Object.assign({}, w, { checked: true }));
       selectedSingleWorkerCode = '__ALL__';
+      workersFetchStatus = {
+        state: sessionExpired ? 'session' : (failures.length > 0 ? (workersList.length > 0 ? 'partial' : 'error') : 'ok'),
+        failures,
+        sessionExpired,
+        queriedMonths
+      };
+
+      if (sessionExpired) {
+        showValidationMessage('Sessão do SPT expirada — faça login novamente.');
+      } else if (failures.length > 0 && workersList.length === 0) {
+        const f = failures[0];
+        showValidationMessage(`Falha ao consultar o SPT (${f.mes || 'período'}): ${f.reason || 'erro'} — tentar novamente.`, { showRetry: true });
+      } else if (failures.length > 0 && workersList.length > 0) {
+        const failedMonths = failures.map((f) => `${f.mes} (${f.reason})`).join(', ');
+        showValidationMessage(`Lista parcial de prestadores: falha ao consultar o SPT em ${failedMonths} — tentar novamente.`, { showRetry: true });
+      } else {
+        const currentValMsg = overlay.querySelector('#je-spt-rep-validation')?.textContent || '';
+        if (/Falha ao consultar o SPT|Sessão do SPT expirada|Lista parcial de prestadores/i.test(currentValMsg)) {
+          showValidationMessage('');
+        }
+      }
     } catch (e) {
       console.warn('[TSE XT] Falha ao carregar prestadores da unidade:', e);
       workersList = [];
+      const reason = (e && e.message) ? e.message : 'erro de rede';
+      workersFetchStatus = {
+        state: 'error',
+        failures: [{ kind: 'http', mes: 'período', reason }],
+        sessionExpired: false,
+        queriedMonths: 1
+      };
+      showValidationMessage(`Falha ao consultar o SPT (período): ${reason} — tentar novamente.`, { showRetry: true });
     } finally {
       loadingWorkers = false;
       populateWorkerDropdown();
@@ -963,7 +1214,7 @@ window.JEPessoasSptReport = (function () {
     }
   }
 
-  function showValidationMessage(message) {
+  function showValidationMessage(message, options = {}) {
     if (!overlay) return;
     const box = overlay.querySelector('#je-spt-rep-validation');
     if (!box) return;
@@ -972,7 +1223,15 @@ window.JEPessoasSptReport = (function () {
       box.hidden = true;
       return;
     }
-    box.textContent = String(message);
+    if (options && options.showRetry) {
+      setSafeHTML(
+        box,
+        `<span>${escapeHTML(String(message))}</span> <button type="button" class="je-audit-btn" data-spt-retry-workers="1">Tentar novamente</button>`
+      );
+      bindRetryButton(box);
+    } else {
+      box.textContent = String(message);
+    }
     box.hidden = false;
   }
 
