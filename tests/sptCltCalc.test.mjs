@@ -399,3 +399,582 @@ test('Critério de aceite Bloco A — com Home Office desligado e desconto de in
   assert.equal(dom04NoDeduct.cltWorkedMin, 561); // 09:21 (sem desconto de 1h)
   assert.equal(C.formatMin(mDigiLunch.he100BrutoMin), '55:24'); // +4h nos 4 plantões de FDS >6h com 1 par
 });
+
+// ---------------------------------------------------------------------------
+// BLOCO B — Consultas ao SPT (B1 a B6)
+// ---------------------------------------------------------------------------
+
+// Fixture de HTML real do SPT (com window.lPeriodos em <script> inline + tabela #maintable)
+const SPT_CONSULTA_HTML_FIXTURE = `<!DOCTYPE html>
+<html>
+<head>
+  <script>/*<![CDATA[*/
+    window.lPeriodos = [
+      ["2862","10\\/2026","01\\/10\\/2026","31\\/10\\/2026","0","Outubro 2026"],
+      ["2862","09\\/2026","01\\/09\\/2026","30\\/09\\/2026","0","Setembro 2026"],
+      ["9901","10\\/2026","01\\/10\\/2026","31\\/10\\/2026","0","Outubro 2026"]
+    ];
+  /*]]>*/</script>
+</head>
+<body>
+  <form id="formulario" method="post" action="/spt-consultafrequencia/gestao/ponto-gestao">
+    <input type="hidden" name="_csrf" value="csrf-token-fixture-123" />
+    <input type="hidden" name="cmd" value="" />
+    <input type="hidden" name="periodoCodigo" value="" />
+    <input type="hidden" name="periodoDescricao" value="" />
+    <input type="hidden" name="periodoDtInicio" value="" />
+    <input type="hidden" name="periodoDtFinal" value="" />
+    <input type="hidden" name="codContrato" value="" />
+    <input type="hidden" name="codTSE" value="" />
+    <input type="hidden" name="cpf" value="" />
+    <input type="hidden" name="numContrato" value="" />
+    <input type="hidden" name="cdFunc" value="" />
+    <input type="hidden" name="matFunc" value="" />
+    <input type="hidden" name="nome" value="" />
+    <select id="cbUnidades" name="cbUnidades">
+      <option value="1184" selected>- - - - - -SEÇÃO DE TOTALIZAÇÃO E DIVULGAÇÃO DE RESULTADOS</option>
+    </select>
+    <select id="cbContratos" name="cbContratos">
+      <option value="-1">Todos</option>
+      <option value="2862">77/2023 - DIGISYSTEM</option>
+    </select>
+    <select id="cbPeriodos" name="cbPeriodos">
+      <option value="-1">Selecione</option>
+      <option value="0">10/2026</option>
+      <option value="1">09/2026</option>
+    </select>
+    <input id="edtdataponto" name="edtdataponto" value="2026-10-31" />
+    <button type="submit" name="btnPesquisar">Pesquisar</button>
+  </form>
+  <table id="maintable">
+    <tbody>
+      <tr>
+        <td><a data-contrato="2862" data-codigo="75645" data-matricula="22990" data-cpf="00011122233" data-cod-tse="TSE-75645" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR ALFA">000.111.222-33</a></td>
+        <td>PRESTADOR ALFA</td>
+      </tr>
+      <tr>
+        <td><a data-contrato="2862" data-codigo="75646" data-matricula="22991" data-cpf="44455566677" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR BETA">444.555.666-77</a></td>
+        <td>PRESTADOR BETA</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+function createMinimalDocFromHtml(html) {
+  const scripts = [];
+  for (const [, content] of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)) {
+    scripts.push({ textContent: content });
+  }
+  const csrfMatch = html.match(/name="_csrf"\s+value="([^"]+)"/i);
+  const csrfInput = csrfMatch ? { value: csrfMatch[1] } : null;
+
+  const links = [];
+  for (const [fullTag] of html.matchAll(/<a\s+[^>]*data-codigo="[^"]+"[^>]*>/gi)) {
+    const attrs = {};
+    for (const [, k, v] of fullTag.matchAll(/([a-z0-9-]+)="([^"]*)"/gi)) {
+      attrs[k] = v;
+    }
+    links.push({
+      dataset: {},
+      handlers: {},
+      getAttribute: (name) => (name in attrs ? attrs[name] : null),
+      removeAttribute(name) { delete attrs[name]; },
+      addEventListener(type, fn) { this.handlers[type] = fn; }
+    });
+  }
+
+  const unitOptions = [];
+  const unitSelectMatch = html.match(/<select[^>]*id="cbUnidades"[^>]*>([\s\S]*?)<\/select>/i);
+  if (unitSelectMatch) {
+    for (const [, val, text] of unitSelectMatch[1].matchAll(/<option[^>]*value="([^"]*)"[^>]*>([\s\S]*?)<\/option>/gi)) {
+      unitOptions.push({ value: val, textContent: text.trim() });
+    }
+  }
+
+  const contractOptions = [];
+  const contractSelectMatch = html.match(/<select[^>]*id="cbContratos"[^>]*>([\s\S]*?)<\/select>/i);
+  if (contractSelectMatch) {
+    for (const [, val, text] of contractSelectMatch[1].matchAll(/<option[^>]*value="([^"]*)"[^>]*>([\s\S]*?)<\/option>/gi)) {
+      contractOptions.push({ value: val, textContent: text.trim() });
+    }
+  }
+
+  const dayRows = [];
+  for (const [, rowHtml] of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = Array.from(rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi), (m) => ({
+      textContent: m[1].replace(/<[^>]+>/g, '').trim()
+    }));
+    if (cells.length >= 9 && /^\d{2}\/\d{2}\/\d{4}$/.test(cells[0].textContent)) {
+      dayRows.push({
+        querySelectorAll: (sel) => (sel === 'td' ? cells : [])
+      });
+    }
+  }
+
+  const hasMaintable = /id="maintable"/i.test(html);
+  const isLoginForm = /process-login|type="password"/i.test(html);
+
+  return {
+    links,
+    getElementById(id) {
+      if (id === 'cbUnidades' && unitOptions.length) return { options: unitOptions, value: unitOptions[0].value, addEventListener() {} };
+      if (id === 'cbContratos' && contractOptions.length) return { options: contractOptions, value: '-1', addEventListener() {} };
+      return null;
+    },
+    querySelector(sel) {
+      if (sel === 'input[name="_csrf"]') return csrfInput;
+      if (sel === '#cbUnidades' && unitOptions.length) return { options: unitOptions };
+      if (sel === '#cbContratos' && contractOptions.length) return { options: contractOptions };
+      if (sel === '#maintable') return hasMaintable ? { querySelectorAll: (s) => (s === 'tbody tr' ? dayRows : []) } : null;
+      if (sel.includes('process-login')) return isLoginForm ? {} : null;
+      return null;
+    },
+    querySelectorAll(sel) {
+      if (sel === 'script') return scripts;
+      if (sel === '#maintable a[data-codigo]') return links;
+      if (sel === '#maintable tbody tr') return dayRows;
+      return [];
+    }
+  };
+}
+
+test('B1 e B6 — parsePeriodosFromDoc extrai window.lPeriodos do HTML sem depender do escopo isolado e parseWorkersFromConsultationDoc preserva data-cod-tse / fallback CPF', () => {
+  const doc = createMinimalDocFromHtml(SPT_CONSULTA_HTML_FIXTURE);
+  const periodos = C.parsePeriodosFromDoc(doc);
+  assert.equal(periodos.length, 3);
+  assert.deepEqual(periodos[0], ['2862', '10/2026', '01/10/2026', '31/10/2026', '0', 'Outubro 2026']);
+  assert.deepEqual(periodos[1], ['2862', '09/2026', '01/09/2026', '30/09/2026', '0', 'Setembro 2026']);
+
+  const workers = C.parseWorkersFromConsultationDoc(doc);
+  assert.equal(workers.length, 2);
+  // Prestador Alfa tem data-cod-tse explícito ("TSE-75645") e CPF "00011122233"
+  assert.equal(workers[0].codigo, '75645');
+  assert.equal(workers[0].cpf, '00011122233');
+  assert.equal(workers[0].codTse, 'TSE-75645');
+  // Prestador Beta não tem data-cod-tse; deve fazer fallback para data-cpf ("44455566677"), igual ao gestao-ponto.js do SPT
+  assert.equal(workers[1].codigo, '75646');
+  assert.equal(workers[1].cpf, '44455566677');
+  assert.equal(workers[1].codTse, '44455566677');
+});
+
+test('B1 e B6 — sptModernizer extrai lPeriodos do HTML ao clicar no CPF quando Contrato = Todos (-1) e preenche codTSE + período', () => {
+  const doc = createMinimalDocFromHtml(SPT_CONSULTA_HTML_FIXTURE);
+  let submitted = false;
+  const formFields = {
+    cmd: { value: '' },
+    periodoCodigo: { value: '' },
+    periodoDescricao: { value: '' },
+    periodoDtInicio: { value: '' },
+    periodoDtFinal: { value: '' },
+    codContrato: { value: '' },
+    codTSE: { value: '' },
+    cpf: { value: '' },
+    numContrato: { value: '' },
+    cdFunc: { value: '' },
+    matFunc: { value: '' },
+    nome: { value: '' },
+    cbContratos: { value: '-1' },
+    cbPeriodos: { value: '-1' },
+    edtdataponto: { value: '2026-09-30' }
+  };
+  const btnPesquisar = {
+    dataset: {},
+    removeAttribute() {},
+    addEventListener(type, fn) { this.onClick = fn; }
+  };
+  const form = {
+    elements: formFields,
+    querySelector: (s) => (s === 'button[name="btnPesquisar"]' ? btnPesquisar : null),
+    submit() { submitted = true; }
+  };
+
+  const customDoc = Object.assign({}, doc, {
+    addEventListener() {},
+    body: {
+      classList: { add() {}, remove() {}, contains: () => true },
+      dataset: {},
+      insertBefore() {},
+      appendChild() {},
+      firstChild: null
+    },
+    createElement: () => ({
+      className: '',
+      id: '',
+      dataset: {},
+      style: {},
+      addEventListener() {},
+      removeAttribute() {},
+      appendChild() {},
+      insertBefore() {},
+      replaceChildren() {},
+      querySelector: () => null,
+      querySelectorAll: () => []
+    }),
+    getElementById(id) {
+      if (id === 'formulario') return form;
+      if (id === 'edtdataponto') return formFields.edtdataponto;
+      return doc.getElementById(id);
+    }
+  });
+
+  const window = {
+    location: { pathname: '/spt-consultafrequencia/gestao/ponto-gestao' },
+    JEPessoasSptCltCalc: C
+  };
+  vm.runInNewContext(readFileSync(new URL('../content/modules/sptModernizer.js', import.meta.url), 'utf8'), {
+    window,
+    document: customDoc,
+    chrome: { runtime: { getURL: () => '' } },
+    DOMParser: class { parseFromString() { return { body: { childNodes: [] } }; } }
+  });
+  window.JEPessoasSptModernizer.mount('sptGestao');
+
+  // Simula clique no CPF do Prestador Alfa com edtdataponto = 2026-09-30 e cbPeriodos = -1
+  doc.links[0].handlers.click({ preventDefault() {} });
+  assert.equal(submitted, true);
+  assert.equal(formFields.cmd.value, 'cmdVerPeriodoContrato');
+  assert.equal(formFields.codTSE.value, 'TSE-75645');
+  assert.equal(formFields.cpf.value, '00011122233');
+  assert.equal(formFields.periodoCodigo.value, '2862');
+  assert.equal(formFields.periodoDescricao.value, '09/2026');
+  assert.equal(formFields.periodoDtInicio.value, '01/09/2026');
+  assert.equal(formFields.periodoDtFinal.value, '30/09/2026');
+});
+
+function createSptReportModalHarness(fetchHandler, store = {}) {
+  const elements = new Map();
+  function makeEl(tag = 'div') {
+    const el = {
+      tagName: tag.toUpperCase(),
+      id: '',
+      className: '',
+      value: '',
+      checked: false,
+      disabled: false,
+      hidden: false,
+      textContent: '',
+      dataset: {},
+      style: {},
+      handlers: {},
+      children: [],
+      options: [],
+      classList: {
+        _set: new Set(),
+        add(...c) { c.forEach((x) => this._set.add(x)); },
+        remove(...c) { c.forEach((x) => this._set.delete(x)); },
+        toggle(c, force) {
+          const on = force !== undefined ? !!force : !this._set.has(c);
+          if (on) this._set.add(c); else this._set.delete(c);
+        },
+        contains(c) { return this._set.has(c); }
+      },
+      addEventListener(type, fn) { this.handlers[type] = fn; },
+      removeAttribute() {},
+      setAttribute(k, v) { this[k] = v; },
+      getAttribute(k) { return this[k] || null; },
+      appendChild(child) {
+        this.children.push(child);
+        if (child && child.tagName === 'OPTION') this.options.push(child);
+        if (child && child.id) elements.set('#' + child.id, child);
+        return child;
+      },
+      replaceChildren(...nodes) {
+        this.children = [...nodes];
+        this.options = nodes.filter((n) => n && n.tagName === 'OPTION');
+      },
+      querySelector(sel) {
+        if (sel === 'option:checked') {
+          return this.options.find((o) => o.value === this.value) || this.options[0] || null;
+        }
+        if (sel.startsWith('option[value="')) {
+          const v = sel.slice(14, -2);
+          return this.options.find((o) => o.value === v) || null;
+        }
+        return elements.get(sel) || null;
+      },
+      querySelectorAll(sel) {
+        if (sel === 'input[name="je-spt-rep-mode"]') return modeRadios;
+        if (sel === 'input[name="je-spt-rep-detail"]') return detailRadios;
+        return [];
+      },
+      click() { if (this.handlers.click) this.handlers.click({ preventDefault() {}, target: this }); },
+      remove() {}
+    };
+    return el;
+  }
+
+  const modeRadios = ['xt_digi', 'spt_puro'].map((v) => Object.assign(makeEl('input'), { value: v, checked: v === 'xt_digi' }));
+  const detailRadios = ['mensal', 'diario'].map((v) => Object.assign(makeEl('input'), { value: v, checked: v === 'mensal' }));
+
+  const preCreatedIds = [
+    'je-spt-rep-close', 'je-spt-rep-subunits', 'je-spt-rep-unit-mount',
+    'je-spt-rep-from', 'je-spt-rep-to', 'je-spt-rep-contrato',
+    'je-spt-rep-worker-select', 'je-spt-seg-mode-xt', 'je-spt-seg-mode-raw',
+    'je-spt-seg-mensal', 'je-spt-seg-diario', 'je-spt-rep-team',
+    'je-spt-rep-team-summary', 'je-spt-rep-worker-search', 'je-spt-rep-all',
+    'je-spt-rep-none', 'je-spt-rep-team-list', 'je-spt-rep-ho-wrap',
+    'je-spt-rep-homeoffice', 'je-spt-rep-special-lunch-wrap',
+    'je-spt-rep-special-lunch', 'je-spt-rep-holidays', 'je-spt-rep-run',
+    'je-spt-rep-csv', 'je-spt-rep-print', 'je-spt-rep-progress',
+    'je-spt-rep-progress-fill', 'je-spt-rep-progress-label',
+    'je-spt-rep-cancel', 'je-spt-rep-body', 'je-spt-only-active-days'
+  ];
+  preCreatedIds.forEach((id) => {
+    const el = makeEl();
+    el.id = id;
+    if (id === 'je-spt-rep-subunits' || id === 'je-spt-rep-special-lunch') el.checked = true;
+    elements.set('#' + id, el);
+  });
+
+  let selectedUnitId = '1184';
+  const comboStub = {
+    getAvailableUnits: () => [],
+    getAvailableContracts: () => [],
+    getAvailablePeriodos: () => [],
+    cacheUnitsAndContractsFromDOM: () => {},
+    mountComboboxWidget: ({ initialUnitId }) => {
+      selectedUnitId = initialUnitId || '1184';
+      return {
+        root: makeEl(),
+        getValue: () => selectedUnitId,
+        getSelectedUnit: () => ({ id: selectedUnitId, cleanName: 'SETOT', parentPath: 'STI › COSE › SETOT' }),
+        setDisabled: () => {}
+      };
+    }
+  };
+
+  let exportedCsv = '';
+  const document = {
+    createElement: (tag) => makeEl(tag),
+    addEventListener: () => {},
+    body: makeEl('body'),
+    head: makeEl('head'),
+    getElementById: (id) => elements.get('#' + id) || null,
+    querySelector: (sel) => elements.get(sel) || null,
+    querySelectorAll: () => []
+  };
+
+  const chrome = {
+    runtime: { getManifest: () => ({ version: '1.2.18', version_name: '1.2.18-Snapshot' }) },
+    storage: {
+      local: {
+        get: (defaults, cb) => cb(Object.fromEntries(Object.entries(defaults).map(([k, v]) => [k, store[k] ?? v]))),
+        set: (data, cb) => { Object.assign(store, data); cb?.(); }
+      }
+    }
+  };
+
+  class SyntheticDOMParser {
+    parseFromString(html) {
+      const parsed = createMinimalDocFromHtml(html);
+      parsed.body = {
+        innerHTML: html,
+        childNodes: [{ html }]
+      };
+      return parsed;
+    }
+  }
+
+  // Intercepta replaceChildren para guardar o HTML passado a setSafeHTML
+  for (const el of elements.values()) {
+    const origReplace = el.replaceChildren.bind(el);
+    el.replaceChildren = (...nodes) => {
+      origReplace(...nodes);
+      if (nodes.length === 1 && nodes[0] && typeof nodes[0].html === 'string') {
+        el.innerHTML = nodes[0].html;
+      }
+    };
+  }
+
+  const window = {
+    JEPessoasSptCltCalc: C,
+    JEPessoasSptCombobox: comboStub,
+    print: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {}
+  };
+
+  const src = readFileSync(new URL('../content/modules/sptReportModal.js', import.meta.url), 'utf8');
+  vm.runInNewContext(src, {
+    window,
+    document,
+    chrome,
+    URLSearchParams,
+    Date,
+    Set,
+    Map,
+    console,
+    Blob: class { constructor(parts) { exportedCsv = parts.join(''); } },
+    URL: { createObjectURL: () => 'blob:spt-test', revokeObjectURL: () => {} },
+    setTimeout: (fn) => { fn(); return 1; },
+    alert: (msg) => { throw new Error(msg); },
+    DOMParser: SyntheticDOMParser,
+    fetch: fetchHandler
+  });
+
+  return {
+    api: window.JEPessoasSptReport,
+    elements,
+    store,
+    getExportedCsv: () => exportedCsv
+  };
+}
+
+test('B2, B4 e B5 — período multi-mês consulta prestadores em cada mês do intervalo, une por código, faz cache de metadados e renova CSRF quando expira (403)', async () => {
+  const calls = [];
+  let csrfRefreshCount = 0;
+  let firstSeptConsultFailedCsrf = false;
+
+  const harness = createSptReportModalHarness(async (url, opts = {}) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      csrfRefreshCount += 1;
+      calls.push({ type: 'GET_HOME', csrfRefreshCount });
+      return {
+        ok: true,
+        status: 200,
+        text: async () => SPT_CONSULTA_HTML_FIXTURE.replace('csrf-token-fixture-123', `csrf-token-${csrfRefreshCount}`)
+      };
+    }
+
+    const params = new URLSearchParams(opts.body || '');
+    const cmd = params.get('cmd');
+    const dt = params.get('edtdataponto');
+    const csrf = params.get('_csrf');
+    calls.push({ type: cmd, edtdataponto: dt, periodoDescricao: params.get('periodoDescricao'), csrf, codTSE: params.get('codTSE') });
+
+    // Simula expiração de CSRF na 1ª consulta de 09/2026 para testar renovação automática (B5)
+    if (cmd === 'cmdConsultar' && dt === '2026-09-30' && !firstSeptConsultFailedCsrf) {
+      firstSeptConsultFailedCsrf = true;
+      return {
+        ok: false,
+        status: 403,
+        text: async () => '<html><body>Invalid CSRF Token</body></html>'
+      };
+    }
+
+    if (cmd === 'cmdConsultar' && dt === '2026-09-30') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => `<table id="maintable"><tbody>
+          <tr><td><a data-contrato="2862" data-codigo="101" data-matricula="1" data-cpf="11111111111" data-cod-tse="COD-101" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR SETEMBRO">111</a></td></tr>
+          <tr><td><a data-contrato="2862" data-codigo="102" data-matricula="2" data-cpf="22222222222" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR AMBOS">222</a></td></tr>
+        </tbody></table>`
+      };
+    }
+
+    if (cmd === 'cmdConsultar' && dt === '2026-10-31') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => `<table id="maintable"><tbody>
+          <tr><td><a data-contrato="2862" data-codigo="102" data-matricula="2" data-cpf="22222222222" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR AMBOS">222</a></td></tr>
+          <tr><td><a data-contrato="2862" data-codigo="103" data-matricula="3" data-cpf="33333333333" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR OUTUBRO">333</a></td></tr>
+        </tbody></table>`
+      };
+    }
+
+    return { ok: true, status: 200, text: async () => '<table id="maintable"><tbody></tbody></table>' };
+  }, {
+    je_xt_spt_report_prefs_v2: {
+      unitId: '1184',
+      fromIso: '2026-09-01',
+      toIso: '2026-10-31',
+      contrato: '2862',
+      hoDefaultMigratedV2: true
+    }
+  });
+
+  await harness.api.open();
+
+  // 1) B2 e B4: Deve ter consultado 2026-09-30 e 2026-10-31 (e nenhuma data fixa como 2026-10-15)
+  const consultDates = calls.filter((c) => c.type === 'cmdConsultar').map((c) => c.edtdataponto);
+  assert.ok(consultDates.includes('2026-09-30'));
+  assert.ok(consultDates.includes('2026-10-31'));
+  assert.ok(!consultDates.includes('2026-10-15'));
+
+  // 2) B5: GET_HOME foi chamado apenas 2 vezes: 1 no carregamento inicial + 1 quando o CSRF retornou 403
+  assert.equal(csrfRefreshCount, 2);
+
+  // 3) B2: Os 3 prestadores distintos (101 de set, 102 de ambos, 103 de out) foram unidos por código sem duplicar o 102
+  const options = harness.elements.get('#je-spt-rep-worker-select').options.map((o) => o.value);
+  assert.deepEqual(options, ['__ALL__', '102', '103', '101']);
+});
+
+test('B3 e B6 — falha em mês durante geração registra em report.failures, marca partial = true e exibe aviso na tela, no PDF e no CSV', async () => {
+  const postedCodTse = [];
+
+  const harness = createSptReportModalHarness(async (url, opts = {}) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    const params = new URLSearchParams(opts.body || '');
+    const cmd = params.get('cmd');
+    if (cmd === 'cmdConsultar') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => `<table id="maintable"><tbody>
+          <tr><td><a data-contrato="2862" data-codigo="75645" data-matricula="22990" data-cpf="00011122233" data-cod-tse="TSE-75645" data-num-contrato="77/2023" data-nome-escaped="PRESTADOR ALFA">000</a></td></tr>
+        </tbody></table>`
+      };
+    }
+    if (cmd === 'cmdVerPeriodoContrato') {
+      postedCodTse.push(params.get('codTSE'));
+      const mes = params.get('periodoDescricao');
+      if (mes === '09/2026') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => `<table id="maintable"><tbody>
+            <tr><td>01/09/2026</td><td>08:00</td><td>12:00</td><td>13:00</td><td>17:00</td><td></td><td></td><td></td><td>08:00:00</td></tr>
+          </tbody></table>`
+        };
+      }
+      // Outubro falha com HTTP 500!
+      return {
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error'
+      };
+    }
+    return { ok: true, status: 200, text: async () => '' };
+  }, {
+    je_xt_spt_report_prefs_v2: {
+      unitId: '1184',
+      fromIso: '2026-09-01',
+      toIso: '2026-10-31',
+      contrato: '2862',
+      hoDefaultMigratedV2: true
+    }
+  });
+
+  await harness.api.open();
+  await harness.elements.get('#je-spt-rep-run').handlers.click();
+
+  const saved = harness.store.je_xt_spt_report_v2;
+  assert.ok(saved);
+  // B6: Verifica que codTSE enviado ao SPT usou data-cod-tse ("TSE-75645")
+  assert.deepEqual(postedCodTse, ['TSE-75645', 'TSE-75645']);
+
+  // B3: Relatório marcado como parcial e lista a falha de 10/2026 sem omitir o mês
+  assert.equal(saved.partial, true);
+  assert.equal(saved.failures.length, 1);
+  assert.match(saved.failures[0], /PRESTADOR ALFA — 10\/2026: falha na consulta \(HTTP 500\)/);
+  assert.equal(saved.workers[0].months.length, 2);
+  assert.equal(saved.workers[0].months[0].fetchError, undefined);
+  assert.equal(saved.workers[0].months[1].fetchError, true);
+
+  // Tela mostra o banner parcial e a linha de falha
+  const bodyHtml = harness.elements.get('#je-spt-rep-body').innerHTML;
+  assert.match(bodyHtml, /Relatório Parcial/i);
+  assert.match(bodyHtml, /PRESTADOR ALFA — 10\/2026: falha na consulta \(HTTP 500\)/);
+
+  // CSV inclui o aviso de relatório parcial e a linha com StatusConsulta = falha na consulta (HTTP 500)
+  harness.elements.get('#je-spt-rep-csv').handlers.click();
+  const csv = harness.getExportedCsv();
+  assert.match(csv, /AVISO_RELATORIO_PARCIAL/);
+  assert.match(csv, /falha na consulta \(HTTP 500\)/);
+});
+

@@ -45,6 +45,7 @@ window.JEPessoasSptReport = (function () {
   let showOnlyActiveDaysInDaily = false;
   let currentResult = null;
   let expandedMonthlyRows = new Set();
+  let metadataCache = null; // { units, contracts, periodos, csrf }
 
   function escapeHTML(str) {
     if (str == null) return '';
@@ -89,31 +90,89 @@ window.JEPessoasSptReport = (function () {
     return input ? input.value : '';
   }
 
-  async function ensureMetadataLoaded() {
-    const cb = combo();
-    let units = cb ? cb.getAvailableUnits(document) : [];
-    let contracts = cb ? cb.getAvailableContracts(document) : [];
-    let csrf = getCsrfToken(document);
+  function isSptLoginOrExpiredDoc(resp, html, doc) {
+    if (resp && /login|encerrada/i.test(String(resp.url || ''))) return true;
+    if (doc && doc.querySelector) {
+      if (doc.querySelector('form[action*="process-login"], form[action*="/login"], input[name="password"][type="password"]')) {
+        return true;
+      }
+    }
+    if (typeof html === 'string' && html.length < 15000 && /process-login|sess[aã]o\s+expirada|autentica[cç][aã]o/i.test(html)) {
+      return true;
+    }
+    return false;
+  }
 
-    if (!units.length || !csrf) {
+  function isCsrfErrorResponse(resp, html) {
+    if (resp && (resp.status === 403 || resp.status === 401)) return true;
+    if (typeof html === 'string' && /Invalid CSRF Token|CSRF token|Forbidden/i.test(html)) return true;
+    return false;
+  }
+
+  async function ensureMetadataLoaded(options = {}) {
+    const forceRefresh = !!(options && options.forceRefresh);
+    if (!forceRefresh && metadataCache && metadataCache.csrf && Array.isArray(metadataCache.units) && metadataCache.units.length > 0) {
+      return metadataCache;
+    }
+
+    const cb = combo();
+    const c = calc();
+    let units = (!forceRefresh && cb) ? cb.getAvailableUnits(document) : [];
+    let contracts = (!forceRefresh && cb) ? cb.getAvailableContracts(document) : [];
+    let periodos = (!forceRefresh && cb && cb.getAvailablePeriodos)
+      ? cb.getAvailablePeriodos(document)
+      : ((!forceRefresh && c && c.parsePeriodosFromDoc) ? c.parsePeriodosFromDoc(document) : []);
+    let csrf = !forceRefresh ? getCsrfToken(document) : '';
+
+    if (forceRefresh || !units.length || !csrf || !periodos.length) {
       try {
         const resp = await fetch(GESTAO_HOME_URL, { credentials: 'include' });
-        const html = await resp.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        if (cb) {
-          cb.cacheUnitsAndContractsFromDOM(doc);
-          units = cb.getAvailableUnits(doc);
-          contracts = cb.getAvailableContracts(doc);
+        if (resp && resp.ok !== false) {
+          const html = await resp.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          if (cb) {
+            cb.cacheUnitsAndContractsFromDOM(doc);
+            const fetchedUnits = cb.getAvailableUnits(doc);
+            const fetchedContracts = cb.getAvailableContracts(doc);
+            const fetchedPeriodos = cb.getAvailablePeriodos ? cb.getAvailablePeriodos(doc) : [];
+            if (fetchedUnits.length) units = fetchedUnits;
+            if (fetchedContracts.length) contracts = fetchedContracts;
+            if (fetchedPeriodos.length) periodos = fetchedPeriodos;
+          }
+          if (!units.length && c && c.parseUnitsFromSelect) {
+            units = c.parseUnitsFromSelect(doc.getElementById('cbUnidades') || doc.querySelector('#cbUnidades'));
+          }
+          if (!contracts.length && c && c.parseContractsFromSelect) {
+            contracts = c.parseContractsFromSelect(doc.getElementById('cbContratos') || doc.querySelector('#cbContratos'));
+          }
+          if (!periodos.length && c && c.parsePeriodosFromDoc) {
+            periodos = c.parsePeriodosFromDoc(doc);
+          }
+          const fetchedCsrf = getCsrfToken(doc);
+          if (fetchedCsrf) csrf = fetchedCsrf;
         }
-        if (!csrf) csrf = getCsrfToken(doc);
       } catch (_) {}
     }
 
-    return { units, contracts, csrf };
+    metadataCache = {
+      units: Array.isArray(units) ? units : [],
+      contracts: Array.isArray(contracts) ? contracts : [],
+      periodos: Array.isArray(periodos) ? periodos : [],
+      csrf: csrf || ''
+    };
+    return metadataCache;
   }
 
-  function findPeriodForContractAndMonth(contrato, ymBr) {
-    const lPeriodos = Array.isArray(window.lPeriodos) ? window.lPeriodos : [];
+  function findPeriodForContractAndMonth(contrato, ymBr, periodosOverride = null) {
+    const c = calc();
+    const cb = combo();
+    const lPeriodos = Array.isArray(periodosOverride) && periodosOverride.length > 0
+      ? periodosOverride
+      : ((metadataCache && Array.isArray(metadataCache.periodos) && metadataCache.periodos.length > 0)
+        ? metadataCache.periodos
+        : ((cb && cb.getAvailablePeriodos && cb.getAvailablePeriodos(document))
+          || (c && c.parsePeriodosFromDoc && c.parsePeriodosFromDoc(document))
+          || []));
     if (!contrato || contrato === '-1') return { idx: -1, tuple: null };
     let idx = lPeriodos.findIndex((p) => Array.isArray(p) && String(p[0]) === String(contrato) && String(p[1]) === String(ymBr));
     if (idx < 0) {
@@ -127,21 +186,18 @@ window.JEPessoasSptReport = (function () {
 
   async function fetchWorkersByUnitAndContract(unitId, contrato, fromIso, toIso, buscarAbaixo = true) {
     const c = calc();
-    const { csrf } = await ensureMetadataLoaded();
-    if (!unitId || !csrf) return [];
+    let meta = await ensureMetadataLoaded();
+    if (!unitId || !meta.csrf) return [];
 
     const slices = c.splitDateRangeByMonth(fromIso, toIso);
-    const refSlice = slices[slices.length - 1] || c.previousMonthPeriod();
-    const ymBr = refSlice.periodoDescricao || refSlice.label || '10/2026';
-    const refDateIso = refSlice.dtFinalIso || refSlice.toIso || '2026-10-15';
+    if (!slices.length) return [];
 
     const contractParam = contrato && contrato !== '-1' ? String(contrato) : '-1';
-    const periodInfo = findPeriodForContractAndMonth(contractParam, ymBr);
 
-    async function queryWithDate(dateIso, pInfo) {
+    async function queryWithDate(dateIso, pInfo, allowRetry = true) {
       const tuple = (pInfo && pInfo.tuple) || ['', '', '', ''];
       const body = new URLSearchParams({
-        _csrf: csrf,
+        _csrf: meta.csrf,
         cmd: 'cmdConsultar',
         periodoCodigo: tuple[0] || '',
         periodoDescricao: tuple[1] || '',
@@ -170,39 +226,105 @@ window.JEPessoasSptReport = (function () {
         body: body.toString()
       });
       const html = await resp.text();
+      if (allowRetry && isCsrfErrorResponse(resp, html)) {
+        meta = await ensureMetadataLoaded({ forceRefresh: true });
+        if (meta.csrf) {
+          return queryWithDate(dateIso, pInfo, false);
+        }
+      }
+      if (resp && resp.ok === false) return [];
       const doc = new DOMParser().parseFromString(html, 'text/html');
+      if (isSptLoginOrExpiredDoc(resp, html, doc)) return [];
+      const inlinePeriodos = c.parsePeriodosFromDoc ? c.parsePeriodosFromDoc(doc) : [];
+      if (inlinePeriodos.length > 0 && (!meta.periodos || !meta.periodos.length)) {
+        meta.periodos = inlinePeriodos;
+      }
       return c.parseWorkersFromConsultationDoc(doc);
     }
 
-    let list = await queryWithDate(refDateIso, periodInfo);
-
-    if (list.length === 0 && periodInfo.tuple && periodInfo.tuple[3]) {
-      const fallbackIso = c.brToIso(periodInfo.tuple[3]);
-      if (fallbackIso && fallbackIso !== refDateIso) {
-        list = await queryWithDate(fallbackIso, periodInfo);
+    const byCode = new Map();
+    for (const slice of slices) {
+      const refDateIso = slice.dtFinalIso;
+      const ymBr = slice.periodoDescricao;
+      if (!refDateIso || !ymBr) continue;
+      const periodInfo = findPeriodForContractAndMonth(contractParam, ymBr, meta.periodos);
+      let sliceWorkers = await queryWithDate(refDateIso, periodInfo);
+      if (sliceWorkers.length === 0 && periodInfo.tuple && periodInfo.tuple[3]) {
+        const fallbackIso = c.brToIso(periodInfo.tuple[3]);
+        if (fallbackIso && fallbackIso !== refDateIso) {
+          sliceWorkers = await queryWithDate(fallbackIso, periodInfo);
+        }
       }
+      sliceWorkers.forEach((w) => {
+        if (!byCode.has(w.codigo)) {
+          byCode.set(w.codigo, w);
+        }
+      });
     }
 
-    const prev = c.previousMonthPeriod();
-    if (contractParam === '-1' && prev.toIso && prev.toIso !== refDateIso) {
-      try {
-        const prevList = await queryWithDate(prev.toIso, { idx: -1, tuple: null });
-        const byCode = new Map();
-        list.concat(prevList).forEach((w) => {
-          if (!byCode.has(w.codigo)) byCode.set(w.codigo, w);
-        });
-        list = Array.from(byCode.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-      } catch (_) {}
-    }
-
-    return list;
+    return Array.from(byCode.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }
 
-  async function fetchWorkerMonthSlice(worker, slice, unitId, buscarAbaixo = true, options = {}) {
-    const { csrf } = await ensureMetadataLoaded();
-    const periodInfo = findPeriodForContractAndMonth(worker.contrato, slice.periodoDescricao);
+  function createFailedMonthSummary(slice, errorReason) {
+    return {
+      ymKey: slice.ymKey,
+      monthLabel: slice.periodoDescricao,
+      fetchError: true,
+      errorReason: String(errorReason || 'falha na consulta'),
+      presumeHomeOffice: false,
+      deductAutoLunchOnSpecialDays: true,
+      workedDays: 0,
+      presencialWorkedDays: 0,
+      workedWeekdays: 0,
+      homeOfficeDays: 0,
+      dsrCompensatedDays: 0,
+      dsrAlertDays: 0,
+      workedWeekendDays: 0,
+      weekdaysInPeriod: 0,
+      weekdaysWithoutRecord: 0,
+      unregisteredWeekdays: 0,
+      justifiedDays: 0,
+      sptTotalMin: 0,
+      cltWorkedMin: 0,
+      horasNormaisMin: 0,
+      lunchAdjustmentMin: 0,
+      expectedJourneyMin: 0,
+      fullMonthReferenceMin: 0,
+      he50BrutoMin: 0,
+      he100BrutoMin: 0,
+      excedenteBrutoMin: 0,
+      debitoBhBrutoMin: 0,
+      aMenosBrutoMin: 0,
+      compensadoBhMin: 0,
+      compensadoNoMesMin: 0,
+      he50LiquidoMin: 0,
+      debitoBhLiquidoMin: 0,
+      excedenteLiquidoMin: 0,
+      aMenosLiquidoMin: 0,
+      saldoBhMesMin: 0,
+      saldoMesMin: 0,
+      endingStreak: 0,
+      endingDateIso: '',
+      alerts: {
+        intervaloCurtoDays: 0,
+        almocoAutoDays: 0,
+        batidaImparDays: 0,
+        acima2hExtraDays: 0,
+        fdsDays: 0,
+        homeOfficeDays: 0,
+        dsrCompensatedDays: 0,
+        dsrAlertDays: 0,
+        weekdaysWithoutRecord: 0
+      },
+      days: []
+    };
+  }
+
+  async function fetchWorkerMonthSlice(worker, slice, unitId, buscarAbaixo = true, options = {}, allowRetry = true) {
+    let meta = await ensureMetadataLoaded();
+    const periodInfo = findPeriodForContractAndMonth(worker.contrato, slice.periodoDescricao, meta.periodos);
     const body = new URLSearchParams({
-      _csrf: csrf,
+      _csrf: meta.csrf,
       cmd: 'cmdVerPeriodoContrato',
       periodoCodigo: worker.contrato || (periodInfo.tuple && periodInfo.tuple[0]) || '',
       periodoDescricao: slice.periodoDescricao,
@@ -232,10 +354,34 @@ window.JEPessoasSptReport = (function () {
       body: body.toString()
     });
     const html = await resp.text();
-    if (/login|encerrada/i.test(resp.url)) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    if (allowRetry && isCsrfErrorResponse(resp, html)) {
+      meta = await ensureMetadataLoaded({ forceRefresh: true });
+      if (meta.csrf) {
+        return fetchWorkerMonthSlice(worker, slice, unitId, buscarAbaixo, options, false);
+      }
+    }
+
+    if (isSptLoginOrExpiredDoc(resp, html, doc)) {
       return { loggedOut: true };
     }
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    if (resp && resp.ok === false) {
+      return {
+        loggedOut: false,
+        error: `HTTP ${resp.status || 'erro'}`
+      };
+    }
+
+    const hasSheetTable = !!(doc && doc.querySelector && (doc.querySelector('#maintable') || doc.querySelector('.card .card-body')));
+    if (!hasSheetTable) {
+      return {
+        loggedOut: false,
+        error: 'resposta sem tabela de frequência'
+      };
+    }
+
     const parsed = calc().parseWorkerSheetDoc(doc, {
       dtInicioIso: slice.dtInicioIso,
       dtFinalIso: slice.dtFinalIso
@@ -510,7 +656,7 @@ window.JEPessoasSptReport = (function () {
     ['#je-spt-rep-from', '#je-spt-rep-to'].forEach((sel) => {
       overlay.querySelector(sel).addEventListener('change', () => {
         savePrefs();
-        markDirtySelection();
+        refreshWorkersList();
       });
     });
 
@@ -830,6 +976,7 @@ window.JEPessoasSptReport = (function () {
     const totalSteps = picked.length * slices.length;
     let doneSteps = 0;
     let loggedOut = false;
+    const failures = [];
     const workersOut = [];
 
     for (const w of picked) {
@@ -862,22 +1009,36 @@ window.JEPessoasSptReport = (function () {
           });
           if (res.loggedOut) {
             loggedOut = true;
+            failures.push(`${w.nome} — ${slice.periodoDescricao}: falha na consulta (sessão expirada no SPT)`);
+            wEntry.months.push(createFailedMonthSummary(slice, 'sessão expirada no SPT'));
             break;
           }
-          if (res.meta && res.meta.contrato && !wEntry.empresa) {
-            wEntry.empresa = res.meta.contrato;
+          if (res.error) {
+            failures.push(`${w.nome} — ${slice.periodoDescricao}: falha na consulta (${res.error})`);
+            wEntry.months.push(createFailedMonthSummary(slice, res.error));
+            runningStreak = 0;
+            prevDateIso = '';
+          } else {
+            if (res.meta && res.meta.contrato && !wEntry.empresa) {
+              wEntry.empresa = res.meta.contrato;
+            }
+            wEntry.months.push(res.summary);
+            runningStreak = res.summary.endingStreak || 0;
+            prevDateIso = res.summary.endingDateIso || '';
           }
-          wEntry.months.push(res.summary);
-          runningStreak = res.summary.endingStreak || 0;
-          prevDateIso = res.summary.endingDateIso || '';
         } catch (err) {
+          const reason = (err && err.message) ? err.message : 'erro de rede';
           console.warn('[TSE XT] Erro ao consultar prestador no SPT:', w.nome, slice.periodoDescricao, err);
+          failures.push(`${w.nome} — ${slice.periodoDescricao}: falha na consulta (${reason})`);
+          wEntry.months.push(createFailedMonthSummary(slice, reason));
+          runningStreak = 0;
+          prevDateIso = '';
         }
         doneSteps += 1;
         await sleep(FETCH_THROTTLE_MS);
       }
 
-      wEntry.totals = calc().summarizeWorkerMonths(wEntry.months);
+      wEntry.totals = calc().summarizeWorkerMonths(wEntry.months.filter((m) => !m.fetchError));
       workersOut.push(wEntry);
     }
 
@@ -898,7 +1059,8 @@ window.JEPessoasSptReport = (function () {
       toBr: calc().isoToBr(toIso),
       contrato,
       contratoLabel: contratoText,
-      partial: aborted || loggedOut,
+      partial: aborted || loggedOut || failures.length > 0,
+      failures,
       workers: workersOut,
       unitTotals: calc().summarizeUnitReport(workersOut)
     };
@@ -1193,6 +1355,19 @@ window.JEPessoasSptReport = (function () {
     const rows = [];
     report.workers.forEach((w, wIdx) => {
       w.months.forEach((m, mIdx) => {
+        if (m.fetchError) {
+          rows.push(`
+            <tr class="je-audit-row je-recog-server je-spt-row-error">
+              <td class="je-spt-col-left">
+                <strong>${escapeHTML(w.nome)}</strong>
+                <small class="je-spt-sub-meta">CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small>
+              </td>
+              <td>${escapeHTML(m.monthLabel)}</td>
+              <td colspan="6" class="je-spt-col-left"><span class="je-occ-perda je-occ-perda-danger" title="Mês não pôde ser consultado no SPT">${escapeHTML(w.nome)} — ${escapeHTML(m.monthLabel)}: falha na consulta (${escapeHTML(m.errorReason || 'erro')})</span></td>
+            </tr>
+          `);
+          return;
+        }
         const rowId = `${wIdx}:${mIdx}`;
         const isExpanded = expandedMonthlyRows.has(rowId);
         const presDays = m.presencialWorkedDays != null ? m.presencialWorkedDays : m.workedDays;
@@ -1403,6 +1578,19 @@ window.JEPessoasSptReport = (function () {
     const rows = [];
     report.workers.forEach((w, wIdx) => {
       w.months.forEach((m, mIdx) => {
+        if (m.fetchError) {
+          rows.push(`
+            <tr class="je-audit-row je-recog-server je-spt-row-error">
+              <td class="je-spt-col-left">
+                <strong>${escapeHTML(w.nome)}</strong>
+                <small class="je-spt-sub-meta">CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small>
+              </td>
+              <td>${escapeHTML(m.monthLabel)}</td>
+              <td colspan="11" class="je-spt-col-left"><span class="je-occ-perda je-occ-perda-danger" title="Mês não pôde ser consultado no SPT">${escapeHTML(w.nome)} — ${escapeHTML(m.monthLabel)}: falha na consulta (${escapeHTML(m.errorReason || 'erro')})</span></td>
+            </tr>
+          `);
+          return;
+        }
         const rowId = `${wIdx}:${mIdx}`;
         const isExpanded = expandedMonthlyRows.has(rowId);
         const saldoBhClass = m.saldoBhMesMin > 0 ? 'je-spt-pos' : (m.saldoBhMesMin < 0 ? 'je-spt-neg' : '');
@@ -1571,9 +1759,15 @@ window.JEPessoasSptReport = (function () {
 
     const u = report.unitTotals || calc().summarizeUnitReport(report.workers);
     const when = report.generatedAt ? new Date(report.generatedAt).toLocaleString('pt-BR') : '';
+    const failures = Array.isArray(report.failures) ? report.failures : [];
+    const failuresListHTML = failures.length > 0
+      ? `<ul class="je-spt-failures-list">${failures.map((f) => `<li>${escapeHTML(f)}</li>`).join('')}</ul>`
+      : '';
     const alertBanner = flags.loggedOut
-      ? '<div class="je-audit-alert">Sessão expirada no SPT durante a consulta. Faça login novamente e gere o relatório.</div>'
-      : (report.partial ? '<div class="je-audit-alert">Consulta interrompida pelo usuário. O resultado exibido é parcial.</div>' : '');
+      ? `<div class="je-audit-alert"><strong>Relatório Parcial — Sessão expirada no SPT durante a consulta.</strong> Faça login novamente e gere o relatório.${failuresListHTML}</div>`
+      : (report.partial
+        ? `<div class="je-audit-alert"><strong>Relatório Parcial:</strong> Nem todos os meses/prestadores puderam ser consultados com sucesso.${failuresListHTML}</div>`
+        : '');
 
     if (calcMode === 'spt_puro') {
       const uPres = u.presencialWorkedDays != null ? u.presencialWorkedDays : u.workedDays;
@@ -1711,6 +1905,12 @@ window.JEPessoasSptReport = (function () {
     if (!currentResult || !currentResult.workers || !currentResult.workers.length) return;
     const rows = [];
     const isRaw = calcMode === 'spt_puro';
+    if (currentResult.partial) {
+      const failSummary = Array.isArray(currentResult.failures) && currentResult.failures.length
+        ? currentResult.failures.join(' | ')
+        : 'Consulta interrompida ou incompleta';
+      rows.push(['AVISO_RELATORIO_PARCIAL', `Relatório parcial — falhas registradas: ${failSummary}`]);
+    }
 
     if (detailMode === 'diario') {
       if (isRaw) {
@@ -1825,11 +2025,13 @@ window.JEPessoasSptReport = (function () {
         'JornadaEsperadaUteis', 'TotalSPT', 'TrabalhadoLiquidoCLT',
         'HorasNormais', 'HE_Credito_BH_50', 'Debito_BH', 'Compensado_BH',
         'Saldo_BH_Uteis', 'HE_Credito_BH_100', 'Visao_TSE_XT_Saldo_BH_Mais_HE_100',
-        'DiasAlertaDSR_Dom_Mais6d', 'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar'
+        'DiasAlertaDSR_Dom_Mais6d', 'DiasAlmocoMenor1h', 'DiasAlmocoAuto1h', 'DiasAcima2hExtra', 'DiasBatidaImpar',
+        'StatusConsulta'
       ]);
       currentResult.workers.forEach((w) => {
         w.months.forEach((m) => {
           const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
+          const statusConsulta = m.fetchError ? `falha na consulta (${m.errorReason || 'erro'})` : 'OK';
           rows.push([
             'TSE XT / Digi',
             currentResult.unitName,
@@ -1856,7 +2058,8 @@ window.JEPessoasSptReport = (function () {
             String(m.alerts.intervaloCurtoDays),
             String(m.alerts.almocoAutoDays),
             String(m.alerts.acima2hExtraDays),
-            String(m.alerts.batidaImparDays)
+            String(m.alerts.batidaImparDays),
+            statusConsulta
           ]);
         });
       });
@@ -1879,6 +2082,10 @@ window.JEPessoasSptReport = (function () {
     const when = report.generatedAt ? new Date(report.generatedAt).toLocaleString('pt-BR') : '';
     const version = (window.JEPessoasVersion && window.JEPessoasVersion.getVersion && window.JEPessoasVersion.getVersion()) || '';
     const isRaw = calcMode === 'spt_puro';
+    const failures = Array.isArray(report.failures) ? report.failures : [];
+    const printPartialBanner = report.partial
+      ? `<div class="je-print-partial-warning"><strong>ATENÇÃO — RELATÓRIO PARCIAL:</strong> Nem todos os meses/prestadores puderam ser consultados.${failures.length ? `<ul>${failures.map((f) => `<li>${escapeHTML(f)}</li>`).join('')}</ul>` : ''}</div>`
+      : '';
 
     if (isRaw) {
       const monthlyRows = [];
@@ -1995,6 +2202,16 @@ window.JEPessoasSptReport = (function () {
     const monthlyRows = [];
     report.workers.forEach((w) => {
       w.months.forEach((m) => {
+        if (m.fetchError) {
+          monthlyRows.push(`
+            <tr class="je-print-row-error">
+              <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small></td>
+              <td>${escapeHTML(m.monthLabel)}</td>
+              <td colspan="10" class="l"><strong>${escapeHTML(w.nome)} — ${escapeHTML(m.monthLabel)}: falha na consulta (${escapeHTML(m.errorReason || 'erro')})</strong></td>
+            </tr>
+          `);
+          return;
+        }
         const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
         monthlyRows.push(`
           <tr>
@@ -2097,6 +2314,7 @@ window.JEPessoasSptReport = (function () {
         ${report.issuer ? `<p class="meta">Emitido por ${escapeHTML(report.issuer)}</p>` : ''}
         <p class="meta">Fonte: SPT - Gestão de Frequência do TSE · TSE XT v${escapeHTML(version)}. Regras ativas: jornada 8h Seg–Sex (tolerância ±10 min art. 58 §1º), almoço mín. 1h (art. 71), Home Office presumido: ${presumeHomeOffice ? 'Ligado' : 'Desligado (padrão de fiscalização)'}, desconto de 1h de intervalo não batido em Sáb/Dom/Fer (&gt;6h): ${deductAutoLunchOnSpecialDays ? 'Ligado (CLT/SPT)' : 'Desligado (Digisystem)'}, e colunas independentes para Saldo BH (Úteis) e HE 100%.</p>
       </header>
+      ${printPartialBanner}
 
       <div class="je-print-metrics">
         <div><span>Trabalhado CLT</span><strong>${fmt(u.cltWorkedMin)}</strong></div>

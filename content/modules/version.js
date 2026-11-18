@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.17-Snapshot';
+  const CURRENT_VERSION = '1.2.18-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.18-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco B): extração de lPeriodos do HTML, consulta multi-mês, cache de CSRF e tratamento de erros parciais',
+      features: [
+        'Extraído window.lPeriodos diretamente do HTML (script inline e options de cbPeriodos) no mundo isolado do content script (sptCltCalc, sptUnitCombobox, sptReportModal e sptModernizer).',
+        'Consulta de prestadores por período multi-mês em cada fatia mensal do intervalo selecionado (unindo por código e removendo datas fixas e mistura com mês anterior fora do intervalo).',
+        'Cache de ensureMetadataLoaded() durante a geração do relatório com renovação automática do token CSRF apenas quando expirado (HTTP 401/403), e preservação de data-cod-tse (com fallback para data-cpf) no campo codTSE.',
+        'Verificação de resp.ok, sessão expirada e presença da tabela de frequência: qualquer mês com falha é listado em report.failures e exibido como relatório parcial (partial = true) na tela, no PDF e no CSV.'
+      ]
+    },
     {
       version: '1.2.17-Snapshot',
       date: '2026-11-18',

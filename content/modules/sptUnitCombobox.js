@@ -13,6 +13,7 @@ window.JEPessoasSptCombobox = (function () {
 
   const UNITS_CACHE_KEY = 'je_spt_units_cache_v1';
   const CONTRATOS_CACHE_KEY = 'je_spt_contratos_cache_v1';
+  const PERIODOS_CACHE_KEY = 'je_spt_periodos_cache_v1';
 
   const calc = () => window.JEPessoasSptCltCalc;
 
@@ -55,6 +56,14 @@ window.JEPessoasSptCombobox = (function () {
         sessionStorage.setItem(CONTRATOS_CACHE_KEY, JSON.stringify(contratos));
       } catch (_) {}
     }
+    if (c.parsePeriodosFromDoc) {
+      const periodos = c.parsePeriodosFromDoc(doc);
+      if (Array.isArray(periodos) && periodos.length > 0) {
+        try {
+          sessionStorage.setItem(PERIODOS_CACHE_KEY, JSON.stringify(periodos));
+        } catch (_) {}
+      }
+    }
   }
 
   function getAvailableUnits(doc = document) {
@@ -94,6 +103,27 @@ window.JEPessoasSptCombobox = (function () {
       if (raw) {
         const list = JSON.parse(raw);
         if (Array.isArray(list)) return list;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function getAvailablePeriodos(doc = document) {
+    const c = calc();
+    if (c && c.parsePeriodosFromDoc) {
+      const parsed = c.parsePeriodosFromDoc(doc);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        try {
+          sessionStorage.setItem(PERIODOS_CACHE_KEY, JSON.stringify(parsed));
+        } catch (_) {}
+        return parsed;
+      }
+    }
+    try {
+      const raw = sessionStorage.getItem(PERIODOS_CACHE_KEY);
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list) && list.length > 0) return list;
       }
     } catch (_) {}
     return [];
@@ -410,6 +440,7 @@ window.JEPessoasSptCombobox = (function () {
     cacheUnitsAndContractsFromDOM,
     getAvailableUnits,
     getAvailableContracts,
+    getAvailablePeriodos,
     mountComboboxWidget,
     enhanceNativeUnitSelect
   };

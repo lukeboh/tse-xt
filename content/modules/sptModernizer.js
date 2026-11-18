@@ -335,10 +335,14 @@ window.JEPessoasSptModernizer = (function () {
         form.elements['cmd'].value = 'cmdConsultar';
         form.target = '';
 
+        const periodosList = (combo() && combo().getAvailablePeriodos && combo().getAvailablePeriodos(document))
+          || (calc() && calc().parsePeriodosFromDoc && calc().parsePeriodosFromDoc(document))
+          || [];
+
         if (contratoField && contratoField.value !== '-1' && periodoField && periodoField.value !== '-1') {
           const idx = parseInt(periodoField.value, 10);
-          if (!isNaN(idx) && Array.isArray(window.lPeriodos) && window.lPeriodos[idx]) {
-            const p = window.lPeriodos[idx];
+          if (!isNaN(idx) && Array.isArray(periodosList) && periodosList[idx]) {
+            const p = periodosList[idx];
             form.elements['periodoCodigo'].value = p[0];
             form.elements['periodoDescricao'].value = p[1];
             form.elements['periodoDtInicio'].value = p[2];
@@ -378,6 +382,7 @@ window.JEPessoasSptModernizer = (function () {
           const cdFunc = a.getAttribute('data-codigo') || '';
           const matFunc = a.getAttribute('data-matricula') || '';
           const cpf = a.getAttribute('data-cpf') || '';
+          const codTse = a.getAttribute('data-cod-tse') || cpf;
           const numContrato = a.getAttribute('data-num-contrato') || '';
           const nome = a.getAttribute('data-nome-escaped') || '';
 
@@ -385,23 +390,26 @@ window.JEPessoasSptModernizer = (function () {
           form.elements['codContrato'].value = contrato;
           form.elements['cdFunc'].value = cdFunc;
           form.elements['matFunc'].value = matFunc;
-          form.elements['codTSE'].value = cpf;
+          form.elements['codTSE'].value = codTse;
           form.elements['cpf'].value = cpf;
           form.elements['numContrato'].value = numContrato;
           form.elements['nome'].value = nome;
 
+          const periodosList = (combo() && combo().getAvailablePeriodos && combo().getAvailablePeriodos(document))
+            || (calc() && calc().parsePeriodosFromDoc && calc().parsePeriodosFromDoc(document))
+            || [];
           const pIdx = parseInt(form.elements['cbPeriodos']?.value || '-1', 10);
-          if (!isNaN(pIdx) && pIdx !== -1 && Array.isArray(window.lPeriodos) && window.lPeriodos[pIdx]) {
-            const p = window.lPeriodos[pIdx];
+          if (!isNaN(pIdx) && pIdx !== -1 && Array.isArray(periodosList) && periodosList[pIdx]) {
+            const p = periodosList[pIdx];
             form.elements['periodoCodigo'].value = p[0];
             form.elements['periodoDescricao'].value = p[1];
             form.elements['periodoDtInicio'].value = p[2];
             form.elements['periodoDtFinal'].value = p[3];
-          } else if (Array.isArray(window.lPeriodos)) {
+          } else if (Array.isArray(periodosList) && periodosList.length > 0) {
             const dataVal = form.elements['edtdataponto']?.value || '';
             const ym = /^\d{4}-\d{2}/.test(dataVal) ? `${dataVal.slice(5, 7)}/${dataVal.slice(0, 4)}` : '';
-            const found = window.lPeriodos.find((p) => p[0] === contrato && (!ym || p[1] === ym))
-              || window.lPeriodos.find((p) => p[0] === contrato);
+            const found = periodosList.find((p) => Array.isArray(p) && String(p[0]) === String(contrato) && (!ym || String(p[1]) === ym))
+              || periodosList.find((p) => Array.isArray(p) && String(p[0]) === String(contrato));
             if (found) {
               form.elements['periodoCodigo'].value = found[0];
               form.elements['periodoDescricao'].value = found[1];

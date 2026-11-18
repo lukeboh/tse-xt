@@ -1,5 +1,15 @@
 # Changelog — TSE XT
 
+## 1.2.18-Snapshot — 18/11/2026
+
+- **Bloco B — Consultas ao SPT, períodos e tratamento de falhas (`sptCltCalc.js`, `sptUnitCombobox.js`, `sptReportModal.js`, `sptModernizer.js`)**:
+  - **B1**: Extraído `window.lPeriodos` diretamente do HTML (`parsePeriodosFromDoc(doc)` lendo `<script>` inline ou `<option>` de `cbPeriodos`), contornando o isolamento de mundo do content script no `sptReportModal` e no clique em CPF / Pesquisar do `sptModernizer`.
+  - **B2 e B4**: Períodos de vários meses consultam a lista de prestadores em **cada mês do intervalo** (`slice.dtFinalIso`) e unem por `codigo`, sem mistura com o mês anterior fora do intervalo e sem datas fixas (`'10/2026'` / `'2026-10-15'`).
+  - **B3**: Verificação de `resp.ok`, detecção de tela de login/CSRF expirado e validação da tabela de frequência; qualquer mês com falha é registrado em `report.failures` (`"Prestador X — MM/AAAA: falha na consulta (...)"`), incluído como linha de erro e marcado como relatório parcial (`partial = true`) com aviso visível na tela, no PDF e no CSV.
+  - **B5**: Resultado de `ensureMetadataLoaded()` (`units`, `contracts`, `periodos`, `csrf`) mantido em cache durante a geração do relatório, renovando o CSRF apenas quando a resposta indicar expiração (`401`/`403` ou erro de CSRF).
+  - **B6**: Confirmado no HTML/`gestao-ponto.js` do SPT o preenchimento de `codTSE` (`data-cod-tse || data-cpf`) e aplicado em `parseWorkersFromConsultationDoc`, `sptModernizer` e `sptReportModal`.
+- Verificação: **242 testes de comportamento passando**.
+
 ## 1.2.17-Snapshot — 18/11/2026
 
 - **Bloco A — Regras de cálculo e fiscalização do SPT (`sptCltCalc.js`, `sptReportModal.js`, `sptModernizer.js`, `spt-gestao.css`)**:
