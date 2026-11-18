@@ -109,11 +109,16 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Aponta diferenças de horas, de faixas de acréscimo e pagamentos sem correspondência; permite conferir os lançamentos, exportar CSV e imprimir.
 • Sem limite fixo de meses; progresso e previsão de término durante as consultas.
 
+🏢 16. SPT — GESTÃO DE FREQUÊNCIA DE PRESTADORES & RELATÓRIO CONSOLIDADO (CLT)
+• Suporte dedicado ao portal SPT — Consulta de Frequência (spt-consultafrequencia.tse.jus.br), com interruptor independente no popup da extensão.
+• Combobox pesquisável de Unidades (busca instantânea por nome, sigla ou código), 5 KPIs CLT no espelho individual e Relatório Consolidado de Horas por Unidade (modos TSE XT / Digi e SPT Puro, coluna Dias úteis sem registro, alerta de domingo/>6d sem folga identificada, feriados CLT/DF editáveis, Anexo de Interpretação, CSV e impressão A4 paisagem).
+• Os dados de prestadores (nome, CPF, contrato, marcações de catraca e horas) são processados exclusivamente no navegador local, com expiração automática do relatório salvo em 7 dias e botão "Apagar relatório salvo".
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔒 PRIVACIDADE & SEGURANÇA POR DESIGN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, últimos parâmetros dos relatórios por usuário — períodos, servidores selecionados, agrupamento, filtro e ordenação —, resultado da Auditoria de Horas Perdidas, último Relatório de Reconhecimento Posterior, última Auditoria de Pagamento de Pecúnias e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
+• 100% Local (Client-side): Nenhum dado funcional, horário, matrícula, CPF, nome de prestador/servidor ou informação pessoal é coletado ou transmitido para fora do seu navegador. O que a extensão guarda (preferências, últimos parâmetros dos relatórios por usuário — períodos, servidores/prestadores selecionados, agrupamento, filtro e ordenação —, resultado da Auditoria de Horas Perdidas, último Relatório de Reconhecimento Posterior, última Auditoria de Pagamento de Pecúnias, último Relatório Consolidado do SPT — que expira automaticamente em 7 dias e possui botão de exclusão imediata — e cache de autorizações de hora extra) fica apenas no armazenamento local do próprio Chrome.
 • Zero Requisições Externas: A extensão não se conecta a nenhum servidor de terceiros; a comunicação ocorre apenas com os próprios sistemas do TSE, no seu contexto de sessão.
 • Manifest V3 Conforme: Construída seguindo os mais altos padrões de segurança do Google Chrome (sem scripts inline inseguros e com sanitização rigorosa de DOM contra XSS).
 • Permissões Mínimas: apenas armazenamento local (preferências e resultados calculados), acesso à aba ativa para recarregá-la ao aplicar preferências e acesso restrito aos domínios oficiais do TSE.
@@ -165,9 +170,9 @@ Os blocos promocionais são gerados de `tools/loja/promo.html` por `node tools/l
 
 | Permissão | Justificativa |
 |---|---|
-| `storage` | Guardar localmente preferências de aparência e os últimos parâmetros dos relatórios por usuário (períodos, matrículas selecionadas/unidade, agrupamento, filtro e ordenação), a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia, a última Auditoria de Pagamento de Pecúnias (só as linhas de serviço extraordinário e de adicional noturno dos seus contracheques) e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
+| `storage` | Guardar localmente preferências de aparência e os últimos parâmetros dos relatórios por usuário (períodos, matrículas/prestadores selecionados/unidade, agrupamento, filtro e ordenação), a confirmação do aviso de aplicação experimental, o resultado da Auditoria de Horas Perdidas, o último Relatório de Reconhecimento Posterior gerado pela chefia, a última Auditoria de Pagamento de Pecúnias (só as linhas de serviço extraordinário e de adicional noturno dos seus contracheques), o último Relatório Consolidado do SPT (nome, CPF, contrato e horas dos prestadores da unidade consultada, com expiração automática após 7 dias e botão de exclusão manual) e um cache das autorizações de hora extra lidas do próprio portal. Nada sai do navegador. |
 | `activeTab` | Recarregar a aba ativa quando o usuário pede, na janela da extensão, para aplicar as preferências escolhidas. |
-| Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas do portal Meu Espaço e ler, com a sessão do próprio usuário, as páginas do portal usadas nos cálculos (Espelho de Ponto próprio e da equipe, autorizações de hora extra e contracheques próprios). Nenhum outro domínio é acessado. |
+| Permissão de host (`*://meuespaco.tse.jus.br/*`, `*://spt-consultafrequencia.tse.jus.br/*`, `*://*.tse.jus.br/*`) | Injetar o visual e as funcionalidades nas páginas dos portais Meu Espaço e SPT — Consulta de Frequência e ler, com a sessão do próprio usuário, as páginas usadas nos cálculos (Espelho de Ponto próprio e da equipe, autorizações de hora extra, contracheques próprios e folhas de frequência de prestadores no SPT). Nenhum outro domínio é acessado. |
 | Código remoto | Não usa. Todo o JavaScript está no pacote. |
 
 **Uso de dados:** marcar que a extensão **não coleta** nenhuma das categorias listadas (dados pessoais, de saúde, financeiros, autenticação, comunicações, localização, histórico da web, atividade do usuário, conteúdo do site). O processamento é todo local e nada é transmitido ao desenvolvedor nem a terceiros. Marcar as três declarações de conformidade (não vende dados, não usa para fins alheios à finalidade única, não usa para crédito).

@@ -94,10 +94,25 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnReload) {
     btnReload.addEventListener('click', () => {
       chrome.tabs?.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]?.id) {
-          chrome.tabs.reload(tabs[0].id);
+        const tabId = tabs[0]?.id;
+        if (!tabId) return;
+        const proceedReload = () => {
+          chrome.tabs.reload(tabId);
           window.close();
+        };
+        if (!chrome.tabs.sendMessage) {
+          proceedReload();
+          return;
         }
+        chrome.tabs.sendMessage(tabId, { action: 'isReportRunning' }, (resp) => {
+          if (chrome.runtime?.lastError || !resp || !resp.running) {
+            proceedReload();
+            return;
+          }
+          if (window.confirm('Um relatório está sendo gerado nesta aba. Deseja interromper a geração e recarregar a página agora?')) {
+            proceedReload();
+          }
+        });
       });
     });
   }

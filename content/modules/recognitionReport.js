@@ -1007,5 +1007,5 @@ window.JEPessoasRecognitionReport = (function () {
     }
   }
 
-  return { open, close, issuerName };
+  return { open, close, issuerName, isRunning: () => running };
 })();

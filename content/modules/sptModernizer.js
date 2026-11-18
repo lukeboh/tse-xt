@@ -192,7 +192,11 @@ window.JEPessoasSptModernizer = (function () {
         const nextState = !currentlyEnabled;
         window.JEPessoasModernizer.applyThemeState(nextState, true);
         chrome.storage?.local?.set({ xtEnabledSpt: nextState }, () => {
-          setTimeout(() => window.location.reload(), 250);
+          if (window.JEPessoasModernizer.reloadAfterThemeToggle) {
+            window.JEPessoasModernizer.reloadAfterThemeToggle();
+          } else {
+            setTimeout(() => window.location.reload(), 250);
+          }
         });
       });
     }

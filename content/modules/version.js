@@ -5,9 +5,20 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.18-Snapshot';
+  const CURRENT_VERSION = '1.2.19-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.19-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco C): privacidade, botão Apagar relatório salvo, expiração em 7 dias e proteção de recarregamento',
+      features: [
+        'Atualizados PRIVACY.md, README.md e docs/descricao-loja.md documentando o processamento local de dados de prestadores do SPT (nome, CPF, contrato, batidas e horas) e sua retenção máxima.',
+        'Adicionado botão "Apagar relatório salvo" no modal do SPT e expiração automática após 7 dias em chrome.storage.local.',
+        'Restrito o recarregamento automático no onInstalled (background.js) apenas às URLs dos portais suportados (Meu Espaço e SPT) e bloqueado o handler reloadExtension em versões de produção.',
+        'Proteção contra perda de progresso: alternar a chave do portal (na topbar ou no popup) adia o reload da aba enquanto um relatório estiver sendo gerado.'
+      ]
+    },
     {
       version: '1.2.18-Snapshot',
       date: '2026-11-18',

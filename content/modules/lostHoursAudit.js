@@ -798,5 +798,5 @@ window.JEPessoasLostHours = (function () {
     }
   }
 
-  return { init: createDOM, open, close, getServerLabel };
+  return { init: createDOM, open, close, getServerLabel, isRunning: () => running };
 })();

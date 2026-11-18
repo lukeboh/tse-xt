@@ -716,7 +716,7 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
     'je-spt-rep-none', 'je-spt-rep-team-list', 'je-spt-rep-ho-wrap',
     'je-spt-rep-homeoffice', 'je-spt-rep-special-lunch-wrap',
     'je-spt-rep-special-lunch', 'je-spt-rep-holidays', 'je-spt-rep-run',
-    'je-spt-rep-csv', 'je-spt-rep-print', 'je-spt-rep-progress',
+    'je-spt-rep-csv', 'je-spt-rep-print', 'je-spt-rep-clear', 'je-spt-rep-progress',
     'je-spt-rep-progress-fill', 'je-spt-rep-progress-label',
     'je-spt-rep-cancel', 'je-spt-rep-body', 'je-spt-only-active-days'
   ];
@@ -760,7 +760,12 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
     storage: {
       local: {
         get: (defaults, cb) => cb(Object.fromEntries(Object.entries(defaults).map(([k, v]) => [k, store[k] ?? v]))),
-        set: (data, cb) => { Object.assign(store, data); cb?.(); }
+        set: (data, cb) => { Object.assign(store, data); cb?.(); },
+        remove: (keys, cb) => {
+          const list = Array.isArray(keys) ? keys : [keys];
+          list.forEach((k) => { delete store[k]; });
+          cb?.();
+        }
       }
     }
   };
@@ -977,4 +982,167 @@ test('B3 e B6 — falha em mês durante geração registra em report.failures, m
   assert.match(csv, /AVISO_RELATORIO_PARCIAL/);
   assert.match(csv, /falha na consulta \(HTTP 500\)/);
 });
+
+// ---------------------------------------------------------------------------
+// BLOCO C — Privacidade e Segurança (C1 a C4)
+// ---------------------------------------------------------------------------
+
+test('C2 — relatório salvo expira automaticamente após 7 dias ao abrir o modal e botão Apagar relatório salvo limpa chrome.storage.local', async () => {
+  const eightDaysAgoIso = new Date(Date.now() - (8 * 24 * 60 * 60 * 1000)).toISOString();
+  const expiredReport = {
+    version: 4,
+    generatedAt: eightDaysAgoIso,
+    unitId: '1184',
+    unitName: 'SETOT',
+    fromIso: '2026-10-01',
+    toIso: '2026-10-31',
+    fromBr: '01/10/2026',
+    toBr: '31/10/2026',
+    contratoLabel: 'Todos',
+    workers: [{ codigo: '1', nome: 'TESTE', months: [] }],
+    unitTotals: { workersCount: 1, activeWorkersCount: 1, sptTotalMin: 480, cltWorkedMin: 480 }
+  };
+
+  const harnessExpired = createSptReportModalHarness(async () => ({
+    ok: true,
+    status: 200,
+    text: async () => SPT_CONSULTA_HTML_FIXTURE
+  }), {
+    je_xt_spt_report_v2: expiredReport,
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-10-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+
+  await harnessExpired.api.open();
+  // Relatório de 8 dias atrás deve ter sido removido do storage automaticamente e botões desabilitados
+  assert.equal(harnessExpired.store.je_xt_spt_report_v2, undefined);
+  assert.equal(harnessExpired.elements.get('#je-spt-rep-csv').disabled, true);
+  assert.equal(harnessExpired.elements.get('#je-spt-rep-clear').disabled, true);
+
+  // Agora testa um relatório recente (1 dia atrás) + clique em "Apagar relatório salvo"
+  const oneDayAgoIso = new Date(Date.now() - (1 * 24 * 60 * 60 * 1000)).toISOString();
+  const validReport = Object.assign({}, expiredReport, {
+    generatedAt: oneDayAgoIso,
+    workers: [{
+      codigo: '1',
+      nome: 'PRESTADOR RECENTE',
+      cpf: '00011122233',
+      numContrato: '77/2023',
+      months: [{
+        ymKey: '2026-10',
+        monthLabel: '10/2026',
+        days: [C.analyzeDayClt({ date: '01/10/2026', punches: ['08:00', '12:00', '13:00', '17:00', '', ''], total: '08:00:00' })]
+      }]
+    }]
+  });
+
+  const harnessValid = createSptReportModalHarness(async () => ({
+    ok: true,
+    status: 200,
+    text: async () => SPT_CONSULTA_HTML_FIXTURE
+  }), {
+    je_xt_spt_report_v2: validReport,
+    je_xt_spt_report_prefs_v2: { unitId: '1184', fromIso: '2026-10-01', toIso: '2026-10-31', hoDefaultMigratedV2: true }
+  });
+
+  await harnessValid.api.open();
+  assert.ok(harnessValid.store.je_xt_spt_report_v2);
+  assert.equal(harnessValid.elements.get('#je-spt-rep-clear').disabled, false);
+
+  // Clica em "Apagar relatório salvo"
+  await harnessValid.elements.get('#je-spt-rep-clear').handlers.click();
+  assert.equal(harnessValid.store.je_xt_spt_report_v2, undefined);
+  assert.equal(harnessValid.elements.get('#je-spt-rep-clear').disabled, true);
+  assert.equal(harnessValid.elements.get('#je-spt-rep-csv').disabled, true);
+  assert.match(harnessValid.elements.get('#je-spt-rep-body').innerHTML, /Selecione a <strong>Unidade<\/strong>/);
+});
+
+test('C3 — background.js: onInstalled consulta apenas portais suportados (Meu Espaço e SPT) e reloadExtension é bloqueado em versão de produção (com update_url)', () => {
+  let installedListener = null;
+  let messageListener = null;
+  let queriedUrls = null;
+  let reloadCalled = 0;
+  let currentManifest = { version: '1.2.19', update_url: 'https://clients2.google.com/service/update2/crx' };
+
+  const chrome = {
+    runtime: {
+      getManifest: () => currentManifest,
+      reload: () => { reloadCalled += 1; },
+      onInstalled: { addListener: (fn) => { installedListener = fn; } },
+      onMessage: { addListener: (fn) => { messageListener = fn; } }
+    },
+    tabs: {
+      query: (q, cb) => { queriedUrls = q.url; cb([]); },
+      reload: () => {}
+    }
+  };
+
+  const bgSrc = readFileSync(new URL('../background.js', import.meta.url), 'utf8');
+  vm.runInNewContext(bgSrc, { chrome, console });
+
+  // 1) Verifica filtro de URLs no onInstalled: não pode conter '*://*.tse.jus.br/*' genérico
+  installedListener({ reason: 'update' });
+  assert.ok(Array.isArray(queriedUrls));
+  assert.ok(!queriedUrls.includes('*://*.tse.jus.br/*'));
+  assert.ok(queriedUrls.every((u) => u.includes('/portalservidor2/') || u.includes('/spt-consultafrequencia/')));
+
+  // 2) Em instalação de produção (com update_url), reloadExtension é recusado
+  let prodResp = null;
+  messageListener({ action: 'reloadExtension' }, {}, (r) => { prodResp = r; });
+  assert.equal(reloadCalled, 0);
+  assert.equal(prodResp.status, 'forbidden_in_production');
+
+  // 3) Em instalação de desenvolvimento (sem update_url), reloadExtension é permitido
+  currentManifest = { version: '1.2.19' };
+  let devResp = null;
+  messageListener({ action: 'reloadExtension' }, {}, (r) => { devResp = r; });
+  assert.equal(reloadCalled, 1);
+  assert.equal(devResp.status, 'reloading');
+});
+
+test('C4 — alternar a chave do portal adia o reload da aba enquanto um relatório estiver sendo gerado', () => {
+  let reportRunning = true;
+  let reloadCalls = 0;
+  const scheduled = [];
+
+  const window = {
+    location: {
+      pathname: '/spt-consultafrequencia/gestao',
+      reload: () => { reloadCalls += 1; }
+    },
+    JEPessoasSptReport: {
+      isRunning: () => reportRunning
+    }
+  };
+  const document = {
+    body: { classList: { add() {}, remove() {}, contains: () => true } },
+    documentElement: { classList: { add() {}, remove() {} } },
+    querySelectorAll: () => []
+  };
+
+  const domSrc = readFileSync(new URL('../content/modules/domModernizer.js', import.meta.url), 'utf8');
+  vm.runInNewContext(domSrc, {
+    window,
+    document,
+    chrome: {},
+    localStorage: { setItem() {}, getItem: () => 'true' },
+    setTimeout: (fn) => { scheduled.push(fn); return scheduled.length; },
+    clearTimeout: () => {}
+  });
+
+  // Solicita reload após troca de chave enquanto o relatório do SPT está rodando
+  window.JEPessoasModernizer.reloadAfterThemeToggle();
+  assert.equal(reloadCalls, 0);
+  assert.equal(scheduled.length, 1);
+
+  // Dispara o 1º timer ainda com o relatório em execução: não deve recarregar a página
+  scheduled.shift()();
+  assert.equal(reloadCalls, 0);
+  assert.equal(scheduled.length, 1);
+
+  // Quando o relatório termina (reportRunning = false), o próximo ciclo executa o reload
+  reportRunning = false;
+  scheduled.shift()();
+  assert.equal(reloadCalls, 1);
+});
+
 

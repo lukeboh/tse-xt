@@ -34,8 +34,37 @@ window.JEPessoasModernizer = (function () {
   // sequência na mesma página deixaria o DOM num estado híbrido que nem
   // reflete "ligado" nem "desligado" de verdade. Um reload garante que o
   // próximo estado seja sempre produzido do zero por mountXT().
+  function isAnyReportRunning() {
+    return Boolean(
+      (window.JEPessoasSptReport && window.JEPessoasSptReport.isRunning && window.JEPessoasSptReport.isRunning())
+      || (window.JEPessoasRecognitionReport && window.JEPessoasRecognitionReport.isRunning && window.JEPessoasRecognitionReport.isRunning())
+      || (window.JEPessoasPayrollAudit && window.JEPessoasPayrollAudit.isRunning && window.JEPessoasPayrollAudit.isRunning())
+      || (window.JEPessoasLostHours && window.JEPessoasLostHours.isRunning && window.JEPessoasLostHours.isRunning())
+    );
+  }
+
+  let pendingReloadTimer = null;
   function reloadAfterThemeToggle() {
-    setTimeout(() => window.location.reload(), 250);
+    if (pendingReloadTimer) {
+      clearTimeout(pendingReloadTimer);
+      pendingReloadTimer = null;
+    }
+    if (isAnyReportRunning()) {
+      const waitUntilIdle = () => {
+        if (isAnyReportRunning()) {
+          pendingReloadTimer = setTimeout(waitUntilIdle, 400);
+          return;
+        }
+        pendingReloadTimer = null;
+        window.location.reload();
+      };
+      pendingReloadTimer = setTimeout(waitUntilIdle, 400);
+      return;
+    }
+    pendingReloadTimer = setTimeout(() => {
+      pendingReloadTimer = null;
+      window.location.reload();
+    }, 250);
   }
 
   function applyThemeState(enabled, isExplicitUserToggle = false) {
@@ -2965,6 +2994,8 @@ window.JEPessoasModernizer = (function () {
 
   return {
     applyThemeState,
+    isAnyReportRunning,
+    reloadAfterThemeToggle,
     createPersistentToggle,
     modernizeHeader,
     injectPageTitleHeader,

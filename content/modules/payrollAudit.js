@@ -961,5 +961,5 @@ window.JEPessoasPayrollAudit = (function () {
     if (mine && (overlay.querySelector('#je-pay-from').value !== stored.from || overlay.querySelector('#je-pay-to').value !== stored.to)) periodChanged();
   }
 
-  return { open, close, issuerName };
+  return { open, close, issuerName, isRunning: () => running };
 })();

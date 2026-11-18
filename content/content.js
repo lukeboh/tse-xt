@@ -588,7 +588,23 @@
       if (window.JEPessoasModernizer && window.JEPessoasModernizer.applyThemeState) {
         window.JEPessoasModernizer.applyThemeState(nextState, true);
       }
-      setTimeout(() => window.location.reload(), 250);
+      if (window.JEPessoasModernizer && window.JEPessoasModernizer.reloadAfterThemeToggle) {
+        window.JEPessoasModernizer.reloadAfterThemeToggle();
+      } else {
+        setTimeout(() => window.location.reload(), 250);
+      }
+    });
+  } catch (e) {}
+  try {
+    chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
+      if (message && message.action === 'isReportRunning') {
+        const busy = Boolean(
+          window.JEPessoasModernizer && window.JEPessoasModernizer.isAnyReportRunning
+            ? window.JEPessoasModernizer.isAnyReportRunning()
+            : (window.JEPessoasSptReport && window.JEPessoasSptReport.isRunning && window.JEPessoasSptReport.isRunning())
+        );
+        if (sendResponse) sendResponse({ running: busy });
+      }
     });
   } catch (e) {}
 })();

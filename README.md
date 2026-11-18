@@ -2,9 +2,9 @@
 
 **Versão estável: 1.2.6 — 13/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.2.6.md)
 
-Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Edge, Brave) projetada para transformar e modernizar a interface e usabilidade do portal **Meu Espaço**, do **Tribunal Superior Eleitoral (TSE)** — não apenas o Espelho de Ponto, mas todo o menu de serviços do portal (`meuespaco.tse.jus.br/portalservidor2`).
+Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Edge, Brave) projetada para transformar e modernizar a interface e usabilidade do portal **Meu Espaço** (`meuespaco.tse.jus.br/portalservidor2`) e do **SPT — Consulta de Frequência** (`spt-consultafrequencia.tse.jus.br/spt-consultafrequencia`), do **Tribunal Superior Eleitoral (TSE)**.
 
-> ⚠️ **Aplicação experimental.** O TSE XT tem o único objetivo de melhorar a experiência do usuário no portal Meu Espaço (controle de ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário e demais serviços). Pode conter erros e **não representa nenhuma garantia** de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho. Um aviso com esse teor é exibido no primeiro uso e a cada atualização de versão.
+> ⚠️ **Aplicação experimental.** O TSE XT tem o único objetivo de melhorar a experiência do usuário nos portais Meu Espaço e SPT — Gestão de Frequência (controle de ponto, Reembolso Farmacêutico, Gestão de Serviço Extraordinário, fiscalização contratual de frequência e demais serviços). Pode conter erros e **não representa nenhuma garantia** de aquisição de bancos de horas, pecúnias ou outros direitos relativos ao cumprimento da jornada de trabalho. Um aviso com esse teor é exibido no primeiro uso e a cada atualização de versão.
 
 ---
 
@@ -15,6 +15,7 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
    - **Espelho de Ponto** (`EspelhoPontoMesAction`/`EspelhoPontoDiaAction`): cálculo de saldo, dashboard de KPIs, Auditoria de Horas Perdidas, Reconhecimento Posterior da equipe, Auditoria de Pagamento de Pecúnias e ajuste de ponto inline.
    - **Reembolso Farmacêutico** (`ReembolsoFarmaceuticoAction`): formulário de novo pedido reconstruído, busca de medicamento, calculadora de desconto, badges de status.
    - **Gestão de Serviço Extraordinário** (`HoraExtraGestao`): painel de KPI por servidor com o mesmo indicador de excedente/pecúnia do Espelho de Ponto.
+   - **SPT — Gestão de Frequência de Prestadores** (`spt-consultafrequencia`): tela de logon e gestão modernizadas, combobox pesquisável de Unidades, 5 KPIs CLT no acompanhamento individual e Relatório Consolidado de Horas por Unidade (modos `TSE XT / Digi` e `SPT Puro`, com Anexo de Interpretação, exportação CSV e impressão A4 paisagem). Os dados de prestadores (nome, CPF, contrato, batidas e horas) são processados exclusivamente no navegador, com expiração automática do relatório salvo em `chrome.storage.local` após 7 dias e botão "Apagar relatório salvo".
 
 ---
 

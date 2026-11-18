@@ -1,5 +1,14 @@
 # Changelog — TSE XT
 
+## 1.2.19-Snapshot — 18/11/2026
+
+- **Bloco C — Privacidade, retenção e segurança no SPT (`PRIVACY.md`, `README.md`, `docs/descricao-loja.md`, `sptReportModal.js`, `background.js`, `domModernizer.js`, `content.js`, `popup/popup.js`)**:
+  - **C1**: Atualizados `PRIVACY.md`, `README.md` e `docs/descricao-loja.md` descrevendo o módulo do SPT, quais dados de prestadores (nome, CPF, contrato, batidas e horas) são processados exclusivamente no navegador e o prazo de retenção local (7 dias).
+  - **C2**: Adicionado botão **"Apagar relatório salvo"** (`#je-spt-rep-clear`) no modal do SPT e expiração automática de **7 dias** (`REPORT_TTL_MS`) ao carregar o relatório de `chrome.storage.local`.
+  - **C3**: Em `background.js`, o `onInstalled` recarrega apenas abas dos portais suportados (`/portalservidor2/*` e `/spt-consultafrequencia/*`), sem varrer `*://*.tse.jus.br/*`, e o handler `reloadExtension` fica restrito a instalações não empacotadas/desenvolvimento (`!('update_url' in manifest)`).
+  - **C4**: Alternar a chave do portal (no popup ou na topbar) não recarrega a aba enquanto um relatório estiver em geração (`isAnyReportRunning()`), adiando o reload até o término (ou pedindo confirmação ao clicar em "Atualizar Página do Portal" no popup).
+- Verificação: **245 testes de comportamento passando**.
+
 ## 1.2.18-Snapshot — 18/11/2026
 
 - **Bloco B — Consultas ao SPT, períodos e tratamento de falhas (`sptCltCalc.js`, `sptUnitCombobox.js`, `sptReportModal.js`, `sptModernizer.js`)**:

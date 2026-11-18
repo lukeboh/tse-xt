@@ -22,6 +22,7 @@ window.JEPessoasSptReport = (function () {
 
   const STORAGE_KEY = 'je_xt_spt_report_v2';
   const PREFS_KEY = 'je_xt_spt_report_prefs_v2';
+  const REPORT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias de retenção máxima em chrome.storage.local (C2)
   const PONTO_GESTAO_URL = '/spt-consultafrequencia/gestao/ponto-gestao';
   const GESTAO_HOME_URL = '/spt-consultafrequencia/gestao';
   const FETCH_THROTTLE_MS = 80;
@@ -409,10 +410,44 @@ window.JEPessoasSptReport = (function () {
     };
   }
 
+  function isStoredReportExpired(report, nowMs = Date.now()) {
+    if (!report || typeof report !== 'object') return true;
+    if (!report.generatedAt) return true;
+    const generatedMs = Date.parse(report.generatedAt);
+    if (!Number.isFinite(generatedMs)) return true;
+    return (nowMs - generatedMs) > REPORT_TTL_MS;
+  }
+
+  function clearStoredReport() {
+    return new Promise((resolve) => {
+      try {
+        if (chrome.storage?.local?.remove) {
+          chrome.storage.local.remove(STORAGE_KEY, () => resolve());
+        } else {
+          chrome.storage.local.set({ [STORAGE_KEY]: null }, () => resolve());
+        }
+      } catch (_) {
+        resolve();
+      }
+    });
+  }
+
   function loadStoredReport() {
     return new Promise((resolve) => {
       try {
-        chrome.storage.local.get({ [STORAGE_KEY]: null }, (items) => resolve((items && items[STORAGE_KEY]) || null));
+        chrome.storage.local.get({ [STORAGE_KEY]: null }, async (items) => {
+          const stored = (items && items[STORAGE_KEY]) || null;
+          if (!stored) {
+            resolve(null);
+            return;
+          }
+          if (isStoredReportExpired(stored)) {
+            await clearStoredReport();
+            resolve(null);
+            return;
+          }
+          resolve(stored);
+        });
       } catch (_) {
         resolve(null);
       }
@@ -615,6 +650,9 @@ window.JEPessoasSptReport = (function () {
               <button type="button" class="je-audit-btn" id="je-spt-rep-print" title="Abre a visualização de impressão institucional A4 paisagem (com Anexo de Interpretação) para salvar em PDF ou imprimir" disabled>
                 Imprimir / PDF
               </button>
+              <button type="button" class="je-audit-btn je-audit-btn-ghost" id="je-spt-rep-clear" title="Remove imediatamente o relatório salvo do armazenamento local deste navegador (os relatórios salvos também expiram automaticamente após 7 dias)" disabled>
+                Apagar relatório salvo
+              </button>
             </div>
           </div>
         </div>
@@ -773,6 +811,13 @@ window.JEPessoasSptReport = (function () {
     overlay.querySelector('#je-spt-rep-cancel').addEventListener('click', () => { aborted = true; });
     overlay.querySelector('#je-spt-rep-csv').addEventListener('click', exportCSV);
     overlay.querySelector('#je-spt-rep-print').addEventListener('click', printReport);
+    overlay.querySelector('#je-spt-rep-clear').addEventListener('click', async () => {
+      if (running) return;
+      currentResult = null;
+      expandedMonthlyRows.clear();
+      await clearStoredReport();
+      renderResult(null);
+    });
     overlay.querySelector('#je-spt-rep-body').addEventListener('click', onBodyClick);
 
     return overlay;
@@ -937,6 +982,8 @@ window.JEPessoasSptReport = (function () {
     overlay.querySelector('#je-spt-rep-contrato').disabled = on;
     overlay.querySelector('#je-spt-rep-worker-select').disabled = on;
     overlay.querySelector('#je-spt-rep-subunits').disabled = on;
+    const clearBtn = overlay.querySelector('#je-spt-rep-clear');
+    if (clearBtn) clearBtn.disabled = on || !currentResult;
     if (unitWidget) unitWidget.setDisabled(on);
     syncHomeOfficeCheckboxState();
   }
@@ -1741,10 +1788,12 @@ window.JEPessoasSptReport = (function () {
     const body = overlay.querySelector('#je-spt-rep-body');
     const csvBtn = overlay.querySelector('#je-spt-rep-csv');
     const printBtn = overlay.querySelector('#je-spt-rep-print');
+    const clearBtn = overlay.querySelector('#je-spt-rep-clear');
 
     if (!report || !Array.isArray(report.workers) || !report.workers.length) {
       csvBtn.disabled = true;
       printBtn.disabled = true;
+      if (clearBtn) clearBtn.disabled = true;
       setSafeHTML(body, `
         <div class="je-audit-empty">
           <p>Selecione a <strong>Unidade</strong>, o <strong>Período</strong>, o <strong>Contrato</strong> (opcional), os <strong>Prestadores</strong> e o <strong>Modo</strong> (<em>TSE XT / Digi</em> ou <em>SPT Puro</em>) e clique em <strong>Gerar relatório</strong>.</p>
@@ -1756,6 +1805,7 @@ window.JEPessoasSptReport = (function () {
 
     csvBtn.disabled = false;
     printBtn.disabled = false;
+    if (clearBtn) clearBtn.disabled = false;
 
     const u = report.unitTotals || calc().summarizeUnitReport(report.workers);
     const when = report.generatedAt ? new Date(report.generatedAt).toLocaleString('pt-BR') : '';
