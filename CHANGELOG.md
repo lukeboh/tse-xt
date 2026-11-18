@@ -1,5 +1,13 @@
 # Changelog — TSE XT
 
+## 1.2.20-Snapshot — 18/11/2026
+
+- **Bloco D — Separação de scripts por portal, acessibilidade/performance da combobox e validação inline (`manifest.json`, `sptUnitCombobox.js`, `sptReportModal.js`)**:
+  - **D1**: Separadas as entradas de `content_scripts` no `manifest.json` por portal (`portalservidor2` vs. `spt-consultafrequencia`), carregando no SPT apenas `content/content.css`, `content/spt-gestao.css` e os 9 módulos JS utilizados pelo SPT (sem carregar `espelho-ponto.css`, `reembolso-farmaceutico.css`, `hora-extra-gestao.css` nem os 19 módulos exclusivos do Meu Espaço).
+  - **D2**: Na combobox de Unidades (`sptUnitCombobox.js`), cada opção recebe `id` único (`...-opt-<id>`), o input gerencia `aria-activedescendant`, a `<label>` da tela principal é associada ao input (`for` + `aria-labelledby`), o `<select id="cbUnidades">` oculto recebe `tabindex="-1"` e `aria-hidden="true"`, e a navegação por `ArrowDown`/`ArrowUp` move a classe `.is-active` in-place sem recriar os 347 nós de opção no DOM.
+  - **D3**: Substituídas as chamadas a `alert()` em `sptReportModal.js` por mensagens de validação inline dentro do próprio modal (`#je-spt-rep-validation` com `role="alert"` e `aria-live="assertive"`).
+- Verificação: **248 testes de comportamento passando**.
+
 ## 1.2.19-Snapshot — 18/11/2026
 
 - **Bloco C — Privacidade, retenção e segurança no SPT (`PRIVACY.md`, `README.md`, `docs/descricao-loja.md`, `sptReportModal.js`, `background.js`, `domModernizer.js`, `content.js`, `popup/popup.js`)**:

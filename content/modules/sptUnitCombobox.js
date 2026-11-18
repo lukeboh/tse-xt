@@ -213,6 +213,35 @@ window.JEPessoasSptCombobox = (function () {
       }
     }
 
+    function optionElementId(unitId) {
+      return `${listboxId}-opt-${String(unitId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    }
+
+    function updateActiveOptionInPlace(nextIndex) {
+      if (!filtered.length) {
+        activeIndex = -1;
+        input.removeAttribute('aria-activedescendant');
+        return;
+      }
+      const prevEl = activeIndex >= 0 ? dropdown.children[activeIndex] : null;
+      if (prevEl && prevEl.classList) {
+        prevEl.classList.remove('is-active');
+      }
+      activeIndex = nextIndex;
+      const activeEl = dropdown.children[activeIndex];
+      if (activeEl && activeEl.classList) {
+        activeEl.classList.add('is-active');
+        if (activeEl.id) {
+          input.setAttribute('aria-activedescendant', activeEl.id);
+        }
+        if (typeof activeEl.scrollIntoView === 'function') {
+          activeEl.scrollIntoView({ block: 'nearest' });
+        }
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    }
+
     function renderDropdown(queryText) {
       filtered = c ? c.filterUnits(units, queryText) : units;
       dropdown.replaceChildren();
@@ -223,6 +252,7 @@ window.JEPessoasSptCombobox = (function () {
         empty.textContent = 'Nenhuma unidade encontrada para o termo digitado.';
         dropdown.appendChild(empty);
         activeIndex = -1;
+        input.removeAttribute('aria-activedescendant');
         return;
       }
 
@@ -233,6 +263,7 @@ window.JEPessoasSptCombobox = (function () {
 
       filtered.forEach((u, idx) => {
         const item = document.createElement('div');
+        item.id = optionElementId(u.id);
         item.className = 'je-spt-combobox-option';
         if (selectedUnit && u.id === selectedUnit.id) item.classList.add('is-selected');
         if (idx === activeIndex) item.classList.add('is-active');
@@ -273,8 +304,13 @@ window.JEPessoasSptCombobox = (function () {
       });
 
       const activeEl = dropdown.children[activeIndex];
-      if (activeEl && typeof activeEl.scrollIntoView === 'function') {
-        activeEl.scrollIntoView({ block: 'nearest' });
+      if (activeEl) {
+        if (activeEl.id) input.setAttribute('aria-activedescendant', activeEl.id);
+        if (typeof activeEl.scrollIntoView === 'function') {
+          activeEl.scrollIntoView({ block: 'nearest' });
+        }
+      } else {
+        input.removeAttribute('aria-activedescendant');
       }
     }
 
@@ -292,6 +328,7 @@ window.JEPessoasSptCombobox = (function () {
       root.classList.remove('is-open');
       dropdown.hidden = true;
       input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
       if (restoreText) syncInputDisplay();
     }
 
@@ -330,8 +367,8 @@ window.JEPessoasSptCombobox = (function () {
           return;
         }
         if (filtered.length > 0) {
-          activeIndex = (activeIndex + 1) % filtered.length;
-          renderDropdown(input.value === (selectedUnit && selectedUnit.cleanName) ? '' : input.value);
+          const nextIdx = (activeIndex + 1) % filtered.length;
+          updateActiveOptionInPlace(nextIdx);
         }
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -340,8 +377,8 @@ window.JEPessoasSptCombobox = (function () {
           return;
         }
         if (filtered.length > 0) {
-          activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
-          renderDropdown(input.value === (selectedUnit && selectedUnit.cleanName) ? '' : input.value);
+          const prevIdx = (activeIndex - 1 + filtered.length) % filtered.length;
+          updateActiveOptionInPlace(prevIdx);
         }
       } else if (e.key === 'Enter') {
         if (isOpen && filtered.length > 0) {
@@ -411,11 +448,25 @@ window.JEPessoasSptCombobox = (function () {
 
     selectEl.dataset.jeComboboxMounted = 'true';
     selectEl.classList.add('je-spt-native-select-hidden');
+    selectEl.setAttribute('tabindex', '-1');
+    selectEl.setAttribute('aria-hidden', 'true');
+
+    const comboboxInputId = 'je-cbUnidades-combobox';
+    const ownerDoc = selectEl.ownerDocument || document;
+    const selectId = selectEl.id || 'cbUnidades';
+    const associatedLabel = (ownerDoc.querySelector && ownerDoc.querySelector(`label[for="${selectId}"]`))
+      || (selectEl.parentElement && selectEl.parentElement.querySelector && selectEl.parentElement.querySelector('label'));
+    if (associatedLabel && associatedLabel.setAttribute) {
+      associatedLabel.setAttribute('for', comboboxInputId);
+      if (!associatedLabel.id) {
+        associatedLabel.id = `${comboboxInputId}-label`;
+      }
+    }
 
     const widget = mountComboboxWidget({
       units,
       initialUnitId: selectEl.value,
-      inputId: 'je-cbUnidades-combobox',
+      inputId: comboboxInputId,
       placeholder: 'Digite o nome, sigla ou código da unidade (ex.: Totalização, 1184)...',
       onSelect: (unit) => {
         if (selectEl.value !== unit.id) {
@@ -424,6 +475,10 @@ window.JEPessoasSptCombobox = (function () {
         }
       }
     });
+
+    if (associatedLabel && associatedLabel.id && widget.input && widget.input.setAttribute) {
+      widget.input.setAttribute('aria-labelledby', associatedLabel.id);
+    }
 
     selectEl.parentNode.insertBefore(widget.root, selectEl.nextSibling);
 

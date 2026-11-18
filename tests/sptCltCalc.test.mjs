@@ -718,7 +718,7 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
     'je-spt-rep-special-lunch', 'je-spt-rep-holidays', 'je-spt-rep-run',
     'je-spt-rep-csv', 'je-spt-rep-print', 'je-spt-rep-clear', 'je-spt-rep-progress',
     'je-spt-rep-progress-fill', 'je-spt-rep-progress-label',
-    'je-spt-rep-cancel', 'je-spt-rep-body', 'je-spt-only-active-days'
+    'je-spt-rep-cancel', 'je-spt-rep-validation', 'je-spt-rep-body', 'je-spt-only-active-days'
   ];
   preCreatedIds.forEach((id) => {
     const el = makeEl();
@@ -1144,5 +1144,173 @@ test('C4 — alternar a chave do portal adia o reload da aba enquanto um relató
   scheduled.shift()();
   assert.equal(reloadCalls, 1);
 });
+
+// ---------------------------------------------------------------------------
+// BLOCO D — Tela, Separação de Scripts e Acessibilidade (D1 a D3)
+// ---------------------------------------------------------------------------
+
+test('D1 — manifest.json separa content_scripts por portal para carregar no SPT apenas o CSS e JS necessários', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.content_scripts.length, 2);
+
+  const meuEspacoEntry = manifest.content_scripts.find((cs) => cs.matches.some((m) => m.includes('/portalservidor2/')));
+  const sptEntry = manifest.content_scripts.find((cs) => cs.matches.some((m) => m.includes('/spt-consultafrequencia/')));
+
+  assert.ok(meuEspacoEntry);
+  assert.ok(sptEntry);
+
+  // O SPT deve carregar apenas content.css e spt-gestao.css, sem espelho-ponto.css, reembolso-farmaceutico.css ou hora-extra-gestao.css
+  assert.deepEqual(sptEntry.css, ['content/content.css', 'content/spt-gestao.css']);
+  assert.ok(!sptEntry.js.includes('content/modules/reembolsoFarmaceutico.js'));
+  assert.ok(!sptEntry.js.includes('content/modules/payrollAudit.js'));
+  assert.ok(sptEntry.js.includes('content/modules/sptCltCalc.js'));
+  assert.ok(sptEntry.js.includes('content/modules/sptReportModal.js'));
+});
+
+test('D2 — sptUnitCombobox: opções com id, aria-activedescendant no input, label associada, select nativo com tabindex="-1" e navegação por seta sem recriar os nós DOM', () => {
+  const units = [
+    { id: '1', cleanName: 'TRIBUNAL SUPERIOR ELEITORAL', level: 1, parentPath: '' },
+    { id: '787', cleanName: 'SECRETARIA DE TECNOLOGIA DA INFORMAÇÃO', level: 4, parentPath: 'TSE' },
+    { id: '1184', cleanName: 'SEÇÃO DE TOTALIZAÇÃO E DIVULGAÇÃO DE RESULTADOS', level: 6, parentPath: 'TSE › STI › COSE' }
+  ];
+
+  let createdDivCount = 0;
+  function makeNode(tag) {
+    if (tag === 'div') createdDivCount += 1;
+    const attrs = {};
+    const classes = new Set();
+    return {
+      tagName: tag.toUpperCase(),
+      id: '',
+      className: '',
+      value: '',
+      hidden: false,
+      disabled: false,
+      textContent: '',
+      title: '',
+      dataset: {},
+      style: {},
+      handlers: {},
+      children: [],
+      classList: {
+        add: (...c) => c.forEach((x) => classes.add(x)),
+        remove: (...c) => c.forEach((x) => classes.delete(x)),
+        contains: (c) => classes.has(c)
+      },
+      setAttribute(k, v) { attrs[k] = String(v); if (k === 'id') this.id = String(v); },
+      getAttribute(k) { return k in attrs ? attrs[k] : null; },
+      removeAttribute(k) { delete attrs[k]; },
+      addEventListener(type, fn) { this.handlers[type] = fn; },
+      appendChild(child) { this.children.push(child); return child; },
+      replaceChildren(...nodes) { this.children = [...nodes]; },
+      scrollIntoView() {},
+      select() {},
+      focus() {}
+    };
+  }
+
+  const labelEl = makeNode('label');
+  labelEl.setAttribute('for', 'cbUnidades');
+
+  const selectEl = Object.assign(makeNode('select'), {
+    id: 'cbUnidades',
+    value: '1',
+    options: [
+      { value: '1', textContent: '-TRIBUNAL SUPERIOR ELEITORAL' },
+      { value: '787', textContent: '- - - -SECRETARIA DE TECNOLOGIA DA INFORMAÇÃO' },
+      { value: '1184', textContent: '- - - - - -SEÇÃO DE TOTALIZAÇÃO E DIVULGAÇÃO DE RESULTADOS' }
+    ],
+    parentNode: { insertBefore() {} },
+    parentElement: { querySelector: (s) => (s === 'label' ? labelEl : null) }
+  });
+
+  const doc = {
+    createElement: (tag) => makeNode(tag),
+    createElementNS: (_ns, tag) => makeNode(tag),
+    getElementById: (id) => (id === 'cbUnidades' ? selectEl : null),
+    querySelector: (sel) => {
+      if (sel.includes('#cbUnidades')) return selectEl;
+      if (sel === 'label[for="cbUnidades"]') return labelEl;
+      return null;
+    }
+  };
+  selectEl.ownerDocument = doc;
+
+  const comboMod = loadModule('sptUnitCombobox.js', {
+    document: doc,
+    sessionStorage: { getItem: () => null, setItem() {} },
+    JEPessoasSptCltCalc: C
+  });
+  const Combo = comboMod.JEPessoasSptCombobox;
+
+  const widget = Combo.enhanceNativeUnitSelect(selectEl);
+  assert.ok(widget);
+
+  // 1) Select nativo recebeu tabindex="-1" e aria-hidden="true"
+  assert.equal(selectEl.getAttribute('tabindex'), '-1');
+  assert.equal(selectEl.getAttribute('aria-hidden'), 'true');
+
+  // 2) <label> foi associada ao input da combobox
+  assert.equal(labelEl.getAttribute('for'), 'je-cbUnidades-combobox');
+  assert.equal(widget.input.getAttribute('aria-labelledby'), 'je-cbUnidades-combobox-label');
+
+  // 3) Ao abrir o dropdown, as opções recebem id único e o input recebe aria-activedescendant
+  widget.input.handlers.focus();
+  const listbox = widget.root.children[1];
+  assert.equal(listbox.children.length, 3);
+  const firstOptNode = listbox.children[0];
+  const secondOptNode = listbox.children[1];
+  assert.equal(firstOptNode.id, 'je-cbUnidades-combobox-listbox-opt-1');
+  assert.equal(secondOptNode.id, 'je-cbUnidades-combobox-listbox-opt-787');
+  assert.equal(widget.input.getAttribute('aria-activedescendant'), 'je-cbUnidades-combobox-listbox-opt-1');
+  assert.equal(firstOptNode.classList.contains('is-active'), true);
+
+  // 4) Navegação por ArrowDown move a classe is-active e aria-activedescendant SEM recriar os nós DOM
+  const countBeforeArrow = createdDivCount;
+  widget.input.handlers.keydown({ key: 'ArrowDown', preventDefault() {} });
+  assert.equal(createdDivCount, countBeforeArrow);
+  assert.equal(listbox.children[0], firstOptNode);
+  assert.equal(listbox.children[1], secondOptNode);
+  assert.equal(firstOptNode.classList.contains('is-active'), false);
+  assert.equal(secondOptNode.classList.contains('is-active'), true);
+  assert.equal(widget.input.getAttribute('aria-activedescendant'), 'je-cbUnidades-combobox-listbox-opt-787');
+});
+
+test('D3 — sptReportModal exibe mensagens de validação inline dentro do modal (#je-spt-rep-validation, role="alert") em vez de alert() nativo', async () => {
+  let nativeAlertCalled = false;
+  const harness = createSptReportModalHarness(async () => ({
+    ok: true,
+    status: 200,
+    text: async () => SPT_CONSULTA_HTML_FIXTURE
+  }), {
+    je_xt_spt_report_prefs_v2: {
+      unitId: '1184',
+      fromIso: '2026-10-31',
+      toIso: '2026-10-01', // Período inválido (data inicial > data final)
+      hoDefaultMigratedV2: true
+    }
+  });
+
+  await harness.api.open();
+
+  // Tenta gerar com data inicial > data final (e sem prestadores carregados para o período inválido):
+  // deve exibir mensagem inline em #je-spt-rep-validation sem chamar alert()
+  await harness.elements.get('#je-spt-rep-run').handlers.click();
+  assert.equal(nativeAlertCalled, false);
+  const valBox = harness.elements.get('#je-spt-rep-validation');
+  assert.equal(valBox.hidden, false);
+  assert.match(valBox.textContent, /Informe um período válido/);
+
+  // Corrige o período, aguarda carregar a lista de prestadores, limpa a seleção e tenta gerar:
+  harness.elements.get('#je-spt-rep-from').value = '2026-10-01';
+  harness.elements.get('#je-spt-rep-to').value = '2026-10-31';
+  harness.elements.get('#je-spt-rep-from').handlers.change();
+  await new Promise((r) => setImmediate(r));
+  harness.elements.get('#je-spt-rep-none').handlers.click();
+  await harness.elements.get('#je-spt-rep-run').handlers.click();
+  assert.equal(valBox.hidden, false);
+  assert.match(valBox.textContent, /Selecione ao menos um prestador/);
+});
+
 
 

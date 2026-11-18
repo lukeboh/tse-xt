@@ -665,6 +665,8 @@ window.JEPessoasSptReport = (function () {
           </div>
         </div>
 
+        <div class="je-audit-alert je-spt-validation-alert" id="je-spt-rep-validation" role="alert" aria-live="assertive" hidden></div>
+
         <div class="je-audit-body" id="je-spt-rep-body"></div>
       </div>
     `);
@@ -693,6 +695,7 @@ window.JEPessoasSptReport = (function () {
 
     ['#je-spt-rep-from', '#je-spt-rep-to'].forEach((sel) => {
       overlay.querySelector(sel).addEventListener('change', () => {
+        showValidationMessage('');
         savePrefs();
         refreshWorkersList();
       });
@@ -960,9 +963,25 @@ window.JEPessoasSptReport = (function () {
     }
   }
 
+  function showValidationMessage(message) {
+    if (!overlay) return;
+    const box = overlay.querySelector('#je-spt-rep-validation');
+    if (!box) return;
+    if (!message) {
+      box.textContent = '';
+      box.hidden = true;
+      return;
+    }
+    box.textContent = String(message);
+    box.hidden = false;
+  }
+
   function markDirtySelection() {
     if (!overlay) return;
     const checkedCount = workersList.filter((w) => w.checked).length;
+    if (checkedCount > 0 && overlay.querySelector('#je-spt-rep-validation')?.textContent === 'Selecione ao menos um prestador.') {
+      showValidationMessage('');
+    }
     overlay.querySelector('#je-spt-rep-run').disabled = running || loadingWorkers || checkedCount === 0;
   }
 
@@ -1001,19 +1020,20 @@ window.JEPessoasSptReport = (function () {
     const picked = workersList.filter((w) => w.checked);
 
     if (!unit || !unit.id) {
-      alert('Selecione a Unidade para gerar o relatório.');
+      showValidationMessage('Selecione a Unidade para gerar o relatório.');
       return;
     }
     const slices = calc().splitDateRangeByMonth(fromIso, toIso);
     if (!slices.length) {
-      alert('Informe um período válido (data inicial menor ou igual à data final).');
+      showValidationMessage('Informe um período válido (data inicial menor ou igual à data final).');
       return;
     }
     if (!picked.length) {
-      alert('Selecione ao menos um prestador.');
+      showValidationMessage('Selecione ao menos um prestador.');
       return;
     }
 
+    showValidationMessage('');
     running = true;
     aborted = false;
     expandedMonthlyRows.clear();

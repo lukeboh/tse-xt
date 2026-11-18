@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TSE XT",
-  "version": "1.2.19",
-  "version_name": "1.2.19-Snapshot",
+  "version": "1.2.20",
+  "version_name": "1.2.20-Snapshot",
   "description": "Interface moderna com Glassmorfismo, 5 KPIs e usabilidade aprimorada para sistemas do Tribunal Superior Eleitoral (TSE).",
   "permissions": [
     "storage",
@@ -47,16 +47,13 @@
     {
       "matches": [
         "*://meuespaco.tse.jus.br/portalservidor2/*",
-        "*://*.tse.jus.br/portalservidor2/*",
-        "*://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/*",
-        "*://*.tse.jus.br/spt-consultafrequencia/*"
+        "*://*.tse.jus.br/portalservidor2/*"
       ],
       "css": [
         "content/content.css",
         "content/espelho-ponto.css",
         "content/reembolso-farmaceutico.css",
-        "content/hora-extra-gestao.css",
-        "content/spt-gestao.css"
+        "content/hora-extra-gestao.css"
       ],
       "js": [
         "content/modules/version.js",
@@ -86,6 +83,24 @@
         "content/modules/reembolsoFarmaceutico.js",
         "content/modules/heGestaoExcedenteFetch.js",
         "content/modules/heGestaoKpi.js",
+        "content/content.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://spt-consultafrequencia.tse.jus.br/spt-consultafrequencia/*",
+        "*://*.tse.jus.br/spt-consultafrequencia/*"
+      ],
+      "css": [
+        "content/content.css",
+        "content/spt-gestao.css"
+      ],
+      "js": [
+        "content/modules/version.js",
+        "content/modules/settings.js",
+        "content/modules/quickActions.js",
+        "content/modules/domModernizer.js",
         "content/modules/sptCltCalc.js",
         "content/modules/sptUnitCombobox.js",
         "content/modules/sptReportModal.js",

@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.19-Snapshot';
+  const CURRENT_VERSION = '1.2.20-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.20-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco D): separação de content_scripts por portal, acessibilidade/performance da combobox e validação inline',
+      features: [
+        'Separados os content_scripts no manifest.json por portal (Meu Espaço vs. SPT) para carregar no SPT apenas o CSS (content.css e spt-gestao.css) e os módulos JS necessários.',
+        'Combobox de Unidades (sptUnitCombobox.js) com id único nas opções, aria-activedescendant no input, associação da <label> nativa, select nativo com tabindex="-1"/aria-hidden="true" e atualização in-place na navegação por setas sem recriar as 347 opções do DOM.',
+        'Substituídos os chamadas a alert() no modal de relatório do SPT por banner de validação inline (#je-spt-rep-validation, role="alert").'
+      ]
+    },
     {
       version: '1.2.19-Snapshot',
       date: '2026-11-18',
