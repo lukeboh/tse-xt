@@ -1,5 +1,16 @@
 # Changelog — TSE XT
 
+## 1.2.22-Snapshot — 18/11/2026
+
+- **Bloco F — Regras de jornada parametrizáveis e alertas normativos no SPT (`sptCltCalc.js`, `sptReportModal.js`, `spt-gestao.css`)**:
+  - **F1**: Adicionado seletor de **Perfil de jornada (por contrato)** no relatório, salvo nas preferências por código de contrato (`journeyProfilesByContract`), com 5 perfis: **"8h Seg–Sex (40h)"** (padrão), **"6h Seg–Sex (30h)"**, **"8h48 Seg–Sex (44h)"**, **"44h com sábado (8h Seg–Sex + 4h Sáb)"** e **"12x36"** (meta de 12h nos dias com batida, sem débito nos dias de folga e feriado trabalhado como HE 100% conforme Súmula 444 do TST). O perfil utilizado aparece no cabeçalho, no Anexo de Interpretação, no PDF e no CSV.
+  - **F2**: Adicionados 3 alertas normativos de fiscalização que **não alteram nenhum total de horas**:
+    - **CLT art. 71 §1º**: jornada > 4h e ≤ 6h sem intervalo de 15 min registrado;
+    - **CLT art. 66**: menos de 11h de descanso interjornada entre a última saída de um dia e a primeira entrada do dia seguinte (inclusive atravessando a virada do mês e turnos pós-meia-noite);
+    - **CLT art. 73**: minutos trabalhados entre 22h e 5h exibidos na coluna informativa **"Noturno (h)"**, com a hora noturna reduzida de `52m30s` calculada à parte (sem somar ao total).
+  - **F3**: Adicionada opção **"Aplicar também limite de 5 min por marcação"** (CLT art. 58 §1º), desligada por padrão (mantendo os ±10 min/dia que batem com a Digisystem) e indisponível com explicação quando o perfil não define horários fixos de referência.
+- Verificação: **253 testes de comportamento passando**.
+
 ## 1.2.21-Snapshot — 18/11/2026
 
 - **Bloco E — Falhas silenciosas e robustez no SPT (`sptReportModal.js`, `background.js`, `content.js`)**:

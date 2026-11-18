@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.21-Snapshot';
+  const CURRENT_VERSION = '1.2.22-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.22-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT (Bloco F): perfis de jornada por contrato, alertas normativos (arts. 66, 71 §1º e 73) e tolerância por marcação',
+      features: [
+        'Seletor de perfil de jornada por contrato ("8h Seg–Sex (40h)" padrão, "6h Seg–Sex (30h)", "8h48 Seg–Sex (44h)", "44h com sábado (8h Seg–Sex + 4h Sáb)" e "12x36" com Súmula 444 do TST em feriados), salvo nas preferências por contrato e exibido no cabeçalho, anexo, PDF e CSV.',
+        'Novos alertas normativos que não alteram totais: art. 71 §1º (jornada > 4h e ≤ 6h sem intervalo de 15 min), art. 66 (menos de 11h entre a última saída de um dia e a primeira entrada do dia seguinte, inclusive na virada do mês) e art. 73 (coluna "Noturno (h)" com minutos entre 22h e 5h e hora reduzida de 52m30s calculada à parte).',
+        'Opção "Aplicar também limite de 5 min por marcação" (art. 58 §1º): desligada por padrão (mantendo os ±10 min/dia) e indisponível com explicação quando o perfil não define horários fixos de referência.'
+      ]
+    },
     {
       version: '1.2.21-Snapshot',
       date: '2026-11-18',

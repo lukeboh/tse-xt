@@ -33,9 +33,127 @@ window.JEPessoasSptCltCalc = (function () {
 
   const DAILY_TARGET_MIN = 480; // 8h00 (Seg–Sex)
   const DAILY_TOLERANCE_MIN = 10; // ±10 min diários (CLT art. 58 §1º)
+  const PUNCH_TOLERANCE_MIN = 5; // ±5 min por marcação (CLT art. 58 §1º)
   const MIN_LUNCH_SHIFT_MIN = 360; // > 6h00 exige intervalo mínimo de 1h
   const MIN_LUNCH_MIN = 60; // 1h00 de almoço
+  const SHORT_SHIFT_MIN_FOR_15M_BREAK = 240; // > 4h00 e <= 6h00 exige intervalo de 15 min (CLT art. 71 §1º)
+  const MIN_SHORT_BREAK_MIN = 15; // 15 min de intervalo (CLT art. 71 §1º)
+  const MIN_INTERJORNADA_MIN = 660; // 11h00 de descanso interjornada (CLT art. 66)
+  const NIGHT_START_MIN = 22 * 60; // 22:00 (CLT art. 73 §2º)
+  const NIGHT_END_MIN = 5 * 60; // 05:00 (CLT art. 73 §2º)
   const MAX_DAILY_OVERTIME_MIN = 120; // 2h00 extras 50%/dia útil (CLT art. 59)
+
+  const DEFAULT_JOURNEY_PROFILE_ID = '8h_40h';
+
+  const JOURNEY_PROFILES = {
+    '8h_40h': {
+      id: '8h_40h',
+      label: '8h Seg–Sex (40h)',
+      shortLabel: '8h Seg–Sex (40h)',
+      weekdayTargetMin: 480,
+      saturdayTargetMin: 0,
+      sundayTargetMin: 0,
+      is12x36: false
+    },
+    '6h_30h': {
+      id: '6h_30h',
+      label: '6h Seg–Sex (30h)',
+      shortLabel: '6h Seg–Sex (30h)',
+      weekdayTargetMin: 360,
+      saturdayTargetMin: 0,
+      sundayTargetMin: 0,
+      is12x36: false
+    },
+    '8h48_44h': {
+      id: '8h48_44h',
+      label: '8h48 Seg–Sex (44h)',
+      shortLabel: '8h48 Seg–Sex (44h)',
+      weekdayTargetMin: 528,
+      saturdayTargetMin: 0,
+      sundayTargetMin: 0,
+      is12x36: false
+    },
+    '44h_sab': {
+      id: '44h_sab',
+      label: '44h com sábado (8h Seg–Sex + 4h Sáb)',
+      shortLabel: '44h c/ Sáb (8h+4h)',
+      weekdayTargetMin: 480,
+      saturdayTargetMin: 240,
+      sundayTargetMin: 0,
+      is12x36: false
+    },
+    '12x36': {
+      id: '12x36',
+      label: '12x36',
+      shortLabel: '12x36 (12h plantão / Súm. 444)',
+      weekdayTargetMin: 720,
+      saturdayTargetMin: 720,
+      sundayTargetMin: 720,
+      shiftTargetMin: 720,
+      is12x36: true
+    }
+  };
+
+  function getJourneyProfile(profileIdOrObj) {
+    if (profileIdOrObj && typeof profileIdOrObj === 'object' && profileIdOrObj.id && JOURNEY_PROFILES[profileIdOrObj.id]) {
+      return Object.assign({}, JOURNEY_PROFILES[profileIdOrObj.id], profileIdOrObj);
+    }
+    const id = String(profileIdOrObj || '').trim();
+    return JOURNEY_PROFILES[id] || JOURNEY_PROFILES[DEFAULT_JOURNEY_PROFILE_ID];
+  }
+
+  function listJourneyProfiles() {
+    return Object.values(JOURNEY_PROFILES).map((p) => Object.assign({}, p));
+  }
+
+  function parseReferenceTimes(referenceTimes) {
+    if (!referenceTimes) return [];
+    const tokens = Array.isArray(referenceTimes)
+      ? referenceTimes
+      : String(referenceTimes).split(/[,;\s|]+/).filter(Boolean);
+    const out = [];
+    tokens.forEach((t) => {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
+      if (m) {
+        const hh = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+          out.push(hh * 60 + mm);
+        }
+      }
+    });
+    return out;
+  }
+
+  /**
+   * Calcula minutos reais trabalhados na faixa noturna urbana (22:00 às 05:00 — CLT art. 73 §2º)
+   * dentro de um intervalo [startMin, endMin] do mesmo dia civil (0..1440).
+   */
+  function computeNightOverlapInDay(startMin, endMin) {
+    if (typeof startMin !== 'number' || typeof endMin !== 'number' || endMin <= startMin) return 0;
+    const s = Math.max(0, startMin);
+    const e = Math.min(1440, endMin);
+    let night = 0;
+    // Madrugada: 00:00 (0) até 05:00 (300)
+    if (s < NIGHT_END_MIN) {
+      night += Math.max(0, Math.min(e, NIGHT_END_MIN) - s);
+    }
+    // Noite: 22:00 (1320) até 24:00 (1440)
+    if (e > NIGHT_START_MIN) {
+      night += Math.max(0, e - Math.max(s, NIGHT_START_MIN));
+    }
+    return night;
+  }
+
+  /**
+   * Converte minutos reais noturnos (relógio) em minutos equivalentes na hora noturna reduzida
+   * de 52m30s (fator 60 / 52,5 = 8 / 7 — CLT art. 73 §1º). Apenas informativo: não soma ao total.
+   */
+  function toReducedNightMin(realNightMin) {
+    const n = Number(realNightMin) || 0;
+    if (n <= 0) return 0;
+    return Math.round((n * 60) / 52.5);
+  }
 
   const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -507,6 +625,9 @@ window.JEPessoasSptCltCalc = (function () {
     const toleranceMin = typeof options.toleranceMin === 'number'
       ? options.toleranceMin
       : DAILY_TOLERANCE_MIN;
+    const profile = getJourneyProfile(options.journeyProfile || options.profileId);
+    const apply5MinPerPunchTolerance = !!options.apply5MinPerPunchTolerance;
+    const referenceTimesMin = parseReferenceTimes(options.referenceTimes != null ? options.referenceTimes : profile.referenceTimes);
 
     const info = parseDateInfo(rawDay.date, customHolidays);
     const punches = (rawDay.punches || []).map((p) => String(p || '').trim());
@@ -521,19 +642,26 @@ window.JEPessoasSptCltCalc = (function () {
     const isHoliday = !!(info && info.isHoliday) || /feriado/i.test(justificativa);
     const holidayName = (info && info.holidayName) || (/feriado/i.test(justificativa) ? justificativa : '');
     const isWeekend = !!(info && info.isWeekend);
-    const isSpecialDay = isWeekend || isHoliday;
+    const isSaturday = !!(info && info.dayOfWeek === 6);
+    const isSunday = !!(info && info.dayOfWeek === 0);
+    // Para perfis com jornada ordinária ao sábado ("44h_sab") ou 12x36, o sábado não é dia especial de HE 100% (exceto se for feriado).
+    const isSpecialDay = profile.is12x36
+      ? isHoliday
+      : (profile.saturdayTargetMin > 0 ? (isSunday || isHoliday) : (isWeekend || isHoliday));
 
     // Detecta continuação pós-meia-noite (saída 23:59 no dia anterior e
     // entrada 00:00 no dia atual com Total SPT = 00:00 porque já foi somado no dia anterior).
     const prevEndedMidnight = !!(prevRawDay && Array.isArray(prevRawDay.punches) && prevRawDay.punches.some((p) => String(p || '').trim() === '23:59'));
     const isPostMidnightContinuation = punchCount >= 2 && punches[0] === '00:00' && sptTotalMin === 0 && prevEndedMidnight;
 
-    // Soma pares válidos (E1..S1, E2..S2, E3..S3) e intervalos entre pares
+    // Soma pares válidos (E1..S1, E2..S2, E3..S3), intervalos entre pares e minutos noturnos (22h–5h, art. 73)
     let rawWorkedMin = 0;
     let measuredLunchMin = 0;
     let validPairs = 0;
     let firstEntryMin = null;
     let lastExitMin = null;
+    let nightRealMin = 0;
+    const punchMinList = [];
 
     for (let i = 0; i + 1 < punches.length; i += 2) {
       const eStr = punches[i];
@@ -546,9 +674,15 @@ window.JEPessoasSptCltCalc = (function () {
         if (lastExitMin !== null && eMin > lastExitMin) {
           measuredLunchMin += (eMin - lastExitMin);
         }
+        // Em batida 23:59 sintética do SPT, o minuto 23:59->24:00 integra o turno noturno
+        const effectivePairEnd = sStr === '23:59' ? 1440 : sMin;
         rawWorkedMin += (sMin - eMin);
+        if (!isPostMidnightContinuation) {
+          nightRealMin += computeNightOverlapInDay(eMin, effectivePairEnd);
+        }
         lastExitMin = sMin;
         validPairs += 1;
+        punchMinList.push(eMin, sMin);
       }
     }
 
@@ -574,9 +708,20 @@ window.JEPessoasSptCltCalc = (function () {
       const baseWorked = sptTotalMin > 0 ? sptTotalMin : rawWorkedMin;
       const isCrossMidnightOrigin = sptTotalMin > totalPresenceMin && punches.includes('23:59');
 
+      // Se a jornada cruzou a meia-noite (23:59 no dia atual e horas pós-00h somadas em sptTotalMin),
+      // acrescenta os minutos noturnos trabalhados após 00:00 (entre 00:00 e 05:00) ao nightRealMin.
+      if (isCrossMidnightOrigin && firstEntryMin !== null) {
+        const hasAutoLunchInSpt = sptTotalMin > MIN_LUNCH_SHIFT_MIN;
+        const postMidnightSpanMin = Math.max(0, sptTotalMin + (hasAutoLunchInSpt ? MIN_LUNCH_MIN : 0) - (1440 - firstEntryMin));
+        if (postMidnightSpanMin > 0) {
+          nightRealMin += computeNightOverlapInDay(0, Math.min(1440, postMidnightSpanMin));
+        }
+      }
+
+      const needsAutoLunchForSpecial = (isWeekend || isHoliday) ? deductAutoLunchOnSpecialDays : true;
+
       if (validPairs === 1 && measuredLunchMin === 0) {
-        const shouldDeductAutoLunch = !isSpecialDay || deductAutoLunchOnSpecialDays;
-        if (!shouldDeductAutoLunch) {
+        if (!needsAutoLunchForSpecial) {
           // Quando o desconto de intervalo em Sáb/Dom/Feriado está desligado (reproduz cartão Digisystem):
           // considera o tempo bruto entre entrada e saída (ou o maior entre rawWorkedMin e sptTotalMin quando não há virada de meia-noite).
           cltWorkedMin = isCrossMidnightOrigin
@@ -640,6 +785,32 @@ window.JEPessoasSptCltCalc = (function () {
 
     const isWorkedDay = cltWorkedMin > 0;
 
+    // F2 — Alerta normativo CLT art. 71 §1º: jornada > 4h (240 min) e <= 6h (360 min) sem intervalo de 15 min registrado.
+    // Não altera nenhum total de horas.
+    const hasArt71_1Alert = isWorkedDay
+      && cltWorkedMin > SHORT_SHIFT_MIN_FOR_15M_BREAK
+      && cltWorkedMin <= MIN_LUNCH_SHIFT_MIN
+      && measuredLunchMin < MIN_SHORT_BREAK_MIN;
+
+    if (hasArt71_1Alert) {
+      alerts.push({
+        code: 'art71-15min',
+        label: 'Sem interv. 15m (art. 71 §1º)',
+        tip: `Jornada de ${formatMin(cltWorkedMin)} (> 4h e ≤ 6h) com intervalo registrado de ${formatMin(measuredLunchMin)} (inferior aos 15 min do art. 71 §1º da CLT). Alerta de fiscalização: não altera os totais.`
+      });
+    }
+
+    // F2 — Alerta normativo CLT art. 73: minutos trabalhados entre 22h e 5h e hora noturna reduzida (52m30s) calculada à parte.
+    // Não altera nenhum total de horas.
+    const nightReducedMin = toReducedNightMin(nightRealMin);
+    if (nightRealMin > 0) {
+      alerts.push({
+        code: 'noturno-art73',
+        label: `Noturno ${formatMin(nightRealMin)} (red. ${formatMin(nightReducedMin)})`,
+        tip: `Trabalho entre 22h e 5h (CLT art. 73): ${formatMin(nightRealMin)} reais (equivalentes a ${formatMin(nightReducedMin)} em hora noturna reduzida de 52m30s). Informativo: não altera o total de horas.`
+      });
+    }
+
     let targetMin = 0;
     let normalWorkedMin = 0;
     let he50Min = 0;
@@ -650,6 +821,13 @@ window.JEPessoasSptCltCalc = (function () {
     let deltaBhMin = 0;
     let deltaMin = 0;
     let withinTolerance = false;
+    let punchWithin5Min = true;
+
+    if (apply5MinPerPunchTolerance && referenceTimesMin.length > 0 && punchMinList.length > 0) {
+      // Verifica se cada batida registrada varia no máximo 5 min do horário de referência correspondente
+      punchWithin5Min = punchMinList.length === referenceTimesMin.length
+        && punchMinList.every((pMin, idx) => Math.abs(pMin - referenceTimesMin[idx]) <= PUNCH_TOLERANCE_MIN);
+    }
 
     if (isWorkedDay) {
       if (isSpecialDay) {
@@ -663,11 +841,13 @@ window.JEPessoasSptCltCalc = (function () {
         deltaBhMin = 0;
         deltaMin = cltWorkedMin;
       } else {
-        targetMin = DAILY_TARGET_MIN;
+        targetMin = profile.is12x36
+          ? (profile.shiftTargetMin || 720)
+          : (isSaturday ? (profile.saturdayTargetMin || 0) : (profile.weekdayTargetMin || DAILY_TARGET_MIN));
         const rawDiff = cltWorkedMin - targetMin;
-        withinTolerance = Math.abs(rawDiff) <= toleranceMin;
+        withinTolerance = Math.abs(rawDiff) <= toleranceMin && punchWithin5Min;
         if (withinTolerance) {
-          normalWorkedMin = DAILY_TARGET_MIN;
+          normalWorkedMin = targetMin;
           he50Min = 0;
           he100Min = 0;
           excedenteMin = 0;
@@ -679,11 +859,11 @@ window.JEPessoasSptCltCalc = (function () {
             alerts.push({
               code: 'tolerancia-clt',
               label: `Tol. CLT (${formatMin(rawDiff, true)})`,
-              tip: `Variação de ${formatMin(rawDiff, true)} dentro da tolerância legal de ±${toleranceMin} min/dia (CLT art. 58 §1º). Computado como jornada normal de 08:00.`
+              tip: `Variação de ${formatMin(rawDiff, true)} dentro da tolerância legal de ±${toleranceMin} min/dia (CLT art. 58 §1º). Computado como jornada normal de ${formatMin(targetMin)}.`
             });
           }
         } else if (rawDiff > 0) {
-          normalWorkedMin = DAILY_TARGET_MIN;
+          normalWorkedMin = targetMin;
           he50Min = Math.min(rawDiff, MAX_DAILY_OVERTIME_MIN);
           he100Min = Math.max(0, rawDiff - MAX_DAILY_OVERTIME_MIN);
           excedenteMin = rawDiff;
@@ -714,13 +894,23 @@ window.JEPessoasSptCltCalc = (function () {
 
     if (isWorkedDay && isSpecialDay) {
       const tipoLabel = isHoliday
-        ? `Feriado: ${holidayName || 'HE 100%'}`
+        ? (profile.is12x36 ? `Feriado 12x36 (Súm. 444: ${holidayName || 'HE 100%'})` : `Feriado: ${holidayName || 'HE 100%'}`)
         : (info && info.dayOfWeek === 0 ? 'Domingo (HE 100%)' : 'Sábado (HE 100%)');
       alerts.push({
         code: 'fim-de-semana',
         label: tipoLabel,
-        tip: 'Jornada ordinária 00:00: 100% das horas trabalhadas contam como Hora Extra 100%.'
+        tip: profile.is12x36 && isHoliday
+          ? 'Escala 12x36 em feriado trabalhado (Súmula 444 do TST): 100% das horas trabalhadas contam como Hora Extra 100%.'
+          : 'Jornada ordinária 00:00: 100% das horas trabalhadas contam como Hora Extra 100%.'
       });
+    }
+
+    // Determina a última saída efetiva do turno iniciado neste dia (em minutos a partir de 00:00 do próprio dia,
+    // podendo ultrapassar 1440 quando o turno cruza a meia-noite via 23:59).
+    let effectiveShiftExitMin = (!isPostMidnightContinuation && lastExitMin !== null) ? lastExitMin : null;
+    if (!isPostMidnightContinuation && punches.includes('23:59') && firstEntryMin !== null && sptTotalMin > totalPresenceMin) {
+      const hasAutoLunchInSpt = sptTotalMin > MIN_LUNCH_SHIFT_MIN;
+      effectiveShiftExitMin = firstEntryMin + sptTotalMin + (hasAutoLunchInSpt ? MIN_LUNCH_MIN : 0);
     }
 
     return {
@@ -737,11 +927,18 @@ window.JEPessoasSptCltCalc = (function () {
       dayOfWeek: info ? info.dayOfWeek : -1,
       dayLabel: info ? info.dayLabel : '',
       isWeekend,
+      isSaturday,
+      isSunday,
       isHoliday,
       holidayName,
       isSpecialDay,
+      journeyProfileId: profile.id,
+      journeyProfileLabel: profile.label,
       punches: punches.slice(0, 6),
       punchCount,
+      firstEntryMin,
+      lastExitMin,
+      effectiveShiftExitMin,
       justificativa,
       sptTotalMin,
       rawWorkedMin,
@@ -751,6 +948,11 @@ window.JEPessoasSptCltCalc = (function () {
       lunchDeductionDiffMin,
       cltWorkedMin,
       presencialCltWorkedMin: cltWorkedMin,
+      nightRealMin,
+      nightReducedMin,
+      hasArt71_1Alert,
+      hasArt66InterjornadaAlert: false,
+      interjornadaRestMin: null,
       isWorkedDay,
       isPresencialWorkedDay: isWorkedDay,
       isHomeOfficeDay: false,
@@ -759,6 +961,7 @@ window.JEPessoasSptCltCalc = (function () {
       hasDsrStreakAlert: false,
       isPostMidnightContinuation,
       withinTolerance,
+      punchWithin5Min,
       targetMin,
       presencialTargetMin: targetMin,
       normalWorkedMin,
@@ -841,27 +1044,43 @@ window.JEPessoasSptCltCalc = (function () {
   }
 
   /**
-   * Verifica se duas datas ISO (AAAA-MM-DD) são dias imediatamente consecutivos no calendário.
+   * Calcula a diferença em dias civis (currIso − prevIso).
    */
-  function areConsecutiveIsoDates(prevIso, currIso) {
-    if (!prevIso || !currIso) return false;
+  function diffIsoDays(prevIso, currIso) {
+    if (!prevIso || !currIso) return null;
     const [pY, pM, pD] = prevIso.split('-').map(Number);
     const [cY, cM, cD] = currIso.split('-').map(Number);
+    if (!pY || !cY) return null;
     const dtPrev = Date.UTC(pY, pM - 1, pD);
     const dtCurr = Date.UTC(cY, cM - 1, cD);
-    return (dtCurr - dtPrev) === 86400000;
+    return Math.round((dtCurr - dtPrev) / 86400000);
   }
 
   /**
-   * Aplica (ou remove) a presunção de Home Office (8h) e avalia alertas objetivos de DSR:
+   * Verifica se duas datas ISO (AAAA-MM-DD) são dias imediatamente consecutivos no calendário.
+   */
+  function areConsecutiveIsoDates(prevIso, currIso) {
+    return diffIsoDays(prevIso, currIso) === 1;
+  }
+
+  /**
+   * Aplica (ou remove) a presunção de Home Office e avalia alertas objetivos de fiscalização:
    *  - Trabalho em domingo ou sequência > 6 dias consecutivos sem folga identificada
    *    (CLT art. 67; OJ 410 TST). O alerta NÃO altera nenhum total de horas.
-   *  - Aceita `initialStreak` e `prevDateIso` para considerar a virada entre meses consecutivos.
+   *  - Descanso interjornada < 11h entre a última saída de um dia e a primeira entrada do dia seguinte
+   *    (CLT art. 66), atravessando a virada do mês quando `prevWorkedDateIso` e `prevShiftExitMin` são fornecidos.
    */
   function resolveHomeOfficeAndDsr(daysList, options = {}) {
     const presumeHomeOffice = !!options.presumeHomeOffice;
     const todayIso = options.todayIso || getLocalTodayIso();
-    const shouldReanalyze = options.customHolidays !== undefined || options.deductAutoLunchOnSpecialDays !== undefined || options.toleranceMin !== undefined;
+    const profile = getJourneyProfile(options.journeyProfile || options.profileId);
+    const shouldReanalyze = options.customHolidays !== undefined
+      || options.deductAutoLunchOnSpecialDays !== undefined
+      || options.toleranceMin !== undefined
+      || options.journeyProfile !== undefined
+      || options.profileId !== undefined
+      || options.apply5MinPerPunchTolerance !== undefined
+      || options.referenceTimes !== undefined;
 
     const rawSource = Array.isArray(daysList) ? daysList : [];
     const baseDays = shouldReanalyze
@@ -891,7 +1110,7 @@ window.JEPessoasSptCltCalc = (function () {
       const presNorm = typeof d.presencialNormalWorkedMin === 'number' ? d.presencialNormalWorkedMin : (d.normalWorkedMin || 0);
       const baseAlerts = Array.isArray(d.baseAlerts)
         ? d.baseAlerts.slice()
-        : (d.alerts || []).filter((a) => !['home-office', 'reposicao-dsr', 'dsr-alerta', 'sem-registro', 'feriado'].includes(a.code));
+        : (d.alerts || []).filter((a) => !['home-office', 'reposicao-dsr', 'dsr-alerta', 'sem-registro', 'feriado', 'interjornada-art66'].includes(a.code));
 
       if (d.isHoliday && !isPresencial && !baseAlerts.some((a) => a.code === 'feriado')) {
         baseAlerts.push({
@@ -911,39 +1130,47 @@ window.JEPessoasSptCltCalc = (function () {
         isUnregisteredWeekday: false,
         isDsrCompensated: false,
         hasDsrStreakAlert: false,
+        hasArt66InterjornadaAlert: false,
+        interjornadaRestMin: null,
         cltWorkedMin: presClt,
         targetMin: presTarget,
         normalWorkedMin: presNorm,
-        baseAlerts: baseAlerts.filter((a) => a.code !== 'feriado'),
-        alerts: baseAlerts
+        baseAlerts: baseAlerts.filter((a) => a.code !== 'feriado' && a.code !== 'interjornada-art66'),
+        alerts: baseAlerts.filter((a) => a.code !== 'interjornada-art66')
       });
     });
 
+    // Em escala 12x36, dias sem batida são dias naturais de folga da escala (não são marcados como "Dia útil sem registro" nem recebem Home Office).
     const isEligibleUnpunchedWeekday = (d) => (
-      !d.isSpecialDay &&
+      !profile.is12x36 &&
+      !d.isWeekend &&
+      !d.isHoliday &&
       !d.isPresencialWorkedDay &&
       (d.punchCount === 0 || d.isPostMidnightContinuation) &&
       !d.justificativa &&
       (!d.dateIso || d.dateIso <= todayIso)
     );
 
-    // 1. Aplica Home Office (8h) quando ligado, ou marca dia útil sem registro quando desligado
+    const hoTargetMin = profile.weekdayTargetMin || DAILY_TARGET_MIN;
+    const hoLabelHours = hoTargetMin === 480 ? '8h' : formatMin(hoTargetMin);
+
+    // 1. Aplica Home Office quando ligado, ou marca dia útil sem registro quando desligado
     const step1 = resetList.map((d) => {
       if (!isEligibleUnpunchedWeekday(d)) return d;
       const nextAlerts = d.alerts.slice();
       if (presumeHomeOffice) {
         nextAlerts.push({
           code: 'home-office',
-          label: 'Home Office presumido (8h)',
-          tip: 'Dia útil sem batida e sem justificativa: jornada ordinária de 08:00 presumida por opção do usuário.'
+          label: `Home Office presumido (${hoLabelHours})`,
+          tip: `Dia útil sem batida e sem justificativa: jornada ordinária de ${formatMin(hoTargetMin)} presumida por opção do usuário.`
         });
         return Object.assign({}, d, {
           isWorkedDay: true,
           isHomeOfficeDay: true,
           isUnregisteredWeekday: false,
-          cltWorkedMin: DAILY_TARGET_MIN,
-          targetMin: DAILY_TARGET_MIN,
-          normalWorkedMin: DAILY_TARGET_MIN,
+          cltWorkedMin: hoTargetMin,
+          targetMin: hoTargetMin,
+          normalWorkedMin: hoTargetMin,
           alerts: nextAlerts
         });
       }
@@ -964,10 +1191,12 @@ window.JEPessoasSptCltCalc = (function () {
       });
     });
 
-    // 2. Avalia sequência de dias trabalhados consecutivos (> 6 dias) e trabalho em domingo sem folga identificada,
-    //    considerando a continuidade com o mês anterior quando `initialStreak` e `prevDateIso` são fornecidos.
+    // 2. Avalia sequência de dias trabalhados consecutivos (> 6 dias), trabalho em domingo sem folga identificada (CLT art. 67; OJ 410 TST)
+    //    e descanso interjornada < 11h (CLT art. 66), considerando a virada de mês.
     let streak = typeof options.initialStreak === 'number' && options.initialStreak > 0 ? options.initialStreak : 0;
     let lastIso = options.prevDateIso || '';
+    let prevWorkedDateIso = options.prevWorkedDateIso || '';
+    let prevShiftExitMin = typeof options.prevShiftExitMin === 'number' ? options.prevShiftExitMin : null;
 
     const finalDays = step1.map((d, idx) => {
       if (d.dateIso && lastIso && !areConsecutiveIsoDates(lastIso, d.dateIso)) {
@@ -983,11 +1212,42 @@ window.JEPessoasSptCltCalc = (function () {
         streak = 0;
       }
 
+      const nextAlerts = d.alerts.slice();
+      let hasArt66InterjornadaAlert = false;
+      let interjornadaRestMin = null;
+
+      // F2 — CLT art. 66: menos de 11h (660 min) entre a última saída de um dia e a primeira entrada do dia seguinte
+      if (
+        d.isPresencialWorkedDay &&
+        !d.isPostMidnightContinuation &&
+        typeof d.firstEntryMin === 'number' &&
+        prevWorkedDateIso &&
+        typeof prevShiftExitMin === 'number' &&
+        d.dateIso
+      ) {
+        const dayGap = diffIsoDays(prevWorkedDateIso, d.dateIso);
+        if (dayGap === 1) {
+          const restMin = (1440 - prevShiftExitMin) + d.firstEntryMin;
+          interjornadaRestMin = restMin;
+          if (restMin >= 0 && restMin < MIN_INTERJORNADA_MIN) {
+            hasArt66InterjornadaAlert = true;
+            nextAlerts.push({
+              code: 'interjornada-art66',
+              label: `Interjornada ${formatMin(restMin)} (<11h art. 66)`,
+              tip: `Intervalo interjornada de ${formatMin(restMin)} entre a última saída do dia anterior e a primeira entrada deste dia é inferior ao mínimo legal de 11h (CLT art. 66). Alerta de fiscalização: não altera os totais.`
+            });
+          }
+        }
+      }
+
+      if (d.isPresencialWorkedDay && !d.isPostMidnightContinuation && typeof d.effectiveShiftExitMin === 'number' && d.dateIso) {
+        prevWorkedDateIso = d.dateIso;
+        prevShiftExitMin = d.effectiveShiftExitMin;
+      }
+
       const workedOnSunday = d.dayOfWeek === 0 && d.isWorkedDay;
-      // Verifica se houve domingo trabalhado sem folga identificada na semana (6 dias consecutivos anteriores ou posteriores)
       let sundayWithoutFolga = false;
       if (workedOnSunday) {
-        // Verifica quantos dias sem trabalho existem nos próximos 6 dias (ou nos 6 dias anteriores se no fim da lista)
         const windowIndices = [];
         for (let k = idx + 1; k <= Math.min(step1.length - 1, idx + 6); k += 1) {
           if (!step1[k].dateIso || step1[k].dateIso <= todayIso) {
@@ -1002,8 +1262,9 @@ window.JEPessoasSptCltCalc = (function () {
         }
       }
 
+      let hasDsrStreakAlert = false;
       if (streak > 6 || workedOnSunday) {
-        const nextAlerts = d.alerts.slice();
+        hasDsrStreakAlert = true;
         const reason = streak > 6
           ? `${streak}º dia consecutivo trabalhado sem folga identificada`
           : (sundayWithoutFolga
@@ -1014,32 +1275,39 @@ window.JEPessoasSptCltCalc = (function () {
           label: streak > 6 ? `>6d seguidos (${streak}d)` : 'Dom. trabalhado (DSR)',
           tip: `Trabalho em domingo / >6 dias consecutivos sem folga identificada (CLT art. 67; OJ 410 TST) — ${reason}. Não altera os totais.`
         });
-        return Object.assign({}, d, {
-          hasDsrStreakAlert: true,
-          consecutiveWorkDays: streak,
-          alerts: nextAlerts
-        });
       }
 
       return Object.assign({}, d, {
-        consecutiveWorkDays: streak
+        hasDsrStreakAlert,
+        hasArt66InterjornadaAlert,
+        interjornadaRestMin,
+        consecutiveWorkDays: streak,
+        alerts: nextAlerts
       });
     });
 
     finalDays._endingStreak = streak;
     finalDays._endingDateIso = lastIso;
+    finalDays._endingWorkedDateIso = prevWorkedDateIso;
+    finalDays._endingShiftExitMin = prevShiftExitMin;
     return finalDays;
   }
 
   function summarizeMonthClt(days, meta = {}) {
+    const profile = getJourneyProfile(meta.journeyProfile || meta.profileId);
     const resolvedDays = resolveHomeOfficeAndDsr(Array.isArray(days) ? days : [], {
       presumeHomeOffice: !!meta.presumeHomeOffice,
       deductAutoLunchOnSpecialDays: meta.deductAutoLunchOnSpecialDays !== undefined ? !!meta.deductAutoLunchOnSpecialDays : true,
       customHolidays: meta.customHolidays,
       toleranceMin: meta.toleranceMin,
+      journeyProfile: profile,
+      apply5MinPerPunchTolerance: !!meta.apply5MinPerPunchTolerance,
+      referenceTimes: meta.referenceTimes,
       todayIso: meta.todayIso,
       initialStreak: meta.initialStreak || 0,
-      prevDateIso: meta.prevDateIso || ''
+      prevDateIso: meta.prevDateIso || '',
+      prevWorkedDateIso: meta.prevWorkedDateIso || '',
+      prevShiftExitMin: typeof meta.prevShiftExitMin === 'number' ? meta.prevShiftExitMin : null
     });
 
     let workedDays = 0;
@@ -1047,6 +1315,9 @@ window.JEPessoasSptCltCalc = (function () {
     let workedWeekdays = 0;
     let homeOfficeDays = 0;
     let dsrAlertDays = 0;
+    let art71_1Days = 0;
+    let art66InterjornadaDays = 0;
+    let nightWorkDays = 0;
     let workedWeekendDays = 0;
     let weekdaysInPeriod = 0;
     let weekdaysWithoutRecord = 0;
@@ -1060,6 +1331,8 @@ window.JEPessoasSptCltCalc = (function () {
     let he100BrutoMin = 0;
     let excedenteBrutoMin = 0;
     let debitoBhBrutoMin = 0;
+    let nightRealMin = 0;
+    let nightReducedMin = 0;
     let intervaloCurtoDays = 0;
     let almocoAutoDays = 0;
     let batidaImparDays = 0;
@@ -1073,20 +1346,32 @@ window.JEPessoasSptCltCalc = (function () {
 
     const enrichedDays = resolvedDays.map((d) => {
       if (d.justificativa) justifiedDays += 1;
-      if (!d.isSpecialDay) {
+      if (!d.isWeekend && !d.isHoliday) {
         weekdaysInPeriod += 1;
-        if (!d.isPresencialWorkedDay && (d.punchCount === 0 || d.isPostMidnightContinuation) && !d.justificativa && (!d.dateIso || d.dateIso <= todayIso)) {
+        if (
+          !profile.is12x36 &&
+          !d.isPresencialWorkedDay &&
+          (d.punchCount === 0 || d.isPostMidnightContinuation) &&
+          !d.justificativa &&
+          (!d.dateIso || d.dateIso <= todayIso)
+        ) {
           weekdaysWithoutRecord += 1;
         }
       }
       if (d.hasDsrStreakAlert) {
         dsrAlertDays += 1;
       }
+      if (d.hasArt71_1Alert) {
+        art71_1Days += 1;
+      }
+      if (d.hasArt66InterjornadaAlert) {
+        art66InterjornadaDays += 1;
+      }
       if (d.isWorkedDay) {
         workedDays += 1;
         if (d.isHomeOfficeDay) {
           homeOfficeDays += 1;
-        } else if (d.isSpecialDay) {
+        } else if (d.isSpecialDay || (d.isWeekend && !profile.is12x36 && profile.saturdayTargetMin === 0)) {
           presencialWorkedDays += 1;
           workedWeekendDays += 1;
         } else {
@@ -1102,6 +1387,11 @@ window.JEPessoasSptCltCalc = (function () {
         he100BrutoMin += d.he100Min || 0;
         excedenteBrutoMin += d.excedenteMin || 0;
         debitoBhBrutoMin += d.debitoBhMin || 0;
+        if ((d.nightRealMin || 0) > 0) {
+          nightWorkDays += 1;
+          nightRealMin += d.nightRealMin || 0;
+          nightReducedMin += d.nightReducedMin || 0;
+        }
         runningBh += d.deltaBhMin || 0;
         runningHe100 += d.he100Min || 0;
         runningTotalBalance += d.deltaMin || 0;
@@ -1136,25 +1426,31 @@ window.JEPessoasSptCltCalc = (function () {
     return {
       ymKey: meta.ymKey || (enrichedDays[0] && enrichedDays[0].ymKey) || '',
       monthLabel: meta.monthLabel || (enrichedDays[0] && enrichedDays[0].monthLabel) || '',
+      journeyProfileId: profile.id,
+      journeyProfileLabel: profile.label,
       presumeHomeOffice: !!meta.presumeHomeOffice,
       deductAutoLunchOnSpecialDays: meta.deductAutoLunchOnSpecialDays !== undefined ? !!meta.deductAutoLunchOnSpecialDays : true,
+      apply5MinPerPunchTolerance: !!meta.apply5MinPerPunchTolerance,
       workedDays,
       presencialWorkedDays,
       workedWeekdays,
       homeOfficeDays,
       dsrCompensatedDays: 0,
       dsrAlertDays,
+      art71_1Days,
+      art66InterjornadaDays,
+      nightWorkDays,
       workedWeekendDays,
       weekdaysInPeriod,
       weekdaysWithoutRecord,
-      unregisteredWeekdays: meta.presumeHomeOffice ? 0 : weekdaysWithoutRecord,
+      unregisteredWeekdays: (meta.presumeHomeOffice || profile.is12x36) ? 0 : weekdaysWithoutRecord,
       justifiedDays,
       sptTotalMin,
       cltWorkedMin,
       horasNormaisMin,
       lunchAdjustmentMin,
       expectedJourneyMin,
-      fullMonthReferenceMin: weekdaysInPeriod * DAILY_TARGET_MIN,
+      fullMonthReferenceMin: weekdaysInPeriod * (profile.weekdayTargetMin || DAILY_TARGET_MIN),
       he50BrutoMin,
       he100BrutoMin,
       excedenteBrutoMin,
@@ -1168,8 +1464,12 @@ window.JEPessoasSptCltCalc = (function () {
       aMenosLiquidoMin,
       saldoBhMesMin,
       saldoMesMin,
+      nightRealMin,
+      nightReducedMin,
       endingStreak: resolvedDays._endingStreak || 0,
       endingDateIso: resolvedDays._endingDateIso || '',
+      endingWorkedDateIso: resolvedDays._endingWorkedDateIso || '',
+      endingShiftExitMin: typeof resolvedDays._endingShiftExitMin === 'number' ? resolvedDays._endingShiftExitMin : null,
       alerts: {
         intervaloCurtoDays,
         almocoAutoDays,
@@ -1179,6 +1479,9 @@ window.JEPessoasSptCltCalc = (function () {
         homeOfficeDays,
         dsrCompensatedDays: 0,
         dsrAlertDays,
+        art71_1Days,
+        art66InterjornadaDays,
+        nightWorkDays,
         weekdaysWithoutRecord
       },
       days: enrichedDays
@@ -1195,6 +1498,9 @@ window.JEPessoasSptCltCalc = (function () {
       homeOfficeDays: 0,
       dsrCompensatedDays: 0,
       dsrAlertDays: 0,
+      art71_1Days: 0,
+      art66InterjornadaDays: 0,
+      nightWorkDays: 0,
       workedWeekendDays: 0,
       weekdaysInPeriod: 0,
       weekdaysWithoutRecord: 0,
@@ -1218,6 +1524,8 @@ window.JEPessoasSptCltCalc = (function () {
       aMenosLiquidoMin: 0,
       saldoBhMesMin: 0,
       saldoMesMin: 0,
+      nightRealMin: 0,
+      nightReducedMin: 0,
       alerts: {
         intervaloCurtoDays: 0,
         almocoAutoDays: 0,
@@ -1227,6 +1535,9 @@ window.JEPessoasSptCltCalc = (function () {
         homeOfficeDays: 0,
         dsrCompensatedDays: 0,
         dsrAlertDays: 0,
+        art71_1Days: 0,
+        art66InterjornadaDays: 0,
+        nightWorkDays: 0,
         weekdaysWithoutRecord: 0
       }
     };
@@ -1236,6 +1547,9 @@ window.JEPessoasSptCltCalc = (function () {
       acc.workedWeekdays += m.workedWeekdays || 0;
       acc.homeOfficeDays += m.homeOfficeDays || 0;
       acc.dsrAlertDays += m.dsrAlertDays || 0;
+      acc.art71_1Days += m.art71_1Days || 0;
+      acc.art66InterjornadaDays += m.art66InterjornadaDays || 0;
+      acc.nightWorkDays += m.nightWorkDays || 0;
       acc.workedWeekendDays += m.workedWeekendDays || 0;
       acc.weekdaysInPeriod += m.weekdaysInPeriod || 0;
       acc.weekdaysWithoutRecord += m.weekdaysWithoutRecord || 0;
@@ -1259,6 +1573,8 @@ window.JEPessoasSptCltCalc = (function () {
       acc.aMenosLiquidoMin += m.aMenosLiquidoMin || 0;
       acc.saldoBhMesMin += m.saldoBhMesMin || 0;
       acc.saldoMesMin += m.saldoMesMin || 0;
+      acc.nightRealMin += m.nightRealMin || 0;
+      acc.nightReducedMin += m.nightReducedMin || 0;
       if (m.alerts) {
         acc.alerts.intervaloCurtoDays += m.alerts.intervaloCurtoDays || 0;
         acc.alerts.almocoAutoDays += m.alerts.almocoAutoDays || 0;
@@ -1267,6 +1583,9 @@ window.JEPessoasSptCltCalc = (function () {
         acc.alerts.fdsDays += m.alerts.fdsDays || 0;
         acc.alerts.homeOfficeDays += m.alerts.homeOfficeDays || 0;
         acc.alerts.dsrAlertDays += m.alerts.dsrAlertDays || 0;
+        acc.alerts.art71_1Days += m.alerts.art71_1Days || 0;
+        acc.alerts.art66InterjornadaDays += m.alerts.art66InterjornadaDays || 0;
+        acc.alerts.nightWorkDays += m.alerts.nightWorkDays || 0;
         acc.alerts.weekdaysWithoutRecord += m.alerts.weekdaysWithoutRecord || 0;
       }
     });
@@ -1282,9 +1601,25 @@ window.JEPessoasSptCltCalc = (function () {
     return unit;
   }
 
+  function resolveWorkerJourneyProfile(worker, options = {}, report = null) {
+    const map = (options && options.journeyProfilesByContract)
+      || (report && report.journeyProfilesByContract)
+      || null;
+    const contractKey = String((worker && worker.contrato) || '').trim();
+    if (map && typeof map === 'object') {
+      if (contractKey && map[contractKey]) return getJourneyProfile(map[contractKey]);
+      if (map.__DEFAULT__) return getJourneyProfile(map.__DEFAULT__);
+    }
+    const direct = (options && (options.journeyProfile || options.profileId))
+      || (worker && (worker.journeyProfileId || worker.journeyProfile))
+      || (report && (report.journeyProfileId || report.journeyProfile))
+      || DEFAULT_JOURNEY_PROFILE_ID;
+    return getJourneyProfile(direct);
+  }
+
   /**
    * Recomputa todos os meses de cada prestador encadeando a sequência de dias trabalhados
-   * na virada entre meses consecutivos (`initialStreak` / `prevDateIso`).
+   * e a última saída do mês anterior na virada entre meses consecutivos (`initialStreak`, `prevDateIso`, `prevWorkedDateIso`, `prevShiftExitMin`).
    */
   function recomputeReportWithOptions(report, options = {}) {
     if (!report || !Array.isArray(report.workers)) return report;
@@ -1293,28 +1628,49 @@ window.JEPessoasSptCltCalc = (function () {
       ? !!options.deductAutoLunchOnSpecialDays
       : (report.deductAutoLunchOnSpecialDays !== undefined ? !!report.deductAutoLunchOnSpecialDays : true);
     const customHolidays = options.customHolidays !== undefined ? options.customHolidays : (report.customHolidays || '');
+    const apply5MinPerPunchTolerance = options.apply5MinPerPunchTolerance !== undefined
+      ? !!options.apply5MinPerPunchTolerance
+      : !!report.apply5MinPerPunchTolerance;
+    const referenceTimes = options.referenceTimes !== undefined ? options.referenceTimes : (report.referenceTimes || '');
+    const journeyProfilesByContract = Object.assign(
+      {},
+      (report && report.journeyProfilesByContract) || {},
+      (options && options.journeyProfilesByContract) || {}
+    );
 
     const nextWorkers = report.workers.map((w) => {
+      const workerProfile = resolveWorkerJourneyProfile(w, Object.assign({}, options, { journeyProfilesByContract }), report);
       let runningStreak = 0;
       let lastDateIso = '';
+      let prevWorkedDateIso = '';
+      let prevShiftExitMin = null;
       const sortedMonths = (w.months || []).slice().sort((a, b) => String(a.ymKey || '').localeCompare(String(b.ymKey || '')));
       const nextMonths = sortedMonths.map((m) => {
         if (m.fetchError) return m;
         const summary = summarizeMonthClt(m.days || [], {
           ymKey: m.ymKey,
           monthLabel: m.monthLabel,
+          journeyProfile: workerProfile,
           presumeHomeOffice,
           deductAutoLunchOnSpecialDays,
           customHolidays,
+          apply5MinPerPunchTolerance,
+          referenceTimes,
           todayIso: options.todayIso,
           initialStreak: runningStreak,
-          prevDateIso: lastDateIso
+          prevDateIso: lastDateIso,
+          prevWorkedDateIso,
+          prevShiftExitMin
         });
         runningStreak = summary.endingStreak || 0;
         lastDateIso = summary.endingDateIso || '';
+        prevWorkedDateIso = summary.endingWorkedDateIso || prevWorkedDateIso;
+        prevShiftExitMin = typeof summary.endingShiftExitMin === 'number' ? summary.endingShiftExitMin : prevShiftExitMin;
         return summary;
       });
       return Object.assign({}, w, {
+        journeyProfileId: workerProfile.id,
+        journeyProfileLabel: workerProfile.label,
         months: nextMonths,
         totals: summarizeWorkerMonths(nextMonths.filter((m) => !m.fetchError))
       });
@@ -1323,6 +1679,9 @@ window.JEPessoasSptCltCalc = (function () {
       presumeHomeOffice,
       deductAutoLunchOnSpecialDays,
       customHolidays,
+      apply5MinPerPunchTolerance,
+      referenceTimes,
+      journeyProfilesByContract,
       workers: nextWorkers,
       unitTotals: summarizeUnitReport(nextWorkers)
     });
@@ -1331,10 +1690,23 @@ window.JEPessoasSptCltCalc = (function () {
   return {
     DAILY_TARGET_MIN,
     DAILY_TOLERANCE_MIN,
+    PUNCH_TOLERANCE_MIN,
     MIN_LUNCH_SHIFT_MIN,
     MIN_LUNCH_MIN,
+    SHORT_SHIFT_MIN_FOR_15M_BREAK,
+    MIN_SHORT_BREAK_MIN,
+    MIN_INTERJORNADA_MIN,
+    NIGHT_START_MIN,
+    NIGHT_END_MIN,
     MAX_DAILY_OVERTIME_MIN,
+    DEFAULT_JOURNEY_PROFILE_ID,
+    JOURNEY_PROFILES,
     DEFAULT_FIXED_HOLIDAYS,
+    getJourneyProfile,
+    listJourneyProfiles,
+    parseReferenceTimes,
+    computeNightOverlapInDay,
+    toReducedNightMin,
     getLocalTodayIso,
     computeEasterSunday,
     computeGoodFridayMmDd,

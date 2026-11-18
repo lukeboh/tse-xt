@@ -724,7 +724,8 @@ function createSptReportModalHarness(fetchHandler, store = {}) {
     'je-spt-rep-team-summary', 'je-spt-rep-worker-search', 'je-spt-rep-all',
     'je-spt-rep-none', 'je-spt-rep-team-list', 'je-spt-rep-ho-wrap',
     'je-spt-rep-homeoffice', 'je-spt-rep-special-lunch-wrap',
-    'je-spt-rep-special-lunch', 'je-spt-rep-holidays', 'je-spt-rep-run',
+    'je-spt-rep-special-lunch', 'je-spt-rep-holidays', 'je-spt-rep-profile',
+    'je-spt-rep-punch5min', 'je-spt-rep-punch5min-wrap', 'je-spt-rep-run',
     'je-spt-rep-csv', 'je-spt-rep-print', 'je-spt-rep-clear', 'je-spt-rep-progress',
     'je-spt-rep-progress-fill', 'je-spt-rep-progress-label',
     'je-spt-rep-cancel', 'je-spt-rep-validation', 'je-spt-rep-body', 'je-spt-only-active-days'
@@ -1524,6 +1525,236 @@ test('E2 e E3 — background.js: onInstalled não recarrega SPT em update nem ab
   assert.equal(respValid.status, 'reloaded');
   assert.deepEqual(reloadedTabs, [20]);
 });
+
+// ---------------------------------------------------------------------------
+// BLOCO F — Regras de jornada parametrizáveis e alertas normativos (F1 a F3)
+// ---------------------------------------------------------------------------
+
+test('F1 — perfis de jornada por contrato: 8h (40h), 6h (30h), 8h48 (44h), 44h com sábado (8h+4h) e 12x36 (com Súmula 444 em feriado) + persistência por contrato no relatório/anexo/PDF/CSV', async () => {
+  // 1) Perfil padrão "8h_40h" (480 min Seg-Sex, 0 min Sáb/Dom/Fer)
+  const d8h = C.analyzeDayClt({ date: '05/10/2026', punches: ['08:00', '12:00', '13:00', '17:30', '', ''], total: '08:30:00' }, null, { journeyProfile: '8h_40h' });
+  assert.equal(d8h.targetMin, 480);
+  assert.equal(d8h.he50Min, 30);
+
+  // 2) Perfil "6h_30h" (360 min Seg-Sex): trabalhar 06:00 (360m) = 0 HE / 0 Débito; trabalhar 06:40 (400m) = +40m HE 50%; trabalhar 05:20 (320m) = -40m Débito BH
+  const d6hExact = C.analyzeDayClt({ date: '05/10/2026', punches: ['12:00', '18:00', '', '', '', ''], total: '06:00:00' }, null, { journeyProfile: '6h_30h' });
+  assert.equal(d6hExact.targetMin, 360);
+  assert.equal(d6hExact.normalWorkedMin, 360);
+  assert.equal(d6hExact.he50Min, 0);
+  assert.equal(d6hExact.debitoBhMin, 0);
+
+  const d6hOver = C.analyzeDayClt({ date: '06/10/2026', punches: ['12:00', '15:00', '16:00', '19:40', '', ''], total: '06:40:00' }, null, { journeyProfile: '6h_30h' });
+  assert.equal(d6hOver.targetMin, 360);
+  assert.equal(d6hOver.he50Min, 40);
+
+  const d6hUnder = C.analyzeDayClt({ date: '07/10/2026', punches: ['12:00', '17:20', '', '', '', ''], total: '05:20:00' }, null, { journeyProfile: '6h_30h' });
+  assert.equal(d6hUnder.targetMin, 360);
+  assert.equal(d6hUnder.debitoBhMin, 40);
+
+  // 3) Perfil "8h48_44h" (528 min Seg-Sex): trabalhar 08:48 (528m) = normal; trabalhar 08:00 (480m) = -48m Débito BH; trabalhar 09:18 (558m) = +30m HE 50%
+  const d848Exact = C.analyzeDayClt({ date: '05/10/2026', punches: ['08:00', '12:00', '13:00', '17:48', '', ''], total: '08:48:00' }, null, { journeyProfile: '8h48_44h' });
+  assert.equal(d848Exact.targetMin, 528);
+  assert.equal(d848Exact.he50Min, 0);
+  assert.equal(d848Exact.debitoBhMin, 0);
+
+  const d848Under = C.analyzeDayClt({ date: '06/10/2026', punches: ['08:00', '12:00', '13:00', '17:00', '', ''], total: '08:00:00' }, null, { journeyProfile: '8h48_44h' });
+  assert.equal(d848Under.targetMin, 528);
+  assert.equal(d848Under.debitoBhMin, 48);
+
+  const d848Over = C.analyzeDayClt({ date: '07/10/2026', punches: ['08:00', '12:00', '13:00', '18:18', '', ''], total: '09:18:00' }, null, { journeyProfile: '8h48_44h' });
+  assert.equal(d848Over.targetMin, 528);
+  assert.equal(d848Over.he50Min, 30);
+
+  // 4) Perfil "44h_sab" (480 min Seg-Sex + 240 min Sábado): sábado tem meta de 4h (240m); trabalhar 05:00 no sábado (10/10/2026) gera 04:00 normal e +01:00 HE 50% (e domingo continua 100% HE 100%)
+  const d44Sab = C.analyzeDayClt({ date: '10/10/2026', punches: ['08:00', '13:00', '', '', '', ''], total: '05:00:00' }, null, { journeyProfile: '44h_sab' });
+  assert.equal(d44Sab.isSaturday, true);
+  assert.equal(d44Sab.isSpecialDay, false);
+  assert.equal(d44Sab.targetMin, 240);
+  assert.equal(d44Sab.normalWorkedMin, 240);
+  assert.equal(d44Sab.he50Min, 60);
+  assert.equal(d44Sab.he100Min, 0);
+
+  const d44Dom = C.analyzeDayClt({ date: '11/10/2026', punches: ['08:00', '12:00', '', '', '', ''], total: '04:00:00' }, null, { journeyProfile: '44h_sab' });
+  assert.equal(d44Dom.isSpecialDay, true);
+  assert.equal(d44Dom.targetMin, 0);
+  assert.equal(d44Dom.he100Min, 240);
+
+  // 5) Perfil "12x36": meta de 12h (720m) nos dias com batida (inclusive sábado/domingo normais), sem débito nos dias de folga, e feriado trabalhado (12/10/2026) como 100% HE 100% (Súmula 444 TST)
+  const days12x36 = [
+    C.analyzeDayClt({ date: '10/10/2026', punches: ['07:00', '13:00', '14:00', '20:00', '', ''], total: '12:00:00' }, null, { journeyProfile: '12x36' }), // Sáb (plantão normal 12h)
+    C.analyzeDayClt({ date: '11/10/2026', punches: ['', '', '', '', '', ''], total: '' }, null, { journeyProfile: '12x36' }), // Dom (folga 36h)
+    C.analyzeDayClt({ date: '12/10/2026', punches: ['07:00', '13:00', '14:00', '20:00', '', ''], total: '12:00:00' }, null, { journeyProfile: '12x36' }), // Seg Feriado 12/10 (Súmula 444 -> 12h HE 100%)
+    C.analyzeDayClt({ date: '13/10/2026', punches: ['', '', '', '', '', ''], total: '' }, null, { journeyProfile: '12x36' })  // Ter (dia útil de folga da escala 12x36: sem débito e sem dia sem registro)
+  ];
+  const m12x36 = C.summarizeMonthClt(days12x36, { ymKey: '2026-10', monthLabel: '10/2026', journeyProfile: '12x36', todayIso: '2026-11-18' });
+  assert.equal(m12x36.days[0].targetMin, 720);
+  assert.equal(m12x36.days[0].normalWorkedMin, 720);
+  assert.equal(m12x36.days[0].he100Min, 0);
+  assert.equal(m12x36.days[2].isHoliday, true);
+  assert.equal(m12x36.days[2].targetMin, 0);
+  assert.equal(m12x36.days[2].he100Min, 720); // 12h em HE 100% (Súmula 444 TST)
+  assert.equal(m12x36.unregisteredWeekdays, 0);
+  assert.equal(m12x36.debitoBhBrutoMin, 0);
+
+  // 6) Persistência por contrato no modal e exibição no cabeçalho, anexo, PDF e CSV
+  const harness = createSptReportModalHarness(async (url, opts = {}) => {
+    if (url === '/spt-consultafrequencia/gestao') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    const params = new URLSearchParams(opts.body || '');
+    if (params.get('cmd') === 'cmdConsultar') {
+      return { ok: true, status: 200, text: async () => SPT_CONSULTA_HTML_FIXTURE };
+    }
+    return {
+      ok: true,
+      status: 200,
+      text: async () => `<table id="maintable"><tbody>
+        <tr><td>05/10/2026</td><td>12:00</td><td>18:00</td><td></td><td></td><td></td><td></td><td></td><td>06:00:00</td></tr>
+      </tbody></table>`
+    };
+  }, {
+    je_xt_spt_report_prefs_v2: {
+      unitId: '1184',
+      fromIso: '2026-10-01',
+      toIso: '2026-10-31',
+      contrato: '2862',
+      hoDefaultMigratedV2: true
+    }
+  });
+
+  await harness.api.open();
+  // Muda o seletor de perfil do contrato 2862 para "6h_30h"
+  const profSelect = harness.elements.get('#je-spt-rep-profile');
+  profSelect.value = '6h_30h';
+  await profSelect.handlers.change({ target: profSelect });
+
+  assert.equal(harness.store.je_xt_spt_report_prefs_v2.journeyProfilesByContract['2862'], '6h_30h');
+
+  await harness.elements.get('#je-spt-rep-run').handlers.click();
+  const saved = harness.store.je_xt_spt_report_v2;
+  assert.equal(saved.workers[0].journeyProfileId, '6h_30h');
+  assert.equal(saved.workers[0].months[0].horasNormaisMin, 360);
+  assert.equal(saved.workers[0].months[0].debitoBhBrutoMin, 0);
+
+  const bodyHtml = harness.elements.get('#je-spt-rep-body').innerHTML;
+  assert.match(bodyHtml, /6h Seg–Sex \(30h\)/);
+  assert.match(bodyHtml, /Perfil de jornada \(por contrato\)/);
+
+  harness.elements.get('#je-spt-rep-csv').handlers.click();
+  assert.match(harness.getExportedCsv(), /6h Seg–Sex \(30h\)/);
+});
+
+test('F2 — alertas normativos (arts. 71 §1º, 66 e 73) emitem selo no dia e contagem no consolidado, tratam virada de meia-noite/mês e NÃO alteram nenhum total', () => {
+  // Mês 09/2026 termina em 30/09/2026 com saída às 22:30 (30 min noturnos)
+  const sepDays = [
+    C.analyzeDayClt({ date: '30/09/2026', punches: ['13:30', '17:30', '18:30', '22:30', '', ''], total: '08:00:00' })
+  ];
+  // Mês 10/2026:
+  // - 01/10/2026: entrada às 07:30 (apenas 9h00 após as 22:30 de 30/09 -> Alerta art. 66 interjornada < 11h na virada do mês!)
+  // - 02/10/2026: jornada contínua de 05:00 (13:00 às 18:00) sem intervalo -> Alerta art. 71 §1º (>4h e <=6h sem 15m)
+  // - 25/10/2026: plantão que atravessa a meia-noite (14:13 às 23:59 com Total SPT 11:22:00 e continuação 00:00–02:35 em 26/10)
+  //   -> trabalha das 22:00 às 24:00 (120m) + 00:00 às 02:35 (155m) = 275m (04:35) noturnos reais (art. 73), sem duplicar em 26/10!
+  const rawOct25 = { date: '25/10/2026', punches: ['14:13', '23:59', '', '', '', ''], total: '11:22:00' };
+  const rawOct26 = { date: '26/10/2026', punches: ['00:00', '02:35', '', '', '', ''], total: '00:00' };
+  const octDays = [
+    C.analyzeDayClt({ date: '01/10/2026', punches: ['07:30', '12:00', '13:00', '16:30', '', ''], total: '08:00:00' }),
+    C.analyzeDayClt({ date: '02/10/2026', punches: ['13:00', '18:00', '', '', '', ''], total: '05:00:00' }),
+    C.analyzeDayClt(rawOct25, null),
+    C.analyzeDayClt(rawOct26, rawOct25)
+  ];
+
+  const report = C.recomputeReportWithOptions({
+    workers: [{
+      codigo: '1',
+      nome: 'Prestador Alertas',
+      months: [
+        { ymKey: '2026-09', monthLabel: '09/2026', days: sepDays },
+        { ymKey: '2026-10', monthLabel: '10/2026', days: octDays }
+      ]
+    }]
+  }, { presumeHomeOffice: false, todayIso: '2026-11-18' });
+
+  const [mSep, mOct] = report.workers[0].months;
+
+  // 1) Setembro: 30 min noturnos (22:00 às 22:30) e 34 min em hora reduzida (30 * 60 / 52.5 = 34.28 -> 34)
+  assert.equal(mSep.nightRealMin, 30);
+  assert.equal(mSep.nightReducedMin, 34);
+  assert.equal(mSep.cltWorkedMin, 480); // Não alterou o total trabalhado!
+
+  // 2) 01/10/2026: Alerta art. 66 (descanso de 9h00 = 540 min < 660 min entre 30/09 22:30 e 01/10 07:30)
+  const dOct01 = mOct.days[0];
+  assert.equal(dOct01.hasArt66InterjornadaAlert, true);
+  assert.equal(dOct01.interjornadaRestMin, 540);
+  assert.ok(dOct01.alerts.some((a) => a.code === 'interjornada-art66'));
+  assert.equal(dOct01.cltWorkedMin, 480);
+
+  // 3) 02/10/2026: Alerta art. 71 §1º (5h = 300 min, entre 4h e 6h sem intervalo de 15 min)
+  const dOct02 = mOct.days[1];
+  assert.equal(dOct02.hasArt71_1Alert, true);
+  assert.ok(dOct02.alerts.some((a) => a.code === 'art71-15min'));
+  assert.equal(dOct02.cltWorkedMin, 300); // Não descontou 15 min do total!
+
+  // 4) 25/10/2026 → 26/10/2026 (virada de meia-noite 23:59 → 00:00):
+  //    22:00..24:00 (120m) + 00:00..02:35 (155m) = 275m noturnos reais (04:35), reduzida = round(275 * 60 / 52.5) = 314m (05:14)
+  const dOct25 = mOct.days[2];
+  const dOct26 = mOct.days[3];
+  assert.equal(dOct25.nightRealMin, 275);
+  assert.equal(dOct25.nightReducedMin, 314);
+  assert.ok(dOct25.alerts.some((a) => a.code === 'noturno-art73'));
+  assert.equal(dOct26.nightRealMin, 0); // Não duplica na continuação pós-00h
+  assert.equal(dOct25.cltWorkedMin, 682); // 11:22 inalterado
+
+  // Contagens no consolidado mensal de out/2026
+  assert.equal(mOct.alerts.art66InterjornadaDays, 1);
+  assert.equal(mOct.alerts.art71_1Days, 1);
+  assert.equal(mOct.alerts.nightWorkDays, 1);
+  assert.equal(mOct.nightRealMin, 275);
+  assert.equal(mOct.nightReducedMin, 314);
+});
+
+test('F3 — tolerância por batida (art. 58 §1º): desligada por padrão; quando ligada com horário de referência no perfil, exige <= 5 min em cada marcação', () => {
+  // Dia com total de 08:00 exatas (480m), mas entrada atrasada em 8 min (08:08) e saída atrasada em 8 min (17:08)
+  // ou total de 07:54 (-6 min no dia), com entrada às 08:06 (+6 min > 5 min da referência 08:00) e saída às 17:00 (0 min)
+  const rawDay = {
+    date: '06/10/2026',
+    punches: ['08:06', '12:00', '13:00', '17:00', '', ''],
+    justificativa: '',
+    total: '07:54:00'
+  };
+
+  // 1) Padrão (apply5MinPerPunchTolerance = false): variação diária de -6 min está dentro de ±10 min -> jornada normal 08:00 (0 débito)
+  const dDefault = C.analyzeDayClt(rawDay, null, {
+    referenceTimes: ['08:00', '12:00', '13:00', '17:00'],
+    apply5MinPerPunchTolerance: false
+  });
+  assert.equal(dDefault.withinTolerance, true);
+  assert.equal(dDefault.debitoBhMin, 0);
+
+  // 2) Com apply5MinPerPunchTolerance = true e referência ['08:00','12:00','13:00','17:00']:
+  //    a 1ª batida (08:06) variou 6 min (> 5 min), logo a tolerância não se aplica e gera 6 min de Débito BH
+  const dStrict = C.analyzeDayClt(rawDay, null, {
+    referenceTimes: ['08:00', '12:00', '13:00', '17:00'],
+    apply5MinPerPunchTolerance: true
+  });
+  assert.equal(dStrict.punchWithin5Min, false);
+  assert.equal(dStrict.withinTolerance, false);
+  assert.equal(dStrict.debitoBhMin, 6);
+
+  // 3) Se todas as batidas variarem no máximo 5 min (ex.: 08:04 e 16:58 -> total 07:54 = -6 min), a tolerância diária de 10 min continua valendo
+  const dStrictOk = C.analyzeDayClt({
+    date: '06/10/2026',
+    punches: ['08:04', '12:00', '13:00', '16:58', '', ''],
+    justificativa: '',
+    total: '07:54:00'
+  }, null, {
+    referenceTimes: ['08:00', '12:00', '13:00', '17:00'],
+    apply5MinPerPunchTolerance: true
+  });
+  assert.equal(dStrictOk.punchWithin5Min, true);
+  assert.equal(dStrictOk.withinTolerance, true);
+  assert.equal(dStrictOk.debitoBhMin, 0);
+});
+
 
 
 
