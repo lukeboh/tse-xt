@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.15-Snapshot';
+  const CURRENT_VERSION = '1.2.16-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.16-Snapshot',
+      date: '2026-11-18',
+      title: 'SPT: coluna HE Líquida (após Débitos), tooltips em todos os campos e Anexo de Interpretação',
+      features: [
+        'Renomeada a coluna final da consolidação mensal de "Saldo Total" para "HE Líquida (após Débitos)", deixando explícito o desconto automático do Débito BH dos dias úteis sobre as Horas Extras (1ª etapa: HE 50% − Débito BH = Saldo BH Úteis; 2ª etapa: Saldo BH Úteis + HE 100% = HE Líquida).',
+        'Adicionados tooltips detalhados (title) em todos os filtros, botões, cards de KPI, cabeçalhos de tabela e células de dados (modos TSE XT / Digi e SPT Puro, visões Mensal e Diária).',
+        'Incluído ao final do relatório (em tela e na impressão/PDF) o "Anexo — Guia de Interpretação, Fórmulas e Regras de Apuração (TSE XT / Digi)" com dicionário de colunas, passo a passo do abatimento de débitos nas Horas Extras e resumo das regras CLT/contratuais.'
+      ]
+    },
     {
       version: '1.2.15-Snapshot',
       date: '2026-11-17',

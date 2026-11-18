@@ -1132,3 +1132,180 @@ body.je-xt-enabled.je-spt-login-page footer.bg-white p {
   color: #94a3b8 !important;
   letter-spacing: 0.05em !important;
 }
+
+/* ==========================================================================
+   Anexo de Interpretação, Fórmulas e Regras de Apuração (Tela e Impressão)
+   ========================================================================== */
+
+.je-spt-annex,
+.je-print-annex {
+  margin-top: 24px;
+  padding: 18px 20px;
+  border-radius: var(--je-radius-md);
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(10, 37, 64, 0.12);
+  color: #1e293b;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.je-spt-annex-header {
+  margin-bottom: 14px;
+}
+
+.je-spt-annex-title {
+  margin: 0 0 6px 0 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  letter-spacing: -0.01em;
+}
+
+.je-spt-annex-lead {
+  margin: 0 !important;
+  font-size: 12.5px !important;
+  color: #475569 !important;
+}
+
+.je-spt-annex-highlight {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--je-radius-sm);
+  background: rgba(0, 119, 255, 0.06);
+  border-left: 4px solid var(--je-primary);
+  color: #0f172a;
+}
+
+.je-spt-annex-highlight strong {
+  color: var(--je-primary-dark);
+}
+
+.je-spt-annex-highlight p {
+  margin: 6px 0 8px 0 !important;
+}
+
+.je-spt-annex-highlight ol {
+  margin: 0 !important;
+  padding-left: 20px !important;
+}
+
+.je-spt-annex-highlight li {
+  margin-bottom: 6px;
+}
+
+.je-spt-annex-highlight li:last-child {
+  margin-bottom: 0;
+}
+
+.je-spt-annex-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.je-spt-annex-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(10, 37, 64, 0.1);
+}
+
+.je-spt-annex-table th,
+.je-spt-annex-table td {
+  padding: 8px 12px !important;
+  text-align: left !important;
+  vertical-align: top !important;
+  border-bottom: 1px solid rgba(10, 37, 64, 0.08);
+  font-size: 12px !important;
+}
+
+.je-spt-annex-table th {
+  background: #eef2f7;
+  font-weight: 800 !important;
+  color: var(--je-primary-dark) !important;
+  text-transform: uppercase;
+  font-size: 11px !important;
+  letter-spacing: 0.03em;
+}
+
+.je-spt-annex-table td:first-child {
+  width: 185px;
+  white-space: nowrap;
+}
+
+.je-spt-annex-table td:nth-child(2) {
+  width: 220px;
+}
+
+.je-spt-annex-table code,
+.je-spt-annex-highlight code,
+.je-spt-annex-rule-card code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #0f172a;
+}
+
+.je-spt-annex-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.je-spt-annex-rule-card {
+  background: #ffffff;
+  border: 1px solid rgba(10, 37, 64, 0.09);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.je-spt-annex-rule-card strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--je-primary-dark);
+}
+
+.je-spt-annex-rule-card p {
+  margin: 0 !important;
+  font-size: 11.5px !important;
+  color: #475569 !important;
+}
+
+@media print {
+  .je-print-annex {
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #fafafa !important;
+    border: 1px solid #cbd5e1 !important;
+    font-size: 10px !important;
+  }
+
+  .je-print-annex .je-spt-annex-title {
+    font-size: 12.5px !important;
+  }
+
+  .je-print-annex .je-spt-annex-lead,
+  .je-print-annex .je-spt-annex-highlight,
+  .je-print-annex .je-spt-annex-table th,
+  .je-print-annex .je-spt-annex-table td,
+  .je-print-annex .je-spt-annex-rule-card p {
+    font-size: 9.5px !important;
+    line-height: 1.38 !important;
+  }
+
+  .je-print-annex .je-spt-annex-table th,
+  .je-print-annex .je-spt-annex-table td {
+    padding: 4px 7px !important;
+  }
+
+  .je-print-annex .je-spt-annex-rules {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}

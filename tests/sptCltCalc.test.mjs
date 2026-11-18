@@ -300,3 +300,34 @@ test('sptModernizer — estiliza a tela de logon do SPT no padrao do Meu Espaco'
   assert.match(cssSrc, /body\.je-xt-enabled\.je-spt-login-page \.card/);
   assert.match(cssSrc, /jeCardGlowPulse/);
 });
+
+test('summarizeMonthClt — desconta debito de horas normais das HE 50% e, se remanescente, das HE 100%', () => {
+  const days = [
+    // Seg 05/10/2026: trabalhou apenas 6h (09:00-15:00) -> Debito BH = 2h (120 min)
+    C.analyzeDayClt({ date: '05/10/2026', punches: ['09:00', '15:00', '', '', '', ''], total: '06:00:00' }),
+    // Ter 06/10/2026: trabalhou 8h30 liquidas (08:00-12:00 / 13:00-17:30) -> HE 50% = 30 min
+    C.analyzeDayClt({ date: '06/10/2026', punches: ['08:00', '12:00', '13:00', '17:30', '', ''], total: '08:30:00' }),
+    // Sab 10/10/2026: trabalhou 4h no sabado (08:00-12:00) -> HE 100% = 240 min
+    C.analyzeDayClt({ date: '10/10/2026', punches: ['08:00', '12:00', '', '', '', ''], total: '04:00:00' })
+  ];
+  const m = C.summarizeMonthClt(days, { ymKey: '2026-10', monthLabel: '10/2026', presumeHomeOffice: false });
+  assert.equal(m.he50BrutoMin, 30);
+  assert.equal(m.debitoBhBrutoMin, 120);
+  // 1a etapa: Saldo BH (Uteis) = 30 - 120 = -90 (-01:30)
+  assert.equal(m.saldoBhMesMin, -90);
+  assert.equal(m.he100BrutoMin, 240);
+  // 2a etapa: HE Liquida (apos Debitos) = -90 + 240 = +150 (+02:30)
+  assert.equal(m.saldoMesMin, 150);
+});
+
+test('sptReportModal — exibe coluna HE Liquida (apos Debitos), tooltips em todos os campos e Anexo de Interpretacao', () => {
+  const modalSrc = readFileSync(path.join(rootDir, 'content', 'modules', 'sptReportModal.js'), 'utf8');
+  const cssSrc = readFileSync(path.join(rootDir, 'content', 'spt-gestao.css'), 'utf8');
+  assert.match(modalSrc, /HE Líquida \(após Débitos\)/);
+  assert.match(modalSrc, /HE_Liquida_Apos_Debitos/);
+  assert.match(modalSrc, /function renderInterpretationAnnexHTML\(/);
+  assert.match(modalSrc, /Anexo — Guia de Interpretação, Fórmulas e Regras de Apuração/);
+  assert.match(modalSrc, /Como funciona o desconto de horas devidas \(Débito BH\) nas Horas Extras\?/);
+  assert.match(cssSrc, /\.je-spt-annex/);
+  assert.match(cssSrc, /\.je-print-annex/);
+});

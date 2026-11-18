@@ -1,5 +1,15 @@
 # Changelog — TSE XT
 
+## 1.2.16-Snapshot — 18/11/2026
+
+- **Coluna `HE Líquida (após Débitos)` no Relatório do SPT (`sptReportModal.js`)**:
+  - Renomeada a última coluna numérica da consolidação mensal de `Saldo Total` para **`HE Líquida (após Débitos)`** (na tela, na impressão/PDF e no CSV como `HE_Liquida_Apos_Debitos`) e adicionado o 6º card de KPI correspondente, tornando autoexplicativo que o **Débito BH** dos dias úteis (horas faltantes para completar `08:00/dia`) é descontado em 2 etapas: primeiro das **HE 50%** (`Saldo BH Úteis = HE 50% − Débito BH`) e, caso remanesça saldo negativo, das **HE 100%** (`HE Líquida = Saldo BH Úteis + HE 100%`).
+- **Tooltips (`title`) em todos os campos (`sptReportModal.js`)**:
+  - Adicionados tooltips explicativos em todos os campos de filtro, botões de ação, cards de KPI, mini-KPIs diários, cabeçalhos (`<th>`), células (`<td>`) e rodapés de totais (`<tfoot>`) nas visões Mensal e Diária (modos `TSE XT / Digi` e `SPT Puro`).
+- **Anexo de Interpretação no Relatório (`sptReportModal.js` e `spt-gestao.css`)**:
+  - Incluída ao final do relatório (tanto no modal em tela quanto no documento impresso/PDF) a seção **"Anexo — Guia de Interpretação, Fórmulas e Regras de Apuração (TSE XT / Digi)"**, documentando o desconto de horas devidas nas Horas Extras, o dicionário de todas as colunas/fórmulas e as 4 regras trabalhistas e contratuais aplicadas.
+- Verificação: **237 testes passando**.
+
 ## 1.2.15-Snapshot — 17/11/2026
 
 - **Ajuste de impressão na coluna `Dias` do consolidado mensal do SPT (`sptReportModal.js`)**: subtítulo de detalhamento (`u + ho + f + dsr`) quebrado em segunda linha para não invadir a coluna `Total SPT` no rodapé consolidado da unidade.
