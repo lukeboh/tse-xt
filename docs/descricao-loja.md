@@ -1,7 +1,7 @@
 # Chrome Web Store — TSE XT
 
 > Fonte de verdade de tudo que é preenchido no Developer Dashboard. Atualizar aqui a cada liberação (ver [roteiro-liberacao.md](roteiro-liberacao.md)) e copiar para a loja.
-> Versão de referência: **1.2.6** (13/11/2026)
+> Versão de referência: **1.3.0** (19/11/2026)
 
 ---
 
@@ -10,9 +10,9 @@
 Copiar o bloco abaixo inteiro. O campo da loja é texto puro (sem Markdown) e aceita até 16.000 caracteres.
 
 ```text
-✨ TSE XT — Usabilidade Moderna para todo o Meu Espaço do TSE (Versão 1.2.6)
+✨ TSE XT — Usabilidade Moderna para o Meu Espaço e o SPT do TSE (Versão 1.3.0)
 
-O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade de todo o portal Meu Espaço do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto) até as dezenas de telas do menu clássico, com painéis dedicados para Reembolso Farmacêutico e Gestão de Serviço Extraordinário.
+O TSE XT é uma extensão de produtividade desenvolvida para modernizar a interface visual e a usabilidade dos portais Meu Espaço e SPT — Consulta de Frequência do Tribunal Superior Eleitoral (TSE) — desde as telas de frequência (Espelho de Ponto Mensal e Alteração de Ponto), dezenas de telas do menu clássico, Reembolso Farmacêutico e Gestão de Serviço Extraordinário até o módulo dedicado de fiscalização de frequência de prestadores no SPT.
 
 Com design em Glassmorfismo Tátil, o TSE XT elimina telas em branco, calcula previsões de jornada em tempo real, audita saldos dia a dia e automatiza formulários complexos com total privacidade (100% no seu navegador).
 
@@ -110,8 +110,10 @@ Tenha clareza instantânea sobre sua jornada de trabalho, sem precisar fazer con
 • Sem limite fixo de meses; progresso e previsão de término durante as consultas.
 
 🏢 16. SPT — GESTÃO DE FREQUÊNCIA DE PRESTADORES & RELATÓRIO CONSOLIDADO (CLT)
-• Suporte dedicado ao portal SPT — Consulta de Frequência (spt-consultafrequencia.tse.jus.br), com interruptor independente no popup da extensão.
-• Combobox pesquisável de Unidades (busca instantânea por nome, sigla ou código), 5 KPIs CLT no espelho individual e Relatório Consolidado de Horas por Unidade (modos TSE XT / Digi e SPT Puro, coluna Dias úteis sem registro, alerta de domingo/>6d sem folga identificada, feriados CLT/DF editáveis, Anexo de Interpretação, CSV e impressão A4 paisagem).
+• Suporte dedicado ao portal SPT — Consulta de Frequência (spt-consultafrequencia.tse.jus.br), com tela de logon modernizada e interruptor independente no popup da extensão.
+• Combobox pesquisável de Unidades (busca instantânea por nome, sigla ou código), 5 KPIs CLT no espelho individual e Relatório Consolidado de Horas por Unidade (modos TSE XT / Digi e SPT Puro).
+• Perfis de jornada configuráveis por contrato (8h Seg–Sex, 6h Seg–Sex, 8h48 Seg–Sex, 44h com sábado e 12x36), opção de tolerância de 5 min por marcação (CLT art. 58 §1º), Home Office presumido desligado por padrão, coluna Dias úteis sem registro, alertas normativos informativos (CLT arts. 66, 67/OJ 410, 71 §1º e 73 com hora noturna reduzida 52m30s), feriados CLT/DF editáveis, Anexo de Interpretação, CSV e PDF A4 paisagem agrupado por prestador.
+• Tratamento explícito de falhas de consulta/sessão expirada com botão "Tentar novamente" e proteção contra recarregamento automático enquanto um relatório está sendo gerado.
 • Os dados de prestadores (nome, CPF, contrato, marcações de catraca e horas) são processados exclusivamente no navegador local, com expiração automática do relatório salvo em 7 dias e botão "Apagar relatório salvo".
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

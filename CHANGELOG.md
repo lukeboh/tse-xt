@@ -1,5 +1,22 @@
 # Changelog — TSE XT
 
+## 1.3.0 — 19/11/2026
+
+Liberação estável consolidando a expansão ao **SPT — Gestão de Frequência de Prestadores**, o popup multi-portal e a revisão completa de fiscalização CLT/Digisystem (`1.2.7-Snapshot` a `1.2.23-Snapshot`):
+
+- **Portal SPT — Gestão de Frequência (`spt-consultafrequencia.tse.jus.br`)**:
+  - Tela de logon no padrão Glassmorfismo + Boot Splash do Meu Espaço, tela principal de gestão modernizada com combobox pesquisável de Unidades (`sptUnitCombobox.js`), preservação do `onclick` nativo de validação e aviso discreto de data sugerida (`sptModernizer.js`).
+  - Espelho individual do prestador com 5 KPIs CLT e selos diários de conformidade.
+  - Isolamento de CSS/JS entre Meu Espaço e SPT (`content/xt-shell.css` e `content/modules/xtToggle.js`), mantendo o layout do Meu Espaço intacto e sem regras globais poluindo o Bootstrap do SPT.
+- **Relatório Consolidado de Horas por Unidade (`sptCltCalc.js`, `sptReportModal.js`)**:
+  - Modos **TSE XT / Digi** (padrão) e **SPT Puro (Dados Brutos)**.
+  - Perfis de jornada salvos por contrato (`8h Seg–Sex (40h)`, `6h Seg–Sex (30h)`, `8h48 Seg–Sex (44h)`, `44h com sábado (8h+4h)` e `12x36`), opção de tolerância de 5 min por marcação (art. 58 §1º), Home Office presumido desligado por padrão, desconto configurável de 1h em Sáb/Dom/Fer (>6h, 2 batidas) e feriados civis/DF editáveis (com Sexta-feira Santa e 30/11).
+  - Colunas independentes para **Saldo BH (Úteis)** e **HE 100% (FDS)**, coluna **Dias úteis sem registro**, coluna informativa **Noturno (h)** (CLT art. 73 com hora reduzida 52m30s) e alertas normativos sem alteração de totais (DSR/>6d consecutivos, art. 71 §1º e art. 66 interjornada atravessando virada de mês/meia-noite).
+  - Tratamento explícito de falhas HTTP/sessão expirada/listas parciais com botão *Tentar novamente*, mensagens inline de validação (`role="alert"`), Anexo de Interpretação completo, exportação CSV e PDF A4 paisagem agrupado por prestador.
+- **Popup Multi-Portal & Robustez**:
+  - Interruptores independentes para Meu Espaço e SPT no popup (`popup.html`/`popup.js`), proteção contra reload durante geração de relatórios e validação de `sender.id`/portal em `background.js`.
+- **Verificação**: **255 testes automatizados** (`node --test`), `node scripts/lint-spt.mjs` sem achados, pacote ZIP validado e inspeção visual via Chrome CDP.
+
 ## 1.2.23-Snapshot — 19/11/2026
 
 - **Bloco G — Tela, limpeza e PDF (`xtToggle.js`, `xt-shell.css`, `spt-gestao.css`, `sptModernizer.js`, `sptReportModal.js`, `domModernizer.js`, `content.js`, `manifest.json`)**:

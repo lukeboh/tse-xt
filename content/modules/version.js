@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.23-Snapshot';
+  const CURRENT_VERSION = '1.3.0';
 
   const CHANGELOG = [
+    {
+      version: '1.3.0',
+      date: '2026-11-19',
+      title: 'TSE XT 1.3.0 — Expansão ao SPT (Gestão de Frequência), Popup Multi-Portal e Regras CLT/Digisystem',
+      features: [
+        'Suporte completo ao portal SPT — Gestão de Frequência (tela de logon, gestão por unidade, combobox pesquisável de Unidades, 5 KPIs CLT no espelho individual e isolamento de CSS/JS via xt-shell.css + xtToggle.js).',
+        'Popup multi-portal com interruptores independentes para Meu Espaço e SPT.',
+        'Relatório Consolidado de Horas por Unidade (modos TSE XT / Digi e SPT Puro): perfis de jornada configuráveis por contrato (8h, 6h, 8h48, 44h c/ sábado e 12x36), tolerância de 5 min por marcação, Home Office presumido desligado por padrão, feriados editáveis com Sexta-feira Santa e 30/11 (DF), alertas normativos (CLT arts. 66, 67/OJ 410, 71 §1º e 73), CSV e PDF agrupado por prestador com Anexo de Interpretação.'
+      ]
+    },
     {
       version: '1.2.23-Snapshot',
       date: '2026-11-19',

@@ -1,6 +1,6 @@
 # TSE XT — Extensão de Usabilidade & Modernização Visual para o Meu Espaço do TSE
 
-**Versão estável: 1.2.6 — 13/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.2.6.md)
+**Versão estável: 1.3.0 — 19/11/2026.** [Novidades](CHANGELOG.md) · [Materiais de liberação](docs/release-1.3.0.md)
 
 Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Edge, Brave) projetada para transformar e modernizar a interface e usabilidade do portal **Meu Espaço** (`meuespaco.tse.jus.br/portalservidor2`) e do **SPT — Consulta de Frequência** (`spt-consultafrequencia.tse.jus.br/spt-consultafrequencia`), do **Tribunal Superior Eleitoral (TSE)**.
 
@@ -51,6 +51,14 @@ Uma extensão Manifest V3 para navegadores Chromium (Google Chrome, Microsoft Ed
 - Painel de KPI por servidor autorizado no período, com barras de progresso Sábado/Domingo (autorizado × realizado), desambiguação inteligente de homônimos e o mesmo indicador "horas que poderiam virar pecúnia" do Espelho de Ponto, apurado em segundo plano respeitando os limites normativos (Res. 22.901/2008).
 
 ---
+
+## Novidades da versão 1.3
+
+- **SPT — Gestão de Frequência de Prestadores (`spt-consultafrequencia`)**: tela de logon modernizada, combobox pesquisável de Unidades, 5 KPIs CLT no espelho individual e **Relatório Consolidado de Horas por Unidade** nos modos **TSE XT / Digi** (fiscalização CLT) e **SPT Puro** (dados brutos).
+- **Perfis de jornada por contrato e regras configuráveis**: `8h Seg–Sex (40h)`, `6h Seg–Sex (30h)`, `8h48 Seg–Sex (44h)`, `44h com sábado (8h+4h)` e `12x36`, opção de tolerância de 5 min por marcação (CLT art. 58 §1º), Home Office presumido desligado por padrão, desconto configurável de 1h em Sáb/Dom/Fer (>6h) e feriados civis/DF editáveis (com Sexta-feira Santa e 30/11).
+- **Alertas normativos informativos (sem alterar totais)**: trabalho em domingo / >6 dias consecutivos (CLT art. 67; OJ 410 TST), intervalo de 15 min (art. 71 §1º), descanso interjornada < 11h (art. 66) e adicional noturno 22h–5h com hora reduzida 52m30s (art. 73).
+- **Exportação e impressão aprimoradas**: CSV completo, Anexo de Interpretação listando todas as opções ativas e PDF A4 paisagem agrupado por prestador.
+- **Popup multi-portal e isolamento CSS/JS**: interruptores independentes para Meu Espaço e SPT, proteção contra reload durante geração de relatórios e casca compartilhada (`xt-shell.css` + `xtToggle.js`) sem interferir nos estilos nativos do Bootstrap do SPT.
 
 ## Novidades da versão 1.2
 
