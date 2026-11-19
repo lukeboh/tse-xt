@@ -321,16 +321,17 @@
         // Montagem estrutural (topbar, formulário, tabela, KPIs) num
         // try/finally: reveal() tem que rodar mesmo se algo aqui lançar,
         // senão a página fica escondida até a válvula de segurança.
+        const xtToggle = window.JEPessoasXtToggle || window.JEPessoasModernizer;
         try {
-          if (window.JEPessoasModernizer) {
-            window.JEPessoasModernizer.applyThemeState(isEnabled, false);
+          if (xtToggle && xtToggle.applyThemeState) {
+            xtToggle.applyThemeState(isEnabled, false);
           }
 
           // Com o TSE XT desligado, NENHUMA modernização pode rodar — só o
           // interruptor flutuante precisa existir, pra dar pro usuário como
           // ligar de volta. createPersistentToggle() só adiciona um <aside>
           // novo (escondido via CSS quando ligado, ver
-          // body.je-xt-disabled .je-persistent-toggle-bar em content.css) —
+          // body.je-xt-disabled .je-persistent-toggle-bar em xt-shell.css) —
           // nunca move nó nativo nenhum. Já modernizeGenericMoldura(), por
           // exemplo, MOVE label/input nativos pra dentro de wrappers novos:
           // isso muda o layout mesmo sem nenhuma classe CSS aplicada (divs
@@ -338,8 +339,8 @@
           // — tem que nem rodar enquanto o tema estiver desligado.
           if (!isEnabled) {
             if (isSpt) document.body.classList.add('je-spt-page');
-            if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
-              window.JEPessoasModernizer.createPersistentToggle();
+            if (xtToggle && xtToggle.createPersistentToggle) {
+              xtToggle.createPersistentToggle();
             }
             return;
           }
@@ -585,11 +586,12 @@
       const nextState = change.newValue !== false;
       const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
       if (nextState === currentlyEnabled) return;
-      if (window.JEPessoasModernizer && window.JEPessoasModernizer.applyThemeState) {
-        window.JEPessoasModernizer.applyThemeState(nextState, true);
+      const xtToggle = window.JEPessoasXtToggle || window.JEPessoasModernizer;
+      if (xtToggle && xtToggle.applyThemeState) {
+        xtToggle.applyThemeState(nextState, true);
       }
-      if (window.JEPessoasModernizer && window.JEPessoasModernizer.reloadAfterThemeToggle) {
-        window.JEPessoasModernizer.reloadAfterThemeToggle();
+      if (xtToggle && xtToggle.reloadAfterThemeToggle) {
+        xtToggle.reloadAfterThemeToggle();
       } else {
         setTimeout(() => window.location.reload(), 250);
       }
@@ -598,9 +600,10 @@
   try {
     chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
       if (message && message.action === 'isReportRunning') {
+        const xtToggle = window.JEPessoasXtToggle || window.JEPessoasModernizer;
         const busy = Boolean(
-          window.JEPessoasModernizer && window.JEPessoasModernizer.isAnyReportRunning
-            ? window.JEPessoasModernizer.isAnyReportRunning()
+          xtToggle && xtToggle.isAnyReportRunning
+            ? xtToggle.isAnyReportRunning()
             : (window.JEPessoasSptReport && window.JEPessoasSptReport.isRunning && window.JEPessoasSptReport.isRunning())
         );
         if (sendResponse) sendResponse({ running: busy });

@@ -34,7 +34,10 @@ window.JEPessoasModernizer = (function () {
   // sequência na mesma página deixaria o DOM num estado híbrido que nem
   // reflete "ligado" nem "desligado" de verdade. Um reload garante que o
   // próximo estado seja sempre produzido do zero por mountXT().
+  const xtToggle = () => window.JEPessoasXtToggle;
+
   function isAnyReportRunning() {
+    if (xtToggle() && xtToggle().isAnyReportRunning) return xtToggle().isAnyReportRunning();
     return Boolean(
       (window.JEPessoasSptReport && window.JEPessoasSptReport.isRunning && window.JEPessoasSptReport.isRunning())
       || (window.JEPessoasRecognitionReport && window.JEPessoasRecognitionReport.isRunning && window.JEPessoasRecognitionReport.isRunning())
@@ -45,6 +48,7 @@ window.JEPessoasModernizer = (function () {
 
   let pendingReloadTimer = null;
   function reloadAfterThemeToggle() {
+    if (xtToggle() && xtToggle().reloadAfterThemeToggle) return xtToggle().reloadAfterThemeToggle();
     if (pendingReloadTimer) {
       clearTimeout(pendingReloadTimer);
       pendingReloadTimer = null;
@@ -68,6 +72,7 @@ window.JEPessoasModernizer = (function () {
   }
 
   function applyThemeState(enabled, isExplicitUserToggle = false) {
+    if (xtToggle() && xtToggle().applyThemeState) return xtToggle().applyThemeState(enabled, isExplicitUserToggle);
     if (isExplicitUserToggle) {
       document.body.classList.add('je-theme-transitioning');
       setTimeout(() => {
@@ -259,6 +264,7 @@ window.JEPessoasModernizer = (function () {
   }
 
   function createPersistentToggle() {
+    if (xtToggle() && xtToggle().createPersistentToggle) return xtToggle().createPersistentToggle();
     if (document.getElementById('je-persistent-toggle-bar')) return;
 
     const toggleBar = document.createElement('aside');

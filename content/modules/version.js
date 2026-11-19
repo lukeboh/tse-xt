@@ -5,9 +5,19 @@
 window.JEPessoasVersion = (function () {
   'use strict';
 
-  const CURRENT_VERSION = '1.2.22-Snapshot';
+  const CURRENT_VERSION = '1.2.23-Snapshot';
 
   const CHANGELOG = [
+    {
+      version: '1.2.23-Snapshot',
+      date: '2026-11-19',
+      title: 'SPT (Bloco G): isolamento de CSS/JS, preservação da validação nativa e agrupamento no PDF',
+      features: [
+        'Extraídos xtToggle.js e xt-shell.css compartilhados entre SPT e Meu Espaço, removendo content.css e domModernizer.js do SPT.',
+        'Preservado o onclick nativo do botão Pesquisar no SPT (fase de captura) e exibido aviso discreto "data sugerida pelo TSE XT" quando preenchida automaticamente.',
+        'Tabela mensal do PDF impresso agrupada por prestador (cabeçalho de grupo + linhas compactas por mês + subtotal).'
+      ]
+    },
     {
       version: '1.2.22-Snapshot',
       date: '2026-11-18',

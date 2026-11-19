@@ -179,21 +179,22 @@ window.JEPessoasSptModernizer = (function () {
       });
     }
 
-    if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
-      window.JEPessoasModernizer.createPersistentToggle();
+    const xt = window.JEPessoasXtToggle || window.JEPessoasModernizer;
+    if (xt && xt.createPersistentToggle) {
+      xt.createPersistentToggle();
     }
 
     const headerToggle = topbar.querySelector('#je-theme-toggle-header');
-    if (headerToggle && window.JEPessoasModernizer) {
+    if (headerToggle && xt) {
       headerToggle.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         const currentlyEnabled = document.body.classList.contains('je-xt-enabled');
         const nextState = !currentlyEnabled;
-        window.JEPessoasModernizer.applyThemeState(nextState, true);
+        xt.applyThemeState(nextState, true);
         chrome.storage?.local?.set({ xtEnabledSpt: nextState }, () => {
-          if (window.JEPessoasModernizer.reloadAfterThemeToggle) {
-            window.JEPessoasModernizer.reloadAfterThemeToggle();
+          if (xt.reloadAfterThemeToggle) {
+            xt.reloadAfterThemeToggle();
           } else {
             setTimeout(() => window.location.reload(), 250);
           }
@@ -318,26 +319,41 @@ window.JEPessoasSptModernizer = (function () {
       combo().enhanceNativeUnitSelect(document.getElementById('cbUnidades'));
     }
 
-    // Se o campo Data estiver vazio na tela inicial, preenche com o último dia do mês anterior (ou hoje)
+    // Se o campo Data estiver vazio na tela inicial e o usuário ainda não interagiu com ele,
+    // sugere o último dia do mês anterior e exibe um aviso discreto.
     const inputData = document.getElementById('edtdataponto');
-    if (inputData && !inputData.value) {
-      const prev = calc().previousMonthPeriod();
-      inputData.value = prev.toIso;
+    if (inputData) {
+      if (!inputData.dataset.jeDateInteractionBound) {
+        inputData.dataset.jeDateInteractionBound = 'true';
+        const onUserDateEdit = () => {
+          inputData.dataset.jeUserInteracted = 'true';
+          const existingHint = inputData.parentNode && inputData.parentNode.querySelector('.je-spt-suggested-date-hint');
+          if (existingHint) existingHint.remove();
+        };
+        inputData.addEventListener('input', onUserDateEdit);
+        inputData.addEventListener('change', onUserDateEdit);
+      }
+      if (!inputData.value && inputData.dataset.jeUserInteracted !== 'true') {
+        const prev = calc().previousMonthPeriod();
+        inputData.value = prev.toIso;
+        if (inputData.parentNode && !inputData.parentNode.querySelector('.je-spt-suggested-date-hint')) {
+          const hint = document.createElement('small');
+          hint.className = 'je-spt-suggested-date-hint';
+          hint.textContent = 'data sugerida pelo TSE XT';
+          inputData.parentNode.insertBefore(hint, inputData.nextSibling);
+        }
+      }
     }
 
-    // Permite pesquisar na tela principal também quando Contrato = Todos (-1),
-    // além de preencher os dados do período do trabalhador ao clicar no CPF
+    // Preserva o onclick nativo de validação do SPT; registra um handler na fase de captura
+    // apenas para preencher os campos ocultos do período antes da validação original rodar.
     const form = document.getElementById('formulario');
     const btnPesquisar = form ? form.querySelector('button[name="btnPesquisar"]') : null;
     if (btnPesquisar && !btnPesquisar.dataset.jeSptEnhanced) {
       btnPesquisar.dataset.jeSptEnhanced = 'true';
-      btnPesquisar.removeAttribute('onclick');
-      btnPesquisar.addEventListener('click', (e) => {
+      btnPesquisar.addEventListener('click', () => {
         const contratoField = form.elements['cbContratos'];
         const periodoField = form.elements['cbPeriodos'];
-        const dataField = form.elements['edtdataponto'];
-        form.elements['cmd'].value = 'cmdConsultar';
-        form.target = '';
 
         const periodosList = (combo() && combo().getAvailablePeriodos && combo().getAvailablePeriodos(document))
           || (calc() && calc().parsePeriodosFromDoc && calc().parsePeriodosFromDoc(document))
@@ -347,21 +363,18 @@ window.JEPessoasSptModernizer = (function () {
           const idx = parseInt(periodoField.value, 10);
           if (!isNaN(idx) && Array.isArray(periodosList) && periodosList[idx]) {
             const p = periodosList[idx];
-            form.elements['periodoCodigo'].value = p[0];
-            form.elements['periodoDescricao'].value = p[1];
-            form.elements['periodoDtInicio'].value = p[2];
-            form.elements['periodoDtFinal'].value = p[3];
+            if (form.elements['periodoCodigo']) form.elements['periodoCodigo'].value = p[0];
+            if (form.elements['periodoDescricao']) form.elements['periodoDescricao'].value = p[1];
+            if (form.elements['periodoDtInicio']) form.elements['periodoDtInicio'].value = p[2];
+            if (form.elements['periodoDtFinal']) form.elements['periodoDtFinal'].value = p[3];
           }
         } else {
-          if (dataField && !dataField.value) {
-            dataField.value = calc().previousMonthPeriod().toIso;
-          }
-          form.elements['periodoCodigo'].value = '';
-          form.elements['periodoDescricao'].value = '';
-          form.elements['periodoDtInicio'].value = '';
-          form.elements['periodoDtFinal'].value = '';
+          if (form.elements['periodoCodigo']) form.elements['periodoCodigo'].value = '';
+          if (form.elements['periodoDescricao']) form.elements['periodoDescricao'].value = '';
+          if (form.elements['periodoDtInicio']) form.elements['periodoDtInicio'].value = '';
+          if (form.elements['periodoDtFinal']) form.elements['periodoDtFinal'].value = '';
         }
-      });
+      }, true);
     }
 
     // Garante que clicar no CPF de um prestador na tabela principal funcione mesmo quando Contrato = Todos (-1)
@@ -567,8 +580,9 @@ window.JEPessoasSptModernizer = (function () {
   function mountLoginPage() {
     document.body.classList.add('je-spt-page');
 
-    if (window.JEPessoasModernizer && window.JEPessoasModernizer.createPersistentToggle) {
-      window.JEPessoasModernizer.createPersistentToggle();
+    const xt = window.JEPessoasXtToggle || window.JEPessoasModernizer;
+    if (xt && xt.createPersistentToggle) {
+      xt.createPersistentToggle();
     }
     const loginToggleEnabled = document.body.classList.contains('je-xt-enabled');
     const loginToggleLabel = document.querySelector('#je-persistent-toggle-bar .je-toggle-label');

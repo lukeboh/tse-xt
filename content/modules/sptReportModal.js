@@ -2616,12 +2616,17 @@ window.JEPessoasSptReport = (function () {
     if (isRaw) {
       const monthlyRows = [];
       report.workers.forEach((w) => {
+        const wt = w.totals || calc().summarizeWorkerMonths(w.months);
+        monthlyRows.push(`
+          <tr class="je-print-worker-group">
+            <td colspan="7" class="l"><strong>${escapeHTML(w.nome)}</strong> · CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</td>
+          </tr>
+        `);
         w.months.forEach((m) => {
           const presDays = m.presencialWorkedDays != null ? m.presencialWorkedDays : m.workedDays;
           monthlyRows.push(`
             <tr>
-              <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')}</small></td>
-              <td>${escapeHTML(m.monthLabel)}</td>
+              <td><strong>${escapeHTML(m.monthLabel)}</strong></td>
               <td>${presDays}</td>
               <td>${m.workedWeekdays || 0}</td>
               <td>${m.workedWeekendDays || 0}</td>
@@ -2631,6 +2636,20 @@ window.JEPessoasSptReport = (function () {
             </tr>
           `);
         });
+        if (w.months.length > 1) {
+          const wtPres = wt.presencialWorkedDays != null ? wt.presencialWorkedDays : wt.workedDays;
+          monthlyRows.push(`
+            <tr class="je-print-worker-subtotal">
+              <td>Subtotal</td>
+              <td>${wtPres}</td>
+              <td>${wt.workedWeekdays || 0}</td>
+              <td>${wt.workedWeekendDays || 0}</td>
+              <td>${wt.justifiedDays || 0}</td>
+              <td>${(wt.alerts && wt.alerts.batidaImparDays) || 0}</td>
+              <td><strong>${fmt(wt.sptTotalMin)}</strong></td>
+            </tr>
+          `);
+        }
       });
 
       const uPres = u.presencialWorkedDays != null ? u.presencialWorkedDays : u.workedDays;
@@ -2709,10 +2728,10 @@ window.JEPessoasSptReport = (function () {
         </div>
 
         <h2>1. Consolidação Mensal por Prestador (SPT Puro)</h2>
-        <table class="je-print-table">
+        <table class="je-print-table je-print-table-grouped">
           <thead>
             <tr>
-              <th>Prestador / Contrato</th><th>Mês</th><th>Dias c/ Reg.</th><th>Seg–Sex</th><th>Sáb/Dom/Fer</th><th>Justificados</th><th>Batidas Ímpares</th><th>Total SPT</th>
+              <th>Mês</th><th>Dias c/ Reg.</th><th>Seg–Sex</th><th>Sáb/Dom/Fer</th><th>Justificados</th><th>Batidas Ímpares</th><th>Total SPT</th>
             </tr>
           </thead>
           <tbody>${monthlyRows.join('')}</tbody>
@@ -2728,13 +2747,18 @@ window.JEPessoasSptReport = (function () {
     const monthlyRows = [];
     report.workers.forEach((w) => {
       const profileLabel = w.journeyProfileLabel || formatReportJourneyProfilesSummary(report);
+      const wt = w.totals || calc().summarizeWorkerMonths(w.months);
+      monthlyRows.push(`
+        <tr class="je-print-worker-group">
+          <td colspan="12" class="l"><strong>${escapeHTML(w.nome)}</strong> · CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')} · ${escapeHTML(profileLabel)}</td>
+        </tr>
+      `);
       w.months.forEach((m) => {
         if (m.fetchError) {
           monthlyRows.push(`
             <tr class="je-print-row-error">
-              <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')} · ${escapeHTML(profileLabel)}</small></td>
-              <td>${escapeHTML(m.monthLabel)}</td>
-              <td colspan="11" class="l"><strong>${escapeHTML(w.nome)} — ${escapeHTML(m.monthLabel)}: falha na consulta (${escapeHTML(m.errorReason || 'erro')})</strong></td>
+              <td><strong>${escapeHTML(m.monthLabel)}</strong></td>
+              <td colspan="11" class="l"><strong>Falha na consulta (${escapeHTML(m.errorReason || 'erro')})</strong></td>
             </tr>
           `);
           return;
@@ -2742,8 +2766,7 @@ window.JEPessoasSptReport = (function () {
         const unregDays = m.unregisteredWeekdays != null ? m.unregisteredWeekdays : (m.presumeHomeOffice ? 0 : (m.weekdaysWithoutRecord || 0));
         monthlyRows.push(`
           <tr>
-            <td class="l"><strong>${escapeHTML(w.nome)}</strong><br><small>CPF ${escapeHTML(formatCpf(w.cpf))} · Contrato ${escapeHTML(w.numContrato || '—')} · ${escapeHTML(m.journeyProfileLabel || profileLabel)}</small></td>
-            <td>${escapeHTML(m.monthLabel)}</td>
+            <td><strong>${escapeHTML(m.monthLabel)}</strong></td>
             <td>${formatDaysCell(m)}</td>
             <td>${unregDays}d${m.homeOfficeDays ? `<br><small>${m.homeOfficeDays}d HO</small>` : ''}</td>
             <td>${fmt(m.sptTotalMin)}</td>
@@ -2758,13 +2781,31 @@ window.JEPessoasSptReport = (function () {
           </tr>
         `);
       });
+      if (w.months.length > 1) {
+        const wtUnreg = wt.unregisteredWeekdays != null ? wt.unregisteredWeekdays : (wt.presumeHomeOffice ? 0 : (wt.weekdaysWithoutRecord || 0));
+        monthlyRows.push(`
+          <tr class="je-print-worker-subtotal">
+            <td>Subtotal</td>
+            <td>${formatDaysCell(wt)}</td>
+            <td>${wtUnreg}d${wt.homeOfficeDays ? `<br><small>${wt.homeOfficeDays}d HO</small>` : ''}</td>
+            <td>${fmt(wt.sptTotalMin)}</td>
+            <td><strong>${fmt(wt.cltWorkedMin)}</strong></td>
+            <td>${fmt(wt.horasNormaisMin || 0)}</td>
+            <td>+${fmt(wt.he50BrutoMin || 0)}</td>
+            <td>-${fmt(wt.debitoBhBrutoMin || 0)}</td>
+            <td><strong>${fmt(wt.saldoBhMesMin || 0, true)}</strong></td>
+            <td><strong>+${fmt(wt.he100BrutoMin || 0)}</strong></td>
+            <td>${formatNightCell(wt.nightRealMin, wt.nightReducedMin)}</td>
+            <td><strong>${fmt(wt.saldoMesMin, true)}</strong></td>
+          </tr>
+        `);
+      }
     });
 
     const uUnreg = u.unregisteredWeekdays != null ? u.unregisteredWeekdays : (presumeHomeOffice ? 0 : (u.weekdaysWithoutRecord || 0));
     monthlyRows.push(`
       <tr class="total">
-        <td class="l">Total Consolidado da Unidade (${u.activeWorkersCount}/${u.workersCount} prestadores)</td>
-        <td>—</td>
+        <td class="l">Total Unidade (${u.activeWorkersCount}/${u.workersCount})</td>
         <td>${formatDaysCell(u)}</td>
         <td>${uUnreg}d${u.homeOfficeDays ? `<br><small>${u.homeOfficeDays}d HO</small>` : ''}</td>
         <td>${fmt(u.sptTotalMin)}</td>
@@ -2862,10 +2903,10 @@ window.JEPessoasSptReport = (function () {
       </div>
 
       <h2>1. Consolidação Mensal por Prestador (TSE XT / Digi)</h2>
-      <table class="je-print-table">
+      <table class="je-print-table je-print-table-grouped">
         <thead>
           <tr>
-            <th>Prestador / Contrato</th><th>Mês</th><th>Dias</th><th>Dias úteis sem registro</th><th>Total SPT</th><th>Trab. CLT</th><th>H. Normais</th>
+            <th>Mês</th><th>Dias</th><th>Dias úteis sem registro</th><th>Total SPT</th><th>Trab. CLT</th><th>H. Normais</th>
             <th>HE 50% (BH)</th><th>Débito BH</th><th>Saldo BH (Úteis)</th><th>HE 100% (FDS)</th><th>Noturno (h)</th><th>Visão TSE XT: Saldo BH + HE 100% (não é regra da empresa)</th>
           </tr>
         </thead>

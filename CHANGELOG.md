@@ -1,5 +1,15 @@
 # Changelog — TSE XT
 
+## 1.2.23-Snapshot — 19/11/2026
+
+- **Bloco G — Tela, limpeza e PDF (`xtToggle.js`, `xt-shell.css`, `spt-gestao.css`, `sptModernizer.js`, `sptReportModal.js`, `domModernizer.js`, `content.js`, `manifest.json`)**:
+  - **G1**: Extraído o módulo compartilhado `content/modules/xtToggle.js` (`JEPessoasXtToggle`) e o CSS compartilhado `content/xt-shell.css` (incluindo os estilos de modal/KPI/badges `.je-audit-*`, `.je-recog-*`, `.je-occ-perda*`, removidos do SPT quando `espelho-ponto.css` saiu em D1). Removidos `content.css` e `domModernizer.js` do `content_scripts` do SPT e limpos os overrides de neutralização da combobox em `spt-gestao.css`.
+  - **G2**: `btnPesquisar` em `sptModernizer.js` preserva o `onclick` nativo do SPT (registrando o preenchimento de campos de período na fase de captura), e `edtdataponto` só recebe a data sugerida quando vazio e sem interação do usuário, exibindo o aviso discreto `"data sugerida pelo TSE XT"`.
+  - **G3**: Adicionado `scripts/lint-spt.mjs` (verificação estática sem dependências externas em `spt*.js` e `xtToggle.js`, 0 achados).
+  - **G4**: Inspeção somente leitura de `git log -p` concluída (sem reescrita de histórico) e reportada com hashes exatos.
+  - **PDF**: Tabela mensal impressa agrupada por prestador (cabeçalho de grupo por colaborador, linhas compactas por mês e subtotal quando há mais de 1 mês).
+- Verificação: **255 testes de comportamento passando** e `node scripts/lint-spt.mjs` verde.
+
 ## 1.2.22-Snapshot — 18/11/2026
 
 - **Bloco F — Regras de jornada parametrizáveis e alertas normativos no SPT (`sptCltCalc.js`, `sptReportModal.js`, `spt-gestao.css`)**:

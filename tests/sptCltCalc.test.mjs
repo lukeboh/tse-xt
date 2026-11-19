@@ -576,7 +576,7 @@ test('B1 e B6 — sptModernizer extrai lPeriodos do HTML ao clicar no CPF quando
     nome: { value: '' },
     cbContratos: { value: '-1' },
     cbPeriodos: { value: '-1' },
-    edtdataponto: { value: '2026-09-30' }
+    edtdataponto: { value: '2026-09-30', dataset: {}, addEventListener() {} }
   };
   const btnPesquisar = {
     dataset: {},
@@ -1170,12 +1170,18 @@ test('D1 — manifest.json separa content_scripts por portal para carregar no SP
   assert.ok(meuEspacoEntry);
   assert.ok(sptEntry);
 
-  // O SPT deve carregar apenas content.css e spt-gestao.css, sem espelho-ponto.css, reembolso-farmaceutico.css ou hora-extra-gestao.css
-  assert.deepEqual(sptEntry.css, ['content/content.css', 'content/spt-gestao.css']);
+  // O SPT deve carregar apenas xt-shell.css e spt-gestao.css, sem content.css, espelho-ponto.css, reembolso-farmaceutico.css ou hora-extra-gestao.css
+  assert.deepEqual(sptEntry.css, ['content/xt-shell.css', 'content/spt-gestao.css']);
+  assert.ok(!sptEntry.js.includes('content/modules/domModernizer.js'));
   assert.ok(!sptEntry.js.includes('content/modules/reembolsoFarmaceutico.js'));
   assert.ok(!sptEntry.js.includes('content/modules/payrollAudit.js'));
+  assert.ok(sptEntry.js.includes('content/modules/xtToggle.js'));
   assert.ok(sptEntry.js.includes('content/modules/sptCltCalc.js'));
   assert.ok(sptEntry.js.includes('content/modules/sptReportModal.js'));
+  assert.ok(meuEspacoEntry.css.includes('content/xt-shell.css'));
+  assert.ok(meuEspacoEntry.css.includes('content/content.css'));
+  assert.ok(meuEspacoEntry.js.includes('content/modules/xtToggle.js'));
+  assert.ok(meuEspacoEntry.js.includes('content/modules/domModernizer.js'));
 });
 
 test('D2 — sptUnitCombobox: opções com id, aria-activedescendant no input, label associada, select nativo com tabindex="-1" e navegação por seta sem recriar os nós DOM', () => {
@@ -1753,6 +1759,212 @@ test('F3 — tolerância por batida (art. 58 §1º): desligada por padrão; quan
   assert.equal(dStrictOk.punchWithin5Min, true);
   assert.equal(dStrictOk.withinTolerance, true);
   assert.equal(dStrictOk.debitoBhMin, 0);
+});
+
+// ---------------------------------------------------------------------------
+// BLOCO G — Tela e limpeza (G1 a G3)
+// ---------------------------------------------------------------------------
+
+test('G1 — xtToggle.js centraliza applyThemeState/createPersistentToggle/reloadAfterThemeToggle para SPT e Meu Espaço sem domModernizer no SPT', () => {
+  const scheduled = [];
+  let reloadCalls = 0;
+  let storagePayload = null;
+  let toggleBar = null;
+
+  const bodyClasses = new Set();
+  const htmlClasses = new Set();
+  const labelNode = { innerHTML: '' };
+  const toggleBtnHandlers = {};
+
+  const document = {
+    body: {
+      classList: {
+        add: (...c) => c.forEach((x) => bodyClasses.add(x)),
+        remove: (...c) => c.forEach((x) => bodyClasses.delete(x)),
+        contains: (c) => bodyClasses.has(c)
+      },
+      appendChild(node) { toggleBar = node; }
+    },
+    documentElement: {
+      classList: {
+        add: (...c) => c.forEach((x) => htmlClasses.add(x)),
+        remove: (...c) => c.forEach((x) => htmlClasses.delete(x))
+      }
+    },
+    getElementById: (id) => (id === 'je-persistent-toggle-bar' ? toggleBar : null),
+    querySelectorAll: (sel) => (sel === '.je-toggle-label' ? [labelNode] : []),
+    createElement: () => ({
+      id: '',
+      className: '',
+      innerHTML: '',
+      setAttribute() {},
+      querySelector: () => ({
+        addEventListener: (ev, fn) => { toggleBtnHandlers[ev] = fn; }
+      })
+    })
+  };
+
+  const window = {
+    location: {
+      pathname: '/spt-consultafrequencia/gestao',
+      reload: () => { reloadCalls += 1; }
+    },
+    JEPessoasSptReport: { isRunning: () => false }
+  };
+
+  const xtSrc = readFileSync(new URL('../content/modules/xtToggle.js', import.meta.url), 'utf8');
+  vm.runInNewContext(xtSrc, {
+    window,
+    document,
+    chrome: { storage: { local: { set: (p, cb) => { storagePayload = p; cb?.(); } } } },
+    localStorage: { setItem() {}, getItem: () => 'true' },
+    setTimeout: (fn) => { scheduled.push(fn); return scheduled.length; },
+    clearTimeout: () => {}
+  });
+
+  window.JEPessoasXtToggle.applyThemeState(true, false);
+  assert.equal(bodyClasses.has('je-xt-enabled'), true);
+  assert.equal(htmlClasses.has('je-xt-enabled'), true);
+
+  window.JEPessoasXtToggle.createPersistentToggle();
+  assert.ok(toggleBar);
+
+  // Simula clique do usuário para desligar no SPT
+  toggleBtnHandlers.click({ preventDefault() {}, stopPropagation() {} });
+  assert.equal(storagePayload.xtEnabledSpt, false);
+  assert.equal(bodyClasses.has('je-xt-disabled'), true);
+  assert.equal(reloadCalls, 0);
+  scheduled.forEach((fn) => fn());
+  assert.equal(reloadCalls, 1);
+});
+
+test('G2 — sptModernizer preserva onclick nativo do btnPesquisar na fase de captura e exibe aviso discreto para data sugerida até o usuário editar', () => {
+  const doc = createMinimalDocFromHtml(SPT_CONSULTA_HTML_FIXTURE);
+  let removedOnclick = false;
+  let captureRegistered = false;
+  let nativeOnclickCalled = false;
+  let captureValAtNativeRun = '';
+  const insertedNodes = [];
+  let hintRemoved = false;
+
+  const hintNode = {
+    className: 'je-spt-suggested-date-hint',
+    textContent: '',
+    remove() { hintRemoved = true; }
+  };
+
+  const edtdatapontoHandlers = {};
+  const edtdataponto = {
+    value: '',
+    dataset: {},
+    nextSibling: null,
+    parentNode: {
+      insertBefore(node) { insertedNodes.push(node); },
+      querySelector(sel) {
+        if (sel === '.je-spt-suggested-date-hint' && insertedNodes.length > 0 && !hintRemoved) return hintNode;
+        return null;
+      }
+    },
+    addEventListener(ev, fn) { edtdatapontoHandlers[ev] = fn; }
+  };
+
+  const formFields = {
+    cmd: { value: '' },
+    periodoCodigo: { value: '' },
+    periodoDescricao: { value: '' },
+    periodoDtInicio: { value: '' },
+    periodoDtFinal: { value: '' },
+    cbContratos: { value: '2862' },
+    cbPeriodos: { value: '0' },
+    edtdataponto
+  };
+
+  const clickListeners = [];
+  const btnPesquisar = {
+    dataset: {},
+    removeAttribute(attr) { if (attr === 'onclick') removedOnclick = true; },
+    addEventListener(type, fn, useCapture) {
+      if (type === 'click') {
+        captureRegistered = Boolean(useCapture);
+        clickListeners.push({ fn, useCapture: Boolean(useCapture) });
+      }
+    },
+    simulateClick() {
+      // Fase de captura primeiro, depois onclick nativo do SPT
+      clickListeners.filter((l) => l.useCapture).forEach((l) => l.fn({}));
+      captureValAtNativeRun = formFields.periodoCodigo.value;
+      nativeOnclickCalled = true;
+    }
+  };
+
+  const form = {
+    elements: formFields,
+    querySelector: (s) => (s === 'button[name="btnPesquisar"]' ? btnPesquisar : null),
+    submit() {}
+  };
+
+  const customDoc = Object.assign({}, doc, {
+    addEventListener() {},
+    body: {
+      classList: { add() {}, remove() {}, contains: () => true },
+      dataset: {},
+      insertBefore() {},
+      appendChild() {},
+      firstChild: null
+    },
+    createElement: (tag) => (tag === 'small' ? hintNode : {
+      className: '',
+      id: '',
+      dataset: {},
+      style: {},
+      addEventListener() {},
+      removeAttribute() {},
+      appendChild() {},
+      insertBefore() {},
+      replaceChildren() {},
+      querySelector: () => null,
+      querySelectorAll: () => []
+    }),
+    getElementById(id) {
+      if (id === 'formulario') return form;
+      if (id === 'edtdataponto') return edtdataponto;
+      return doc.getElementById(id);
+    }
+  });
+
+  const window = {
+    location: { pathname: '/spt-consultafrequencia/gestao/ponto-gestao' },
+    JEPessoasSptCltCalc: C
+  };
+  vm.runInNewContext(readFileSync(new URL('../content/modules/sptModernizer.js', import.meta.url), 'utf8'), {
+    window,
+    document: customDoc,
+    chrome: { runtime: { getURL: () => '' } },
+    DOMParser: class { parseFromString() { return { body: { childNodes: [] } }; } }
+  });
+  window.JEPessoasSptModernizer.mount('sptGestao');
+
+  // 1) Não remove onclick nativo e registra listener em fase de captura
+  assert.equal(removedOnclick, false);
+  assert.equal(captureRegistered, true);
+  btnPesquisar.simulateClick();
+  assert.equal(nativeOnclickCalled, true);
+  assert.equal(captureValAtNativeRun, '2862');
+  assert.equal(formFields.periodoDescricao.value, '10/2026');
+
+  // 2) edtdataponto vazio recebeu data sugerida + aviso discreto; ao usuário editar, remove aviso e não sobrescreve
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(edtdataponto.value));
+  assert.equal(insertedNodes.length, 1);
+  assert.equal(hintNode.textContent, 'data sugerida pelo TSE XT');
+
+  edtdataponto.value = '';
+  edtdatapontoHandlers.input();
+  assert.equal(edtdataponto.dataset.jeUserInteracted, 'true');
+  assert.equal(hintRemoved, true);
+
+  // Nova passagem de mount não sobrescreve campo após interação do usuário
+  window.JEPessoasSptModernizer.mount('sptGestao');
+  assert.equal(edtdataponto.value, '');
 });
 
 

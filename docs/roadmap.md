@@ -1,10 +1,10 @@
 # 🗺️ Roadmap Consolidado de Evoluções — TSE XT
 
-**Versão do documento:** 1.2.22-Snapshot
+**Versão do documento:** 1.2.23-Snapshot
 
-**Data de consolidação:** 18/11/2026
+**Data de consolidação:** 19/11/2026
 
-**Status do projeto:** v1.2.6 estável autorizada em 13/11/2026 · expansão ao SPT, popup multi-portal, modo TSE XT/Digi vs SPT Puro, tela de logon do SPT e Blocos A, B, C, D, E e F da revisão completa do SPT (v1.2.22-Snapshot) validados · itens abertos da Trilha C preservados
+**Status do projeto:** v1.2.6 estável autorizada em 13/11/2026 · expansão ao SPT, popup multi-portal, modo TSE XT/Digi vs SPT Puro, tela de logon do SPT e Blocos A, B, C, D, E, F e G da revisão completa do SPT (v1.2.23-Snapshot) validados · itens abertos da Trilha C preservados
 
 > Este documento é a **fonte única e centralizada da verdade** para o backlog de evolução do TSE XT. Reúne em um só lugar as pendências normativas de cálculo, melhorias de interface/experiência de usuário, novos módulos funcionais, débitos técnicos e validações regulatórias.
 
